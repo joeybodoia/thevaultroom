@@ -197,15 +197,25 @@ const PokemonSection: React.FC = () => {
           </h2>
           <div className="text-lg text-gray-600 max-w-4xl mx-auto mb-8 font-pokemon">
             <p className="mb-4">
-              Each bid cycle consists of 6 Prismatic Evolutions packs, 6 Crown Zenith packs, and 6 Destined Rivals packs. Before the packs are opened, users can place bids on specific Pokémon from each set they want to claim.
+              Three exciting rounds: Round 1 (10 Prismatic Evolutions packs), Round 2 (10 Destined Rivals packs), Round 3 (10 Crown Zenith packs). Each round offers two entry options.
             </p>
-            <ul className="text-left space-y-2 mb-4">
-              <li>• The highest bidder for each Pokémon wins the slot for that pokemon card.</li>
-              <li>• If that Pokémon is pulled from any of the packs, the winning bidder keeps all copies of it.</li>
-              <li>• If the Pokémon doesn't appear, the bidder receives nothing for that round.</li>
-            </ul>
+            <div className="bg-gray-50 rounded-xl p-6 mb-4">
+              <h4 className="font-bold text-black mb-3 font-pokemon">Option 1: Direct Card Bidding</h4>
+              <ul className="text-left space-y-2 mb-4">
+                <li>• Bid on high-value cards (e.g., Umbreon EX) from each set</li>
+                <li>• Highest bidder wins all pulled copies of their card</li>
+                <li>• If not pulled, you get nothing for that card</li>
+              </ul>
+              
+              <h4 className="font-bold text-black mb-3 font-pokemon">Option 2: $1 Lottery + Rarity Selection</h4>
+              <ul className="text-left space-y-2 mb-4">
+                <li>• Enter for $1 and choose a rarity type from the set</li>
+                <li>• If your rarity type is pulled, you're entered into the prize pool</li>
+                <li>• 2 random winners per round each get 5 packs (minus direct bid wins)</li>
+              </ul>
+            </div>
             <p className="text-red-600 font-semibold">
-              ⚠️ Only one winner per Pokémon per round, so bid wisely!
+              ⚠️ Choose your strategy: Go for specific high-value cards or try the lottery for complete packs!
             </p>
           </div>
         </div>

@@ -58,7 +58,7 @@ const CurrentSetSection: React.FC = () => {
             
             <div className="bg-yellow-400 text-black rounded-xl p-4 inline-block">
               <p className="font-bold font-pokemon">
-                🎯 Every stream opens 6 packs from each of these three premium sets!
+                🎯 Three rounds: 10 packs per set, 30 total packs opened live!
               </p>
             </div>
           </div>

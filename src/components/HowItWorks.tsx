@@ -10,7 +10,7 @@ const HowItWorks: React.FC = () => {
             How It Works
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto font-pokemon">
-            Join our live Pokemon card opening experience and bid on specific Pokemon cards to win them!
+            Join our live Pokemon card opening experience with three rounds of pack openings and two ways to win!
           </p>
         </div>
 
@@ -22,9 +22,9 @@ const HowItWorks: React.FC = () => {
                   <Users className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-black mb-2 font-pokemon">1. Place Your Bids</h3>
+                  <h3 className="text-xl font-bold text-black mb-2 font-pokemon">1. Choose Your Entry</h3>
                   <p className="text-gray-600 font-pokemon">
-                    Browse available Pokemon cards and place bids on the ones you want. The highest bidder for each Pokemon wins the slot for that card.
+                    Option 1: Bid on high-value cards directly. Option 2: Enter the $1 lottery and select a rarity type. Each round offers both options!
                   </p>
                 </div>
               </div>
@@ -34,9 +34,9 @@ const HowItWorks: React.FC = () => {
                   <Play className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-black mb-2 font-pokemon">2. Watch Live</h3>
+                  <h3 className="text-xl font-bold text-black mb-2 font-pokemon">2. Watch 3 Rounds Live</h3>
                   <p className="text-gray-600 font-pokemon">
-                    Join our live stream as we open 6 booster packs from a Prismatic Evolutions bundle. The excitement builds with every card revealed!
+                    Round 1: 10 Prismatic Evolutions packs. Round 2: 10 Destined Rivals packs. Round 3: 10 Crown Zenith packs. Watch every card revealed live!
                   </p>
                 </div>
               </div>
@@ -46,9 +46,9 @@ const HowItWorks: React.FC = () => {
                   <Trophy className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-black mb-2 font-pokemon">3. Claim Your Wins</h3>
+                  <h3 className="text-xl font-bold text-black mb-2 font-pokemon">3. Win Your Prizes</h3>
                   <p className="text-gray-600 font-pokemon">
-                    If your Pokemon appears during the pack opening, you win ALL copies of that card pulled in the 6 packs. No Pokemon pulled means no win for that round.
+                    Direct bidders win all copies of their card if pulled. Lottery winners (2 per round) each get 5 packs from that round, minus any direct bid wins.
                   </p>
                 </div>
               </div>
@@ -58,9 +58,9 @@ const HowItWorks: React.FC = () => {
                   <Gift className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-black mb-2 font-pokemon">4. Get Your Cards</h3>
+                  <h3 className="text-xl font-bold text-black mb-2 font-pokemon">4. Receive Your Cards</h3>
                   <p className="text-gray-600 font-pokemon">
-                    We ship your winning Pokemon cards directly to you. Only winning bidders receive cards - bid strategically!
+                    We ship all winning cards directly to you. Direct bid winners get specific cards, lottery winners get complete unopened packs!
                   </p>
                 </div>
               </div>
