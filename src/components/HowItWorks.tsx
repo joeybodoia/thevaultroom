@@ -38,9 +38,11 @@ const HowItWorks: React.FC = () => {
                 <div>
                   <h3 className="text-xl font-bold text-black mb-2 font-pokemon">2. Watch Live</h3>
                   <p className="text-gray-600 font-pokemon">
-                    Round 1: 10 sealed Prismatic Evolutions packs. 
-                    Round 2: 10 sealed Destined Rivals packs. 
-                    Round 3: 10 sealed Crown Zenith packs.
+                    <strong>Round 1:</strong> 10 sealed Prismatic Evolutions packs.
+                    <br />
+                    <strong>Round 2:</strong> 10 sealed Destined Rivals packs.
+                    <br />
+                    <strong>Round 3:</strong> 10 sealed Crown Zenith packs.
                   </p>
                 </div>
               </div>
