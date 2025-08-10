@@ -24,8 +24,9 @@ const HowItWorks: React.FC = () => {
                 <div>
                   <h3 className="text-xl font-bold text-black mb-2 font-pokemon">1. Choose Your Entry</h3>
                   <p className="text-gray-600 font-pokemon">
-                    Option 1: Bid on high-value cards directly. Highest bidder for a particular card wins that card (all copies) if pulled.
-                    Option 2: Enter the $1 lottery and select a rarity type. All users who select a rarity type which is pulled during round are added into final pool from which winners are randomly selected.
+                    <strong>Option 1:</strong> Bid on high-value cards directly. Highest bidder for a particular card wins that card (all copies) if pulled.
+                    <br />
+                    <strong>Option 2:</strong> Enter the $1 lottery and select a rarity type. All users who select a rarity type which is pulled during round are added into final pool from which winners are randomly selected.
                   </p>
                 </div>
               </div>
