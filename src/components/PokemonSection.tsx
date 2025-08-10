@@ -481,9 +481,77 @@ const PokemonSection: React.FC = () => {
             )}
 
             {lotteryActiveTab === 'crown_zenith' && (
-              <div className="text-center py-20">
-                <h3 className="text-2xl font-bold text-black font-pokemon">Crown Zenith - $1 Lottery</h3>
-                <p className="text-gray-600 font-pokemon mt-4">Coming soon...</p>
+              <div className="space-y-6">
+                <h3 className="text-2xl font-bold text-black font-pokemon text-center mb-8">
+                  Crown Zenith - $1 Lottery
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {/* Ultra Rare */}
+                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
+                    <div className="text-center">
+                      <div className="bg-blue-600 rounded-lg p-4 mb-4">
+                        <span className="text-xl font-bold text-white font-pokemon">Ultra Rare</span>
+                      </div>
+                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <button className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-all font-pokemon">
+                        Enter for $1
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Hyper Rare */}
+                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
+                    <div className="text-center">
+                      <div className="bg-yellow-500 rounded-lg p-4 mb-4">
+                        <span className="text-xl font-bold text-white font-pokemon">Hyper Rare</span>
+                      </div>
+                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <button className="w-full bg-yellow-500 text-white font-bold py-3 rounded-lg hover:bg-yellow-600 transition-all font-pokemon">
+                        Enter for $1
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* SIR */}
+                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
+                    <div className="text-center">
+                      <div className="bg-pink-600 rounded-lg p-4 mb-4">
+                        <span className="text-xl font-bold text-white font-pokemon">SIR</span>
+                      </div>
+                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <button className="w-full bg-pink-600 text-white font-bold py-3 rounded-lg hover:bg-pink-700 transition-all font-pokemon">
+                        Enter for $1
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* IR */}
+                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
+                    <div className="text-center">
+                      <div className="bg-green-600 rounded-lg p-4 mb-4">
+                        <span className="text-xl font-bold text-white font-pokemon">IR</span>
+                      </div>
+                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <button className="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-all font-pokemon">
+                        Enter for $1
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Code Card */}
+                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
+                    <div className="text-center">
+                      <div className="bg-gray-600 rounded-lg p-4 mb-4">
+                        <span className="text-xl font-bold text-white font-pokemon">Code Card</span>
+                      </div>
+                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <button className="w-full bg-gray-600 text-white font-bold py-3 rounded-lg hover:bg-gray-700 transition-all font-pokemon">
+                        Enter for $1
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
