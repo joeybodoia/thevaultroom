@@ -88,6 +88,9 @@ const PokemonSection: React.FC = () => {
       currentPokemon = [...destinedRivalsPokemon];
     }
 
+    // Filter to only show cards with market price > $50
+    currentPokemon = currentPokemon.filter(poke => (poke.price || 0) > 50);
+
     let filtered = currentPokemon;
 
     // Search by name
