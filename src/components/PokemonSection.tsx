@@ -5,9 +5,11 @@ import { PrismaticPokemonFull, CrownZenithFull, DestinedRivalsFull, PokemonCard 
 import PokemonCard from './PokemonCard';
 
 type SetName = 'prismatic' | 'crown_zenith' | 'destined_rivals';
+type BiddingMode = 'direct' | 'lottery';
 
 const PokemonSection: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SetName>('prismatic');
+  const [biddingMode, setBiddingMode] = useState<BiddingMode>('direct');
   const [prismaticPokemon, setPrismaticPokemon] = useState<PrismaticPokemonFull[]>([]);
   const [crownZenithPokemon, setCrownZenithPokemon] = useState<CrownZenithFull[]>([]);
   const [destinedRivalsPokemon, setDestinedRivalsPokemon] = useState<DestinedRivalsFull[]>([]);
@@ -223,98 +225,137 @@ const PokemonSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* Bidding Mode Tabs */}
         <div className="mb-8">
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`py-2 px-1 border-b-2 font-medium text-lg font-pokemon transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-red-600 text-red-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  {tab.name}
-                  <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
-                    {tab.count}
-                  </span>
-                </button>
-              ))}
+              <button
+                onClick={() => setBiddingMode('direct')}
+                className={`py-2 px-1 border-b-2 font-medium text-lg font-pokemon transition-colors ${
+                  biddingMode === 'direct'
+                    ? 'border-red-600 text-red-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Direct Bids
+              </button>
+              <button
+                onClick={() => setBiddingMode('lottery')}
+                className={`py-2 px-1 border-b-2 font-medium text-lg font-pokemon transition-colors ${
+                  biddingMode === 'lottery'
+                    ? 'border-red-600 text-red-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                $1 Lottery
+              </button>
             </nav>
           </div>
         </div>
-
-        {/* Search, Filter, and Sort Controls */}
-        <div className="bg-gray-50 rounded-xl p-6 mb-8 border border-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search Pokemon..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:border-red-600 focus:outline-none font-pokemon"
-              />
+        {/* Content based on bidding mode */}
+        {biddingMode === 'direct' ? (
+          <>
+            {/* Set Tabs */}
+            <div className="mb-8">
+              <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-8">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`py-2 px-1 border-b-2 font-medium text-lg font-pokemon transition-colors ${
+                        activeTab === tab.id
+                          ? 'border-red-600 text-red-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      {tab.name}
+                      <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
+                        {tab.count}
+                      </span>
+                    </button>
+                  ))}
+                </nav>
+              </div>
             </div>
 
-            {/* Rarity Filter */}
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <select
-                value={selectedRarity}
-                onChange={(e) => setSelectedRarity(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:border-red-600 focus:outline-none font-pokemon appearance-none bg-white"
-              >
-                <option value="">All Rarities</option>
-                {uniqueRarities.map(rarity => (
-                  <option key={rarity} value={rarity}>{rarity}</option>
-                ))}
-              </select>
+            {/* Search, Filter, and Sort Controls */}
+            <div className="bg-gray-50 rounded-xl p-6 mb-8 border border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search Pokemon..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:border-red-600 focus:outline-none font-pokemon"
+                  />
+                </div>
+
+                {/* Rarity Filter */}
+                <div className="relative">
+                  <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <select
+                    value={selectedRarity}
+                    onChange={(e) => setSelectedRarity(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:border-red-600 focus:outline-none font-pokemon appearance-none bg-white"
+                  >
+                    <option value="">All Rarities</option>
+                    {uniqueRarities.map(rarity => (
+                      <option key={rarity} value={rarity}>{rarity}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Sort */}
+                <div className="relative">
+                  <ArrowUpDown className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:border-red-600 focus:outline-none font-pokemon appearance-none bg-white"
+                  >
+                    <option value="price-high">Price: High to Low</option>
+                    <option value="price-low">Price: Low to High</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Results Count */}
+              <div className="mt-4 text-center">
+                <span className="text-gray-600 font-pokemon">
+                  Showing {filteredPokemon.length} of {currentPokemon.length} Pokemon
+                </span>
+              </div>
             </div>
 
-            {/* Sort */}
-            <div className="relative">
-              <ArrowUpDown className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:border-red-600 focus:outline-none font-pokemon appearance-none bg-white"
-              >
-                <option value="price-high">Price: High to Low</option>
-                <option value="price-low">Price: Low to High</option>
-              </select>
+            {/* Pokemon Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredPokemon.map((poke, index) => (
+                <PokemonCard
+                  key={poke.id}
+                  pokemon={poke}
+                  isPopular={index === 0} // Make first card popular
+                />
+              ))}
             </div>
-          </div>
 
-          {/* Results Count */}
-          <div className="mt-4 text-center">
-            <span className="text-gray-600 font-pokemon">
-              Showing {filteredPokemon.length} of {currentPokemon.length} Pokemon
-            </span>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredPokemon.map((poke, index) => (
-            <PokemonCard
-              key={poke.id}
-              pokemon={poke}
-              isPopular={index === 0} // Make first card popular
-            />
-          ))}
-        </div>
-
-        {filteredPokemon.length === 0 && currentPokemon.length > 0 && (
-          <div className="text-center py-12">
-            <div className="flex items-center justify-center space-x-2 mb-4 text-gray-600">
-              <Sparkles className="h-8 w-8" />
-              <span className="text-xl font-pokemon">No Pokemon Found</span>
-            </div>
-            <p className="text-gray-600 font-pokemon">Try adjusting your search or filters</p>
+            {filteredPokemon.length === 0 && currentPokemon.length > 0 && (
+              <div className="text-center py-12">
+                <div className="flex items-center justify-center space-x-2 mb-4 text-gray-600">
+                  <Sparkles className="h-8 w-8" />
+                  <span className="text-xl font-pokemon">No Pokemon Found</span>
+                </div>
+                <p className="text-gray-600 font-pokemon">Try adjusting your search or filters</p>
+              </div>
+            )}
+          </>
+        ) : (
+          /* Lottery Tab Content */
+          <div className="text-center py-20">
+            <h3 className="text-2xl font-bold text-black font-pokemon">$1 Lottery Bidding</h3>
           </div>
         )}
       </div>
