@@ -24,7 +24,8 @@ const HowItWorks: React.FC = () => {
                 <div>
                   <h3 className="text-xl font-bold text-black mb-2 font-pokemon">1. Choose Your Entry</h3>
                   <p className="text-gray-600 font-pokemon">
-                    Option 1: Bid on high-value cards directly. Option 2: Enter the $1 lottery and select a rarity type. Each round offers both options!
+                    Option 1: Bid on high-value cards directly. Highest bidder for a particular card wins that card (all copies) if pulled.
+                    Option 2: Enter the $1 lottery and select a rarity type. All users who select a rarity type which is pulled during round are added into final pool from which winners are randomly selected.
                   </p>
                 </div>
               </div>
@@ -34,9 +35,11 @@ const HowItWorks: React.FC = () => {
                   <Play className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-black mb-2 font-pokemon">2. Watch 3 Rounds Live</h3>
+                  <h3 className="text-xl font-bold text-black mb-2 font-pokemon">2. Watch Live</h3>
                   <p className="text-gray-600 font-pokemon">
-                    Round 1: 10 Prismatic Evolutions packs. Round 2: 10 Destined Rivals packs. Round 3: 10 Crown Zenith packs. Watch every card revealed live!
+                    Round 1: 10 sealed Prismatic Evolutions packs. 
+                    Round 2: 10 sealed Destined Rivals packs. 
+                    Round 3: 10 sealed Crown Zenith packs.
                   </p>
                 </div>
               </div>
@@ -48,7 +51,7 @@ const HowItWorks: React.FC = () => {
                 <div>
                   <h3 className="text-xl font-bold text-black mb-2 font-pokemon">3. Win Your Prizes</h3>
                   <p className="text-gray-600 font-pokemon">
-                    Direct bidders win all copies of their card if pulled. Lottery winners (2 per round) each get 5 packs from that round, minus any direct bid wins.
+                    Direct bidders win all copies of their card if pulled. Lottery winners each win all cards from the packs opened that round, minus any direct bid wins. Lottery winner #1 receives all cards from first 5 packs and lottery winner #2 receives all cards from last 5 packs.
                   </p>
                 </div>
               </div>
@@ -60,7 +63,7 @@ const HowItWorks: React.FC = () => {
                 <div>
                   <h3 className="text-xl font-bold text-black mb-2 font-pokemon">4. Receive Your Cards</h3>
                   <p className="text-gray-600 font-pokemon">
-                    We ship all winning cards directly to you. Direct bid winners get specific cards, lottery winners get complete unopened packs!
+                    We ship all winning cards directly to you. Direct bid winners get specific cards, lottery winners get all remaining cards!
                   </p>
                 </div>
               </div>
@@ -106,15 +109,6 @@ const HowItWorks: React.FC = () => {
               <h4 className="text-lg font-bold text-black mb-2 font-pokemon">Strategic Bidding</h4>
               <p className="text-gray-600 font-pokemon">Bid smart on the Pokemon you want most - highest bidder takes all copies!</p>
             </div>
-            <div className="text-center">
-              <div className="bg-red-600 text-white rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <Gift className="h-8 w-8" />
-              </div>
-              <h4 className="text-lg font-bold text-black mb-2 font-pokemon">Guaranteed Items</h4>
-              <p className="text-gray-600 font-pokemon">Highest bidders receive guaranteed physical items like stickers or shirts!</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="text-center">
               <div className="bg-gray-600 text-white rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                 <Users className="h-8 w-8" />
