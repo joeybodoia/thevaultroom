@@ -538,19 +538,6 @@ const PokemonSection: React.FC = () => {
                       </button>
                     </div>
                   </div>
-
-                  {/* Code Card */}
-                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
-                    <div className="text-center">
-                      <div className="bg-gray-600 rounded-lg p-4 mb-4">
-                        <span className="text-xl font-bold text-white font-pokemon">Code Card</span>
-                      </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
-                      <button className="w-full bg-gray-600 text-white font-bold py-3 rounded-lg hover:bg-gray-700 transition-all font-pokemon">
-                        Enter for $1
-                      </button>
-                    </div>
-                  </div>
                 </div>
               </div>
             )}
@@ -607,19 +594,6 @@ const PokemonSection: React.FC = () => {
                       </div>
                       <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
                       <button className="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-all font-pokemon">
-                        Enter for $1
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Code Card */}
-                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
-                    <div className="text-center">
-                      <div className="bg-gray-600 rounded-lg p-4 mb-4">
-                        <span className="text-xl font-bold text-white font-pokemon">Code Card</span>
-                      </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
-                      <button className="w-full bg-gray-600 text-white font-bold py-3 rounded-lg hover:bg-gray-700 transition-all font-pokemon">
                         Enter for $1
                       </button>
                     </div>
