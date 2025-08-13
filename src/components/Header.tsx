@@ -1,10 +1,26 @@
 import React from 'react';
+import { useState } from 'react';
 import { Play, Users, Trophy } from 'lucide-react';
 import WalletButton from './WalletButton';
+import AuthModal from './AuthModal';
 
 const Header: React.FC = () => {
+  const [authModal, setAuthModal] = useState<{ isOpen: boolean; mode: 'signin' | 'signup' }>({
+    isOpen: false,
+    mode: 'signin'
+  });
+
+  const openAuthModal = (mode: 'signin' | 'signup') => {
+    setAuthModal({ isOpen: true, mode });
+  };
+
+  const closeAuthModal = () => {
+    setAuthModal({ isOpen: false, mode: 'signin' });
+  };
+
   return (
-    <header className="bg-black border-b border-gray-200">
+    <>
+      <header className="bg-black border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-2">
@@ -32,16 +48,29 @@ const Header: React.FC = () => {
               <span className="text-sm font-pokemon">1,247 online</span>
             </div>
             <WalletButton />
-            <button className="bg-yellow-400 text-black px-4 py-2 rounded-lg font-semibold hover:bg-yellow-500 transition-all font-pokemon">
+            <button 
+              onClick={() => openAuthModal('signup')}
+              className="bg-yellow-400 text-black px-4 py-2 rounded-lg font-semibold hover:bg-yellow-500 transition-all font-pokemon"
+            >
               Sign Up
             </button>
-            <button className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-all font-pokemon">
+            <button 
+              onClick={() => openAuthModal('signin')}
+              className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-all font-pokemon"
+            >
               Sign In
             </button>
           </div>
         </div>
       </div>
-    </header>
+      </header>
+      
+      <AuthModal
+        isOpen={authModal.isOpen}
+        onClose={closeAuthModal}
+        mode={authModal.mode}
+      />
+    </>
   );
 };
 
