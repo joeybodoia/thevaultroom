@@ -47,22 +47,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode }) => {
       }
 
       if (authData.user) {
-        // Create user profile in users table
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert({
-            id: authData.user.id,
-            username: username || null,
-            email: email,
-           is_admin: false,
-          });
-
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-          throw new Error(`Profile creation failed: ${profileError.message}`);
-        }
-
-       setSuccess('Account created successfully! You can now sign in.');
+        setSuccess('Account created successfully! Please check your email and click the verification link to complete your registration.');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
