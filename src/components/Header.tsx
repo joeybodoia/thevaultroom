@@ -32,6 +32,9 @@ const Header: React.FC = () => {
               <span className="text-sm font-pokemon">1,247 online</span>
             </div>
             <WalletButton />
+            <button className="bg-yellow-400 text-black px-4 py-2 rounded-lg font-semibold hover:bg-yellow-500 transition-all font-pokemon">
+              Sign Up
+            </button>
             <button className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-all font-pokemon">
               Sign In
             </button>
