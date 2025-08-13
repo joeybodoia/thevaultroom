@@ -9,7 +9,6 @@ interface PokemonCardProps {
 
 const PokemonCard: React.FC<PokemonCardProps> = ({ pokemon, isPopular = false }) => {
   const [bidAmount, setBidAmount] = React.useState('');
-  const [currentBid, setCurrentBid] = React.useState(parseFloat(((pokemon.price || 0) * 0.01).toFixed(2))); // Start at 1% of market price
   const [currentBid, setCurrentBid] = React.useState(parseFloat(((pokemon.ungraded_market_price || 0) * 0.01).toFixed(2))); // Start at 1% of market price
 
   const formatPrice = (price: number | null) => {
