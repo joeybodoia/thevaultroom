@@ -10,6 +10,7 @@ interface PokemonCardProps {
 const PokemonCard: React.FC<PokemonCardProps> = ({ pokemon, isPopular = false }) => {
   const [bidAmount, setBidAmount] = React.useState('');
   const [currentBid, setCurrentBid] = React.useState(parseFloat(((pokemon.price || 0) * 0.01).toFixed(2))); // Start at 1% of market price
+  const [currentBid, setCurrentBid] = React.useState(parseFloat(((pokemon.ungraded_market_price || 0) * 0.01).toFixed(2))); // Start at 1% of market price
 
   const formatPrice = (price: number | null) => {
     if (!price) return 'N/A';
@@ -25,7 +26,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({ pokemon, isPopular = false })
     }
   };
 
-  const buyNowPrice = parseFloat(((pokemon.price || 0) * 0.075).toFixed(2)); // 7.5% of market price for buy now
+  const buyNowPrice = parseFloat(((pokemon.ungraded_market_price || 0) * 0.075).toFixed(2)); // 7.5% of market price for buy now
 
   const formatRarity = (rarity: string | null) => {
     if (!rarity) return 'Unknown Rarity';
@@ -48,7 +49,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({ pokemon, isPopular = false })
         {pokemon.image_url ? (
           <img 
             src={pokemon.image_url} 
-            alt={pokemon.name || 'Pokemon Card'}
+            alt={pokemon.card_name || 'Pokemon Card'}
             className="w-full h-full object-contain bg-white"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
@@ -65,7 +66,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({ pokemon, isPopular = false })
       {/* Pokemon Name */}
       <div className="text-center mb-4">
         <h3 className="text-xl font-bold text-black font-pokemon mb-2">
-          {pokemon.name || 'Unknown Pokemon'}
+          {pokemon.card_name || 'Unknown Pokemon'}
         </h3>
         <div className="space-y-1">
           <p className="text-sm text-gray-600 font-pokemon">
@@ -74,7 +75,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({ pokemon, isPopular = false })
           <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
             <span className="font-pokemon">{formatRarity(pokemon.rarity)}</span>
             <span>•</span>
-            <span className="font-pokemon">{pokemon.card_num || 'N/A'}</span>
+            <span className="font-pokemon">{pokemon.card_number || 'N/A'}</span>
           </div>
         </div>
       </div>
@@ -126,7 +127,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({ pokemon, isPopular = false })
         <div className="flex items-center justify-between">
           <span className="text-gray-600 text-sm font-pokemon">Market Price (Ungraded NM):</span>
           <span className="text-black font-bold font-pokemon">
-            {formatPrice(pokemon.price)}
+            {formatPrice(pokemon.ungraded_market_price)}
           </span>
         </div>
         <div className="flex items-center justify-between">

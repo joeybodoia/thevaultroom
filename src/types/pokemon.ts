@@ -1,34 +1,12 @@
-export interface PrismaticPokemonFull {
+export interface DirectBidCard {
   id: number;
-  name: string | null;
-  image_url: string | null;
-  price: number | null;
+  card_name: string;
+  card_number: string | null;
   set_name: string | null;
   rarity: string | null;
-  card_num: string | null;
+  image_url: string | null;
+  ungraded_market_price: number | null;
   date_updated: string | null;
 }
 
-export interface CrownZenithFull {
-  id: number;
-  name: string | null;
-  image_url: string | null;
-  price: number | null;
-  set_name: string | null;
-  rarity: string | null;
-  card_num: string | null;
-  date_updated: string | null;
-}
-
-export interface DestinedRivalsFull {
-  id: number;
-  name: string | null;
-  image_url: string | null;
-  price: number | null;
-  set_name: string | null;
-  rarity: string | null;
-  card_num: string | null;
-  date_updated: string | null;
-}
-
-export type PokemonCard = PrismaticPokemonFull | CrownZenithFull | DestinedRivalsFull;
+export type PokemonCard = DirectBidCard;

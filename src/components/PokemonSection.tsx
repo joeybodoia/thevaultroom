@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Loader, AlertCircle, Sparkles, Search, Filter, ArrowUpDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { PrismaticPokemonFull, CrownZenithFull, DestinedRivalsFull, PokemonCard as PokemonCardType } from '../types/pokemon';
+import { DirectBidCard, PokemonCard as PokemonCardType } from '../types/pokemon';
 import PokemonCard from './PokemonCard';
 
 type SetName = 'prismatic' | 'crown_zenith' | 'destined_rivals';
@@ -12,9 +12,7 @@ const PokemonSection: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SetName>('prismatic');
   const [biddingMode, setBiddingMode] = useState<BiddingMode>('direct');
   const [lotteryActiveTab, setLotteryActiveTab] = useState<LotterySetName>('prismatic');
-  const [prismaticPokemon, setPrismaticPokemon] = useState<PrismaticPokemonFull[]>([]);
-  const [crownZenithPokemon, setCrownZenithPokemon] = useState<CrownZenithFull[]>([]);
-  const [destinedRivalsPokemon, setDestinedRivalsPokemon] = useState<DestinedRivalsFull[]>([]);
+  const [allCards, setAllCards] = useState<DirectBidCard[]>([]);
   const [filteredPokemon, setFilteredPokemon] = useState<PokemonCardType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +22,7 @@ const PokemonSection: React.FC = () => {
   const [sortBy, setSortBy] = useState('price-high');
 
   useEffect(() => {
-    fetchAllPokemon();
+    fetchAllCards();
   }, []);
 
   useEffect(() => {
@@ -35,45 +33,24 @@ const PokemonSection: React.FC = () => {
 
   useEffect(() => {
     filterAndSortPokemon();
-  }, [activeTab, prismaticPokemon, crownZenithPokemon, destinedRivalsPokemon, searchTerm, selectedRarity, sortBy]);
-  const fetchAllPokemon = async () => {
+  }, [activeTab, allCards, searchTerm, selectedRarity, sortBy]);
+
+  const fetchAllCards = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch Prismatic Evolutions
-      const { data: prismaticData, error: prismaticError } = await supabase
-        .from('prismatic_pokemon_full')
+      // Fetch all direct bid cards
+      const { data: cardsData, error: cardsError } = await supabase
+        .from('direct_bid_cards')
         .select('*')
-        .order('price', { ascending: false });
+        .order('ungraded_market_price', { ascending: false });
 
-      if (prismaticError) {
-        throw prismaticError;
+      if (cardsError) {
+        throw cardsError;
       }
 
-      // Fetch Crown Zenith
-      const { data: crownData, error: crownError } = await supabase
-        .from('crown_zenith_full')
-        .select('*')
-        .order('price', { ascending: false });
-
-      if (crownError) {
-        throw crownError;
-      }
-
-      // Fetch Destined Rivals
-      const { data: rivalsData, error: rivalsError } = await supabase
-        .from('destined_rivals_full')
-        .select('*')
-        .order('price', { ascending: false });
-
-      if (rivalsError) {
-        throw rivalsError;
-      }
-
-      setPrismaticPokemon(prismaticData || []);
-      setCrownZenithPokemon(crownData || []);
-      setDestinedRivalsPokemon(rivalsData || []);
+      setAllCards(cardsData || []);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch Pokemon data');
     } finally {
@@ -82,41 +59,41 @@ const PokemonSection: React.FC = () => {
   };
 
   const filterAndSortPokemon = () => {
-    // Get current tab's pokemon data
-    let currentPokemon: PokemonCardType[] = [];
+    // Filter cards by set based on active tab
+    let currentCards: DirectBidCard[] = [];
     if (activeTab === 'prismatic') {
-      currentPokemon = [...prismaticPokemon];
+      currentCards = allCards.filter(card => card.set_name === 'SV: Prismatic Evolutions');
     } else if (activeTab === 'crown_zenith') {
-      currentPokemon = [...crownZenithPokemon];
+      currentCards = allCards.filter(card => card.set_name === 'Crown Zenith: Galarian Gallery');
     } else if (activeTab === 'destined_rivals') {
-      currentPokemon = [...destinedRivalsPokemon];
+      currentCards = allCards.filter(card => card.set_name === 'SV10: Destined Rivals');
     }
 
-    // Filter to only show cards with market price > $50
-    currentPokemon = currentPokemon.filter(poke => (poke.price || 0) > 50);
+    // Filter to only show cards with market price > $50 (should already be filtered in DB, but double-check)
+    currentCards = currentCards.filter(card => (card.ungraded_market_price || 0) > 50);
 
-    let filtered = currentPokemon;
+    let filtered = currentCards;
 
     // Search by name
     if (searchTerm) {
-      filtered = filtered.filter(poke => 
-        poke.name?.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(card => 
+        card.card_name?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     // Filter by set
     if (selectedRarity) {
-      filtered = filtered.filter(poke => {
-        const rarity = poke.rarity?.split(',')[0].trim();
+      filtered = filtered.filter(card => {
+        const rarity = card.rarity?.split(',')[0].trim();
         return rarity === selectedRarity;
       });
     }
 
     // Sort by price
     if (sortBy === 'price-high') {
-      filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
+      filtered.sort((a, b) => (b.ungraded_market_price || 0) - (a.ungraded_market_price || 0));
     } else if (sortBy === 'price-low') {
-      filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
+      filtered.sort((a, b) => (a.ungraded_market_price || 0) - (b.ungraded_market_price || 0));
     }
 
     setFilteredPokemon(filtered);
@@ -124,15 +101,19 @@ const PokemonSection: React.FC = () => {
 
   // Get unique sets and rarities for filter options
   const getCurrentPokemon = () => {
-    if (activeTab === 'prismatic') return prismaticPokemon;
-    if (activeTab === 'crown_zenith') return crownZenithPokemon;
-    if (activeTab === 'destined_rivals') return destinedRivalsPokemon;
+    if (activeTab === 'prismatic') {
+      return allCards.filter(card => card.set_name === 'SV: Prismatic Evolutions');
+    } else if (activeTab === 'crown_zenith') {
+      return allCards.filter(card => card.set_name === 'Crown Zenith: Galarian Gallery');
+    } else if (activeTab === 'destined_rivals') {
+      return allCards.filter(card => card.set_name === 'SV10: Destined Rivals');
+    }
     return [];
   };
 
   const currentPokemon = getCurrentPokemon();
-  const uniqueRarities = [...new Set(currentPokemon.map(poke => {
-    const rarity = poke.rarity?.split(',')[0].trim();
+  const uniqueRarities = [...new Set(currentPokemon.map(card => {
+    const rarity = card.rarity?.split(',')[0].trim();
     return rarity;
   }).filter(Boolean))];
 
@@ -162,7 +143,7 @@ const PokemonSection: React.FC = () => {
             </div>
             <p className="text-gray-600 font-pokemon">{error}</p>
             <button 
-              onClick={fetchAllPokemon}
+              onClick={fetchAllCards}
               className="mt-4 bg-red-600 text-white px-6 py-2 rounded-lg font-pokemon hover:bg-red-700 transition-all"
             >
               Try Again
@@ -173,7 +154,7 @@ const PokemonSection: React.FC = () => {
     );
   }
 
-  if (prismaticPokemon.length === 0 && crownZenithPokemon.length === 0 && destinedRivalsPokemon.length === 0) {
+  if (allCards.length === 0) {
     return (
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
@@ -190,9 +171,21 @@ const PokemonSection: React.FC = () => {
   }
 
   const tabs = [
-    { id: 'prismatic' as SetName, name: 'Prismatic Evolutions', count: prismaticPokemon.length },
-    { id: 'crown_zenith' as SetName, name: 'Crown Zenith', count: crownZenithPokemon.length },
-    { id: 'destined_rivals' as SetName, name: 'Destined Rivals', count: destinedRivalsPokemon.length }
+    { 
+      id: 'prismatic' as SetName, 
+      name: 'Prismatic Evolutions', 
+      count: allCards.filter(card => card.set_name === 'SV: Prismatic Evolutions').length 
+    },
+    { 
+      id: 'crown_zenith' as SetName, 
+      name: 'Crown Zenith', 
+      count: allCards.filter(card => card.set_name === 'Crown Zenith: Galarian Gallery').length 
+    },
+    { 
+      id: 'destined_rivals' as SetName, 
+      name: 'Destined Rivals', 
+      count: allCards.filter(card => card.set_name === 'SV10: Destined Rivals').length 
+    }
   ];
 
   return (
