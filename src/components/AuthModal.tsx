@@ -52,14 +52,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode }) => {
           .from('users')
           .insert({
             id: authData.user.id,
-           is_admin: false,
+            is_admin: false,
             username: username || null,
             email: email,
           });
 
         if (profileError) {
           console.error('Profile creation error:', profileError);
-          // Don't throw here as the auth user was created successfully
+          throw new Error(`Profile creation failed: ${profileError.message}`);
         }
 
         setSuccess('Account created successfully! Please check your email to verify your account.');
