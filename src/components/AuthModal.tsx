@@ -52,6 +52,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode }) => {
           .from('users')
           .insert({
             id: authData.user.id,
+           is_admin: false,
             username: username || null,
             email: email,
           });
