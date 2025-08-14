@@ -137,13 +137,22 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
+    setError(null);
+    
     try {
+      console.log('Starting sign out process...');
       const { error } = await supabase.auth.signOut();
+      console.log('Sign out response:', error);
+      
       if (error) throw error;
+      
+      console.log('Sign out successful, closing modal...');
       onClose();
     } catch (err: any) {
+      console.error('Sign out error:', err);
       setError(err.message || 'Failed to sign out');
     } finally {
+      console.log('Setting isSigningOut to false');
       setIsSigningOut(false);
     }
   };
