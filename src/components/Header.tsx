@@ -126,8 +126,7 @@ const Header: React.FC = () => {
               <span className="text-sm font-pokemon">1,247 online</span>
             </div>
             <WalletButton />
-            {!loading && (
-          {!loading && user ? (
+            {!loading && user ? (
             <button
               onClick={openProfileModal}
               className="w-10 h-10 bg-gradient-to-br from-red-600 to-yellow-400 rounded-full flex items-center justify-center hover:scale-110 transition-transform border-2 border-white/20"
@@ -145,7 +144,7 @@ const Header: React.FC = () => {
                 </span>
               )}
             </button>
-          )}
+          ) : null}
           {!loading && !user && (
             <>
               <button 
@@ -163,6 +162,7 @@ const Header: React.FC = () => {
             </>
           )}
         </div>
+      </div>
       </div>
       </header>
       
