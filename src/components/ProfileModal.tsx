@@ -70,35 +70,55 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       const fullUploadUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/public/avatars/${uploadPath}`;
       
       setDebugInfo(`Starting upload - File: ${file.name} | Size: ${file.size} bytes | Type: ${file.type} | Upload path: ${uploadPath}`);
-      // First, check if we can access the storage bucket
-      setDebugInfo(prev => (prev || '') + '\n\nChecking storage bucket access...');
-      console.log('Checking storage bucket...');
+      
+      // First, let's check basic Supabase connectivity
+      setDebugInfo(prev => (prev || '') + '\n\nChecking Supabase connection...');
+      console.log('Checking Supabase connection...');
       
       try {
-        const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
-        console.log('Buckets response:', buckets, bucketError);
-        setDebugInfo(prev => (prev || '') + `\n\nBucket check - Available buckets: ${JSON.stringify(buckets)} | Error: ${bucketError ? JSON.stringify(bucketError) : 'none'}`);
+        // Add timeout to all Supabase calls
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Supabase connection timeout after 10 seconds')), 10000);
+        });
+        
+        console.log('About to call supabase.storage.listBuckets()...');
+        setDebugInfo(prev => (prev || '') + '\n\nCalling supabase.storage.listBuckets()...');
+        
+        const bucketsPromise = supabase.storage.listBuckets();
+        const { data: buckets, error: bucketError } = await Promise.race([bucketsPromise, timeoutPromise]) as any;
+        
+        console.log('listBuckets completed:', { buckets, bucketError });
+        setDebugInfo(prev => (prev || '') + `\n\nlistBuckets response - Buckets: ${JSON.stringify(buckets)} | Error: ${bucketError ? JSON.stringify(bucketError) : 'none'}`);
         
         if (bucketError) {
+          console.error('Bucket error:', bucketError);
           throw new Error(`Storage access error: ${bucketError.message}`);
         }
         
+        if (!buckets) {
+          throw new Error('No buckets returned from Supabase');
+        }
+        
         const avatarBucket = buckets?.find(bucket => bucket.name === 'avatars');
+        setDebugInfo(prev => (prev || '') + `\n\nLooking for 'avatars' bucket in: ${buckets.map(b => b.name).join(', ')}`);
+        
         if (!avatarBucket) {
           throw new Error('Avatars storage bucket not found. Available buckets: ' + buckets?.map(b => b.name).join(', '));
         }
         
-        setDebugInfo(prev => (prev || '') + '\n\nStorage bucket verified successfully!');
+        setDebugInfo(prev => (prev || '') + '\n\n✅ Storage bucket verified successfully!');
+        console.log('Storage bucket verified successfully');
+        
       } catch (bucketErr: any) {
-        setDebugInfo(prev => (prev || '') + `\n\nBucket check failed: ${bucketErr.message}`);
+        console.error('Bucket check failed:', bucketErr);
+        setDebugInfo(prev => (prev || '') + `\n\n❌ Bucket check failed: ${bucketErr.message}`);
         throw bucketErr;
       }
       
-      
-      setDebugInfo(prev => prev + '\n\nCalling supabase.storage.from("avatars").upload()...');
+      setDebugInfo(prev => (prev || '') + '\n\nStarting file upload...');
       console.log('About to call Supabase upload');
       
-      // Add timeout to the upload
+      // Now try the upload with timeout
       const uploadPromise = supabase.storage
         .from('avatars')
         .upload(uploadPath, file, {
@@ -106,11 +126,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
           upsert: true
         });
       
-      const timeoutPromise = new Promise((_, reject) => {
+      const uploadTimeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000);
       });
       
-      const { data, error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]) as any;
+      const { data, error: uploadError } = await Promise.race([uploadPromise, uploadTimeoutPromise]) as any;
 
       console.log('Supabase upload completed');
       console.log('Upload data:', data);
