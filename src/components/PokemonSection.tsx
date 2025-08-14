@@ -40,18 +40,37 @@ const PokemonSection: React.FC = () => {
       setLoading(true);
       setError(null);
 
+      // Test basic Supabase connection first
+      console.log('Testing Supabase connection...');
+      const { data: testData, error: testError } = await supabase
+        .from('direct_bid_cards')
+        .select('count')
+        .limit(1);
+      
+      console.log('Supabase connection test result:', { testData, testError });
+      
+      if (testError) {
+        console.error('Supabase connection failed:', testError);
+        throw new Error(`Connection failed: ${testError.message}`);
+      }
+
       // Fetch all direct bid cards
+      console.log('Fetching all cards...');
       const { data: cardsData, error: cardsError } = await supabase
         .from('direct_bid_cards')
         .select('*')
         .order('ungraded_market_price', { ascending: false });
 
+      console.log('Cards fetch result:', { cardsData, cardsError });
+
       if (cardsError) {
         throw cardsError;
       }
 
+      console.log(`Successfully fetched ${cardsData?.length || 0} cards`);
       setAllCards(cardsData || []);
     } catch (err: any) {
+      console.error('fetchAllCards error:', err);
       setError(err.message || 'Failed to fetch Pokemon data');
     } finally {
       setLoading(false);
