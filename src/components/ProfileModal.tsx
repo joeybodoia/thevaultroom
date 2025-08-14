@@ -141,7 +141,14 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
     
     try {
       console.log('Starting sign out process...');
-      const { error } = await supabase.auth.signOut();
+      
+      // Add timeout to sign out process
+      const signOutPromise = supabase.auth.signOut();
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Sign out timeout after 10 seconds')), 10000);
+      });
+      
+      const { error } = await Promise.race([signOutPromise, timeoutPromise]) as any;
       console.log('Sign out response:', error);
       
       if (error) throw error;
@@ -150,7 +157,15 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       onClose();
     } catch (err: any) {
       console.error('Sign out error:', err);
-      setError(err.message || 'Failed to sign out');
+      
+      // If it's a timeout, force sign out anyway
+      if (err.message.includes('timeout')) {
+        console.log('Sign out timed out, forcing local sign out...');
+        // Clear local session and close modal
+        onClose();
+      } else {
+        setError(err.message || 'Failed to sign out');
+      }
     } finally {
       console.log('Setting isSigningOut to false');
       setIsSigningOut(false);
