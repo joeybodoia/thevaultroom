@@ -50,7 +50,7 @@ const PokemonSection: React.FC = () => {
         .limit(1);
       
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Connection test timeout after 10 seconds')), 10000);
+        setTimeout(() => reject(new Error('Connection test timeout after 30 seconds')), 30000);
       });
       
       const { data: testData, error: testError } = await Promise.race([
@@ -77,7 +77,7 @@ const PokemonSection: React.FC = () => {
         .order('ungraded_market_price', { ascending: false });
       
       const cardsTimeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Cards fetch timeout after 15 seconds')), 15000);
+        setTimeout(() => reject(new Error('Cards fetch timeout after 45 seconds')), 45000);
       });
       
       const { data: cardsData, error: cardsError } = await Promise.race([
