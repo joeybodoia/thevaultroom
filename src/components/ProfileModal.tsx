@@ -71,15 +71,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       
       setDebugInfo(`Starting upload - File: ${file.name} | Size: ${file.size} bytes | Type: ${file.type} | Upload path: ${uploadPath}`);
       
-      const { data, error } = await supabase.storage
-        .from('avatars')
-      // Add a small delay to ensure UI updates
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
       setDebugInfo(prev => prev + '\n\nCalling supabase.storage.from("avatars").upload()...');
       console.log('About to call Supabase upload');
       
-      // Try the upload with more detailed error handling
+      const { data, error: uploadError } = await supabase.storage
+        .from('avatars')
         .upload(uploadPath, file, {
           cacheControl: '3600',
           upsert: true
@@ -87,37 +83,34 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
 
       console.log('Supabase upload completed');
       console.log('Upload data:', data);
-      console.log('Upload error:', error);
+      console.log('Upload error:', uploadError);
       
-      setDebugInfo(`Upload response - Data: ${JSON.stringify(data, null, 2)} | Error: ${error ? JSON.stringify(error, null, 2) : 'null'} | Full URL will be: ${fullUploadUrl}`);
-      console.log('Upload Response:', uploadResponse);
+      setDebugInfo(prev => prev + `\n\nUpload response - Data: ${JSON.stringify(data, null, 2)} | Error: ${uploadError ? JSON.stringify(uploadError, null, 2) : 'null'} | Full URL will be: ${fullUploadUrl}`);
       
-      if (error) {
-        setDebugInfo(`Upload failed with error: ${error.message} | Error code: ${error.statusCode || 'unknown'} | Error details: ${JSON.stringify(error, null, 2)}`);
-        console.error('Upload Error Details:', errorDetails);
-        throw error;
+      if (uploadError) {
+        setDebugInfo(prev => prev + `\n\nUpload failed with error: ${uploadError.message} | Error code: ${uploadError.statusCode || 'unknown'} | Error details: ${JSON.stringify(uploadError, null, 2)}`);
+        console.error('Upload Error Details:', uploadError);
+        throw uploadError;
       }
 
-      console.log('Upload Success:', successMsg);
-      setDebugInfo(`Upload successful! Data: ${JSON.stringify(data, null, 2)} | Generated URL: ${fullUploadUrl}`);
+      console.log('Upload Success!');
+      setDebugInfo(prev => prev + `\n\nUpload successful! Data: ${JSON.stringify(data, null, 2)} | Generated URL: ${fullUploadUrl}`);
       // Generate public URL (note: includes /public/ in the path)
       const avatarUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/public/avatars/${file.name}`;
 
       // Update user avatar URL in database
-      setDebugInfo(`Updating database with avatar URL: ${avatarUrl} for user ID: ${userId}`);
+      setDebugInfo(prev => prev + `\n\nUpdating database with avatar URL: ${avatarUrl} for user ID: ${userId}`);
       const { error: updateError } = await supabase
-      console.log('Database Update:', dbUpdateMsg);
-      
         .from('users')
-        .update({ avatar_url: avatarUrl })
+        .update({ avatar: avatarUrl })
         .eq('id', userId);
 
       if (updateError) {
-        setDebugInfo(`Database update error: ${updateError.message} | Error details: ${JSON.stringify(updateError, null, 2)}`);
+        setDebugInfo(prev => prev + `\n\nDatabase update error: ${updateError.message} | Error details: ${JSON.stringify(updateError, null, 2)}`);
         throw updateError;
       }
 
-      setDebugInfo(`Database updated successfully with URL: ${avatarUrl}`);
+      setDebugInfo(prev => prev + `\n\nDatabase updated successfully with URL: ${avatarUrl}`);
       // Update parent component with new avatar URL
       onAvatarUpdate(avatarUrl);
 
@@ -128,7 +121,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       }, 1500);
 
     } catch (err: any) {
-      setDebugInfo(`Error occurred: ${err.message} | Full error: ${JSON.stringify(err)}`);
+      setDebugInfo(prev => prev + `\n\nError occurred: ${err.message} | Full error: ${JSON.stringify(err)}`);
       setError(err.message || 'Failed to upload avatar');
       setUploadStatus('error');
     } finally {
@@ -179,7 +172,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       setUploadStatus('error');
     } finally {
       setIsRemovingAvatar(false);
-      console.log('Upload process completed, isUploading set to false');
     }
   };
 
