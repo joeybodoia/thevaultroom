@@ -137,7 +137,7 @@ const Header: React.FC = () => {
             </div>
             <WalletButton />
             <div className="text-white text-xs">
-              Loading: {loading.toString()}, User: {user ? 'Yes' : 'No'}
+              Loading: {loading.toString()}, User: {user ? 'Yes' : 'No'}, Username: {user?.user_metadata?.username || 'N/A'}
             </div>
             {!loading && (
               <>
