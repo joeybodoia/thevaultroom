@@ -60,10 +60,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
 
       setDebugInfo(`Starting upload: userId=${userId}, filename=${filename}`);
       // Upload file to storage
-      setDebugInfo(`Attempting upload to: ${userId}/${filename}`);
+      const uploadPath = `${userId}/${filename}`;
+      const fullUploadUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/avatars/${uploadPath}`;
+      setDebugInfo(`Attempting upload to path: ${uploadPath} | Full URL: ${fullUploadUrl}`);
+      
       const { data, error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(`${userId}/${filename}`, file, {
+        .upload(uploadPath, file, {
           cacheControl: '3600',
           upsert: true
         });
