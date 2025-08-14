@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Play, Users, Trophy } from 'lucide-react';
 import WalletButton from './WalletButton';
 import AuthModal from './AuthModal';
+import ProfileModal from './ProfileModal';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
@@ -13,12 +14,17 @@ const Header: React.FC = () => {
   });
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileModal, setProfileModal] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     // Get initial session
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
+      if (session?.user) {
+        await loadUserAvatar(session.user.id);
+      }
       setLoading(false);
     };
 
@@ -28,6 +34,11 @@ const Header: React.FC = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setUser(session?.user ?? null);
+        if (session?.user) {
+          await loadUserAvatar(session.user.id);
+        } else {
+          setAvatarUrl(null);
+        }
         if (event === 'SIGNED_IN') {
           closeAuthModal();
         }
@@ -37,6 +48,30 @@ const Header: React.FC = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  const loadUserAvatar = async (userId: string) => {
+    try {
+      // Get user avatar path from database
+      const { data: userData } = await supabase
+        .from('users')
+        .select('avatar')
+        .eq('id', userId)
+        .single();
+
+      if (userData?.avatar) {
+        // Get signed URL for the avatar
+        const { data: signedUrlData } = await supabase.storage
+          .from('avatars')
+          .createSignedUrl(userData.avatar, 3600); // 1 hour expiry
+
+        if (signedUrlData?.signedUrl) {
+          setAvatarUrl(signedUrlData.signedUrl);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading avatar:', error);
+    }
+  };
+
   const openAuthModal = (mode: 'signin' | 'signup') => {
     setAuthModal({ isOpen: true, mode });
   };
@@ -45,10 +80,22 @@ const Header: React.FC = () => {
     setAuthModal({ isOpen: false, mode: 'signin' });
   };
 
-  const handleAvatarClick = () => {
-    // TODO: Open user menu/profile
-    console.log('Avatar clicked');
+  const openProfileModal = () => {
+    setProfileModal(true);
   };
+
+  const closeProfileModal = () => {
+    setProfileModal(false);
+  };
+
+  const handleAvatarClick = () => {
+    openProfileModal();
+  };
+
+  const handleAvatarUpdate = (newAvatarUrl: string | null) => {
+    setAvatarUrl(newAvatarUrl);
+  };
+
   return (
     <>
       <header className="bg-black border-b border-gray-200">
@@ -82,13 +129,21 @@ const Header: React.FC = () => {
             {!loading && (
               user ? (
                 <button
-                  onClick={handleAvatarClick}
+                  onClick={openProfileModal}
                   className="w-10 h-10 bg-gradient-to-br from-red-600 to-yellow-400 rounded-full flex items-center justify-center hover:scale-110 transition-transform border-2 border-white/20"
                   title="User Profile"
                 >
-                  <span className="text-white font-bold font-pokemon text-lg">
-                    {user.email?.charAt(0).toUpperCase() || 'U'}
-                  </span>
+                  {avatarUrl ? (
+                    <img 
+                      src={avatarUrl} 
+                      alt="User avatar" 
+                      className="w-full h-full object-cover rounded-full"
+                    />
+                  ) : (
+                    <span className="text-white font-bold font-pokemon text-lg">
+                      {user.email?.charAt(0).toUpperCase() || 'U'}
+                    </span>
+                  )}
                 </button>
               ) : (
                 <>
@@ -117,6 +172,16 @@ const Header: React.FC = () => {
         onClose={closeAuthModal}
         mode={authModal.mode}
       />
+      
+      {user && (
+        <ProfileModal
+          isOpen={profileModal}
+          onClose={closeProfileModal}
+          user={user}
+          currentAvatarUrl={avatarUrl}
+          onAvatarUpdate={handleAvatarUpdate}
+        />
+      )}
     </>
   );
 };

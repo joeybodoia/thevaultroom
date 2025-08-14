@@ -1,0 +1,206 @@
+import React, { useState, useRef } from 'react';
+import { X, Upload, User, Loader, CheckCircle, AlertCircle } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import type { User } from '@supabase/supabase-js';
+
+interface ProfileModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  user: User;
+  currentAvatarUrl?: string | null;
+  onAvatarUpdate: (newAvatarUrl: string | null) => void;
+}
+
+const ProfileModal: React.FC<ProfileModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  user, 
+  currentAvatarUrl,
+  onAvatarUpdate 
+}) => {
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      setUploadStatus('error');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File size must be less than 5MB');
+      setUploadStatus('error');
+      return;
+    }
+
+    setIsUploading(true);
+    setError(null);
+    setUploadStatus('idle');
+
+    try {
+      const userId = user.id;
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${userId}/avatar.${fileExt}`;
+
+      // Upload file to storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Update user avatar path in database
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ avatar: filePath })
+        .eq('id', userId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Get the new signed URL
+      const { data: signedUrlData } = await supabase.storage
+        .from('avatars')
+        .createSignedUrl(filePath, 3600); // 1 hour expiry
+
+      if (signedUrlData?.signedUrl) {
+        onAvatarUpdate(signedUrlData.signedUrl);
+      }
+
+      setUploadStatus('success');
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload avatar');
+      setUploadStatus('error');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-2xl font-bold text-black font-pokemon">Profile Settings</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        <div className="space-y-6">
+          {/* Current Avatar Display */}
+          <div className="text-center">
+            <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden border-4 border-gray-200">
+              {currentAvatarUrl ? (
+                <img 
+                  src={currentAvatarUrl} 
+                  alt="Current avatar" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-red-600 to-yellow-400 flex items-center justify-center">
+                  <span className="text-white font-bold font-pokemon text-2xl">
+                    {user.email?.charAt(0).toUpperCase() || 'U'}
+                  </span>
+                </div>
+              )}
+            </div>
+            <p className="text-gray-600 font-pokemon">{user.email}</p>
+          </div>
+
+          {/* Upload Section */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-black font-pokemon">Change Avatar</h4>
+            
+            <div 
+              onClick={handleFileSelect}
+              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-red-600 hover:bg-red-50 transition-all"
+            >
+              <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+              <p className="text-gray-600 font-pokemon">Click to upload new avatar</p>
+              <p className="text-gray-400 text-sm font-pokemon">PNG, JPG up to 5MB</p>
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+          </div>
+
+          {/* Status Messages */}
+          {uploadStatus === 'success' && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2 text-green-800">
+                <CheckCircle className="h-5 w-5" />
+                <span className="font-semibold font-pokemon">Avatar Updated!</span>
+              </div>
+              <p className="text-green-600 text-sm mt-1 font-pokemon">
+                Your new avatar has been saved successfully.
+              </p>
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2 text-red-800">
+                <AlertCircle className="h-5 w-5" />
+                <span className="font-semibold font-pokemon">Upload Failed</span>
+              </div>
+              <p className="text-red-600 text-sm mt-1 font-pokemon">{error}</p>
+            </div>
+          )}
+
+          {/* Upload Button */}
+          <button
+            onClick={handleFileSelect}
+            disabled={isUploading}
+            className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon flex items-center justify-center space-x-2"
+          >
+            {isUploading ? (
+              <>
+                <Loader className="h-4 w-4 animate-spin" />
+                <span>Uploading...</span>
+              </>
+            ) : (
+              <>
+                <User className="h-4 w-4" />
+                <span>Choose New Avatar</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ProfileModal;
