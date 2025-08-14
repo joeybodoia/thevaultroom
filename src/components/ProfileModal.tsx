@@ -24,14 +24,24 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isRemovingAvatar, setIsRemovingAvatar] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = () => {
     fileInputRef.current?.click();
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setError(null);
+      setUploadStatus('idle');
+    }
+  };
+
+  const handleFileUpload = async () => {
+    const file = selectedFile;
     if (!file) return;
 
     // Validate file type
@@ -94,6 +104,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       onAvatarUpdate(avatarUrl);
 
       setUploadStatus('success');
+      setSelectedFile(null);
       setTimeout(() => {
         onClose();
       }, 1500);
@@ -218,9 +229,41 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              onChange={handleFileUpload}
+              onChange={handleFileChange}
               className="hidden"
             />
+
+            {/* Show selected file and upload button */}
+            {selectedFile && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-blue-800 font-pokemon">Selected File:</p>
+                    <p className="text-blue-600 text-sm font-pokemon">{selectedFile.name}</p>
+                    <p className="text-blue-500 text-xs font-pokemon">
+                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleFileUpload}
+                    disabled={isUploading}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon flex items-center space-x-2"
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader className="h-4 w-4 animate-spin" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4" />
+                        <span>Upload</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Status Messages */}
