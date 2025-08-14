@@ -106,6 +106,9 @@ const Header: React.FC = () => {
     setAvatarUrl(newAvatarUrl);
   };
 
+  // Check if user is logged in by checking if we can access username
+  const isLoggedIn = user?.user_metadata?.username;
+
   return (
     <>
       <header className="bg-black border-b border-gray-200">
@@ -137,44 +140,40 @@ const Header: React.FC = () => {
             </div>
             <WalletButton />
             <div className="text-white text-xs">
-              Loading: {loading.toString()}, User: {user ? 'Yes' : 'No'}, Username: {user?.user_metadata?.username || 'N/A'}
+              Loading: {loading.toString()}, User: {user ? 'Yes' : 'No'}, Username: {user?.user_metadata?.username || 'N/A'}, IsLoggedIn: {isLoggedIn ? 'Yes' : 'No'}
             </div>
-            {!loading && (
-              <>
-                {user ? (
-                  <button
-                    onClick={openProfileModal}
-                    className="w-10 h-10 bg-gradient-to-br from-red-600 to-yellow-400 rounded-full flex items-center justify-center hover:scale-110 transition-transform border-2 border-white/20"
-                    title="User Profile"
-                  >
-                    {avatarUrl ? (
-                      <img 
-                        src={avatarUrl} 
-                        alt="User avatar" 
-                        className="w-full h-full object-cover rounded-full"
-                      />
-                    ) : (
-                      <span className="text-white font-bold font-pokemon text-lg">
-                        {user.email?.charAt(0).toUpperCase() || 'U'}
-                      </span>
-                    )}
-                  </button>
+            {isLoggedIn ? (
+              <button
+                onClick={openProfileModal}
+                className="w-10 h-10 bg-gradient-to-br from-red-600 to-yellow-400 rounded-full flex items-center justify-center hover:scale-110 transition-transform border-2 border-white/20"
+                title="User Profile"
+              >
+                {avatarUrl ? (
+                  <img 
+                    src={avatarUrl} 
+                    alt="User avatar" 
+                    className="w-full h-full object-cover rounded-full"
+                  />
                 ) : (
-                  <>
-                    <button 
-                      onClick={() => openAuthModal('signup')}
-                      className="bg-yellow-400 text-black px-4 py-2 rounded-lg font-semibold hover:bg-yellow-500 transition-all font-pokemon"
-                    >
-                      Sign Up
-                    </button>
-                    <button 
-                      onClick={() => openAuthModal('signin')}
-                      className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-all font-pokemon"
-                    >
-                      Sign In
-                    </button>
-                  </>
+                  <span className="text-white font-bold font-pokemon text-lg">
+                    {user?.email?.charAt(0).toUpperCase() || 'U'}
+                  </span>
                 )}
+              </button>
+            ) : (
+              <>
+                <button 
+                  onClick={() => openAuthModal('signup')}
+                  className="bg-yellow-400 text-black px-4 py-2 rounded-lg font-semibold hover:bg-yellow-500 transition-all font-pokemon"
+                >
+                  Sign Up
+                </button>
+                <button 
+                  onClick={() => openAuthModal('signin')}
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-all font-pokemon"
+                >
+                  Sign In
+                </button>
               </>
             )}
           </div>
