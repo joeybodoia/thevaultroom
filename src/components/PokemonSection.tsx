@@ -42,28 +42,54 @@ const PokemonSection: React.FC = () => {
 
       // Test basic Supabase connection first
       console.log('Testing Supabase connection...');
-      const { data: testData, error: testError } = await supabase
+      
+      // Add timeout to the connection test
+      const connectionTestPromise = supabase
         .from('direct_bid_cards')
         .select('count')
         .limit(1);
+      
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Connection test timeout after 10 seconds')), 10000);
+      });
+      
+      const { data: testData, error: testError } = await supabase
+      const { data: testData, error: testError } = await Promise.race([
+        connectionTestPromise,
+        timeoutPromise
+      ]) as any;
       
       console.log('Supabase connection test result:', { testData, testError });
       
       if (testError) {
         console.error('Supabase connection failed:', testError);
+        console.error('Error details:', JSON.stringify(testError, null, 2));
         throw new Error(`Connection failed: ${testError.message}`);
       }
+      
+      console.log('Connection test successful, proceeding to fetch cards...');
 
       // Fetch all direct bid cards
       console.log('Fetching all cards...');
-      const { data: cardsData, error: cardsError } = await supabase
+      
+      const cardsPromise = supabase
         .from('direct_bid_cards')
         .select('*')
         .order('ungraded_market_price', { ascending: false });
+      
+      const cardsTimeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Cards fetch timeout after 15 seconds')), 15000);
+      });
+      
+      const { data: cardsData, error: cardsError } = await Promise.race([
+        cardsPromise,
+        cardsTimeoutPromise
+      ]) as any;
 
       console.log('Cards fetch result:', { cardsData, cardsError });
 
       if (cardsError) {
+        console.error('Cards fetch error details:', JSON.stringify(cardsError, null, 2));
         throw cardsError;
       }
 
@@ -71,6 +97,7 @@ const PokemonSection: React.FC = () => {
       setAllCards(cardsData || []);
     } catch (err: any) {
       console.error('fetchAllCards error:', err);
+      console.error('Error stack:', err.stack);
       setError(err.message || 'Failed to fetch Pokemon data');
     } finally {
       setLoading(false);
