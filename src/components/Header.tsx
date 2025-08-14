@@ -102,9 +102,19 @@ const Header: React.FC = () => {
   const handleForceLogout = async () => {
     try {
       console.log('Force logout initiated...');
-      await supabase.auth.signOut();
+      // Force clear local session first
       setUser(null);
       setAvatarUrl(null);
+      
+      // Clear any stored session data
+      localStorage.removeItem('sb-bzqnxgohxamuqgyrjwls-auth-token');
+      sessionStorage.clear();
+      
+      // Try to sign out from Supabase (but don't wait for it)
+      supabase.auth.signOut().catch(err => {
+        console.log('Server signout failed (expected):', err.message);
+      });
+      
       console.log('Force logout completed');
     } catch (error) {
       console.error('Force logout error:', error);
@@ -113,6 +123,45 @@ const Header: React.FC = () => {
       setAvatarUrl(null);
     }
   };
+
+  // Auto-logout after 30 minutes of inactivity
+  useEffect(() => {
+    let inactivityTimer: NodeJS.Timeout;
+    let lastActivity = Date.now();
+
+    const resetTimer = () => {
+      lastActivity = Date.now();
+      clearTimeout(inactivityTimer);
+      
+      if (user) {
+        inactivityTimer = setTimeout(() => {
+          console.log('Auto-logout due to inactivity');
+          handleForceLogout();
+        }, 30 * 60 * 1000); // 30 minutes
+      }
+    };
+
+    const handleActivity = () => {
+      resetTimer();
+    };
+
+    // Listen for user activity
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    
+    if (user) {
+      events.forEach(event => {
+        document.addEventListener(event, handleActivity, true);
+      });
+      resetTimer(); // Start the timer
+    }
+
+    return () => {
+      clearTimeout(inactivityTimer);
+      events.forEach(event => {
+        document.removeEventListener(event, handleActivity, true);
+      });
+    };
+  }, [user]);
 
   const handleLogoClick = () => {
     if (isLoggedIn) {
