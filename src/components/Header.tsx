@@ -20,12 +20,15 @@ const Header: React.FC = () => {
   useEffect(() => {
     // Get initial session
     const getSession = async () => {
+      console.log('Checking initial session...');
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('Initial session:', session);
       setUser(session?.user ?? null);
       if (session?.user) {
         await loadUserAvatar(session.user.id);
       }
       setLoading(false);
+      console.log('Loading set to false, user:', session?.user ?? null);
     };
 
     getSession();
@@ -33,6 +36,7 @@ const Header: React.FC = () => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session);
         setUser(session?.user ?? null);
         if (session?.user) {
           await loadUserAvatar(session.user.id);
@@ -126,6 +130,9 @@ const Header: React.FC = () => {
               <span className="text-sm font-pokemon">1,247 online</span>
             </div>
             <WalletButton />
+            <div className="text-white text-xs">
+              Loading: {loading.toString()}, User: {user ? 'Yes' : 'No'}
+            </div>
             {!loading && (
               <>
                 {user ? (
