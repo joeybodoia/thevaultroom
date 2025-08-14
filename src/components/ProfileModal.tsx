@@ -60,6 +60,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
 
       setDebugInfo(`Starting upload: userId=${userId}, filename=${filename}`);
       // Upload file to storage
+      setDebugInfo(`Attempting upload to: avatars/${userId}/${filename}`);
       const { data, error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(`avatars/${userId}/${filename}`, file, {
@@ -67,7 +68,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
           upsert: true
         });
 
+      setDebugInfo(`Upload response - Data: ${JSON.stringify(data)}, Error: ${JSON.stringify(uploadError)}`);
       if (uploadError) {
+        setDebugInfo(`Upload failed with error: ${uploadError.message} (Code: ${uploadError.statusCode})`);
         throw uploadError;
       }
 
@@ -97,7 +100,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       }, 1500);
 
     } catch (err: any) {
-      setDebugInfo(`Error occurred: ${err.message}`);
+      setDebugInfo(`Error occurred: ${err.message} | Full error: ${JSON.stringify(err)}`);
       setError(err.message || 'Failed to upload avatar');
       setUploadStatus('error');
     } finally {
