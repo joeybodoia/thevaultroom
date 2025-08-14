@@ -68,8 +68,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       const uploadPath = file.name;
 
       const fullUploadUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/public/avatars/${uploadPath}`;
-      // Upload file to storage
-      setDebugInfo(`File: ${file.name} | Upload path: ${uploadPath} | Full URL: ${fullUploadUrl}`);
+      
+      setDebugInfo(`Starting upload - File: ${file.name} | Size: ${file.size} bytes | Type: ${file.type} | Upload path: ${uploadPath}`);
       
       const { data, error } = await supabase.storage
         .from('avatars')
@@ -78,24 +78,26 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
           upsert: true
         });
 
-      setDebugInfo(`Upload response - Data: ${JSON.stringify(data)}, Error: ${JSON.stringify(error)}`);
+      setDebugInfo(`Upload response - Data: ${JSON.stringify(data, null, 2)} | Error: ${error ? JSON.stringify(error, null, 2) : 'null'} | Full URL will be: ${fullUploadUrl}`);
+      
       if (error) {
-        setDebugInfo(`Upload failed with error: ${error.message}`);
+        setDebugInfo(`Upload failed with error: ${error.message} | Error code: ${error.statusCode || 'unknown'} | Error details: ${JSON.stringify(error, null, 2)}`);
         throw error;
       }
 
-      setDebugInfo(`Upload successful. Data: ${JSON.stringify(data)}`);
+      setDebugInfo(`Upload successful! Data: ${JSON.stringify(data, null, 2)} | Generated URL: ${fullUploadUrl}`);
       // Generate public URL (note: includes /public/ in the path)
       const avatarUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/public/avatars/${file.name}`;
 
       // Update user avatar URL in database
+      setDebugInfo(`Updating database with avatar URL: ${avatarUrl} for user ID: ${userId}`);
       const { error: updateError } = await supabase
         .from('users')
         .update({ avatar_url: avatarUrl })
         .eq('id', userId);
 
       if (updateError) {
-        setDebugInfo(`Database update error: ${updateError.message}`);
+        setDebugInfo(`Database update error: ${updateError.message} | Error details: ${JSON.stringify(updateError, null, 2)}`);
         throw updateError;
       }
 
