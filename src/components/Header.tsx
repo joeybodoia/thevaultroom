@@ -139,9 +139,6 @@ const Header: React.FC = () => {
               <span className="text-sm font-pokemon">1,247 online</span>
             </div>
             <WalletButton />
-            <div className="text-white text-xs">
-              Loading: {loading.toString()}, User: {user ? 'Yes' : 'No'}, Username: {user?.user_metadata?.username || 'N/A'}, IsLoggedIn: {isLoggedIn ? 'Yes' : 'No'}
-            </div>
             {isLoggedIn ? (
               <button
                 onClick={openProfileModal}
