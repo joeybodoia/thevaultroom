@@ -1,12 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { X, Upload, User, Loader, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import type { User } from '@supabase/supabase-js';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface ProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  user: User;
+  user: SupabaseUser;
   currentAvatarUrl?: string | null;
   onAvatarUpdate: (newAvatarUrl: string | null) => void;
 }
