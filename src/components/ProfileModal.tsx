@@ -57,7 +57,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       const userId = user.id;
       const uploadPath = file.name;
 
-      setDebugInfo(`Starting upload: userId=${userId}, filename=${file.name}`);
+      const fullUploadUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/public/avatars/${uploadPath}`;
       // Upload file to storage
       const fullUploadUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/avatars/${file.name}`;
       setDebugInfo(`File: ${file.name} | Upload path: ${uploadPath} | Full URL: ${fullUploadUrl}`);
