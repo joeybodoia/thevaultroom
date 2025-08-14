@@ -106,6 +106,12 @@ const Header: React.FC = () => {
     setAvatarUrl(newAvatarUrl);
   };
 
+  const handleLogoClick = () => {
+    if (isLoggedIn) {
+      openProfileModal();
+    }
+  };
+
   // Check if user is logged in by checking if we can access username
   const isLoggedIn = user?.user_metadata?.username;
 
@@ -114,7 +120,10 @@ const Header: React.FC = () => {
       <header className="bg-black border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center space-x-2">
+          <div 
+            className={`flex items-center space-x-2 ${isLoggedIn ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+            onClick={handleLogoClick}
+          >
             <img 
               src="https://i.imgur.com/5ke3mJw.png" 
               alt="The Vault Room Logo" 

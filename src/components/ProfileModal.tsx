@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload, User, Loader, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, Upload, User, Loader, CheckCircle, AlertCircle, LogOut, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -21,6 +21,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isRemovingAvatar, setIsRemovingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = () => {
@@ -98,6 +100,48 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
     }
   };
 
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign out');
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    setIsRemovingAvatar(true);
+    setError(null);
+    
+    try {
+      const userId = user.id;
+      
+      // Remove avatar from database
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ avatar: null })
+        .eq('id', userId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Update parent component
+      onAvatarUpdate(null);
+      setUploadStatus('success');
+      
+    } catch (err: any) {
+      setError(err.message || 'Failed to remove avatar');
+      setUploadStatus('error');
+    } finally {
+      setIsRemovingAvatar(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -115,14 +159,30 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
 
         <div className="space-y-6">
           {/* Current Avatar Display */}
-          <div className="text-center">
-            <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden border-4 border-gray-200">
+          <div className="text-center relative">
+            <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden border-4 border-gray-200 relative group">
               {currentAvatarUrl ? (
-                <img 
-                  src={currentAvatarUrl} 
-                  alt="Current avatar" 
-                  className="w-full h-full object-cover"
-                />
+                <>
+                  <img 
+                    src={currentAvatarUrl} 
+                    alt="Current avatar" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <button
+                      onClick={handleRemoveAvatar}
+                      disabled={isRemovingAvatar}
+                      className="text-white hover:text-red-400 transition-colors"
+                      title="Remove avatar"
+                    >
+                      {isRemovingAvatar ? (
+                        <Loader className="h-6 w-6 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-6 w-6" />
+                      )}
+                    </button>
+                  </div>
+                </>
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-red-600 to-yellow-400 flex items-center justify-center">
                   <span className="text-white font-bold font-pokemon text-2xl">
@@ -194,6 +254,25 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
               <>
                 <User className="h-4 w-4" />
                 <span>Choose New Avatar</span>
+              </>
+            )}
+          </button>
+
+          {/* Sign Out Button */}
+          <button
+            onClick={handleSignOut}
+            disabled={isSigningOut}
+            className="w-full bg-gray-600 text-white font-bold py-3 rounded-lg hover:bg-gray-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon flex items-center justify-center space-x-2"
+          >
+            {isSigningOut ? (
+              <>
+                <Loader className="h-4 w-4 animate-spin" />
+                <span>Signing Out...</span>
+              </>
+            ) : (
+              <>
+                <LogOut className="h-4 w-4" />
+                <span>Sign Out</span>
               </>
             )}
           </button>
