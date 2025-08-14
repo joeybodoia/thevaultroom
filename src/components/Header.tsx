@@ -60,22 +60,15 @@ const Header: React.FC = () => {
 
   const loadUserAvatar = async (userId: string) => {
     try {
-      // Get user avatar path from database
+      // Get user avatar URL from database
       const { data: userData } = await supabase
         .from('users')
-        .select('avatar')
+        .select('avatar_url')
         .eq('id', userId)
         .single();
 
-      if (userData?.avatar) {
-        // Get signed URL for the avatar
-        const { data: signedUrlData } = await supabase.storage
-          .from('avatars')
-          .createSignedUrl(userData.avatar, 3600); // 1 hour expiry
-
-        if (signedUrlData?.signedUrl) {
-          setAvatarUrl(signedUrlData.signedUrl);
-        }
+      if (userData?.avatar_url) {
+        setAvatarUrl(userData.avatar_url);
       }
     } catch (error) {
       console.error('Error loading avatar:', error);

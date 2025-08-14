@@ -54,12 +54,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
     try {
       const userId = user.id;
       const fileExt = file.name.split('.').pop();
-      const filePath = `${userId}/avatar.${fileExt}`;
+      const filename = `avatar.${fileExt}`;
 
       // Upload file to storage
-      const { error: uploadError } = await supabase.storage
+      const { data, error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, {
+        .upload(`avatars/${userId}/${filename}`, file, {
           cacheControl: '3600',
           upsert: true
         });
@@ -68,24 +68,21 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
         throw uploadError;
       }
 
-      // Update user avatar path in database
+      // Generate public URL
+      const avatarUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/public/avatars/${userId}/${filename}`;
+
+      // Update user avatar URL in database
       const { error: updateError } = await supabase
         .from('users')
-        .update({ avatar: filePath })
+        .update({ avatar_url: avatarUrl })
         .eq('id', userId);
 
       if (updateError) {
         throw updateError;
       }
 
-      // Get the new signed URL
-      const { data: signedUrlData } = await supabase.storage
-        .from('avatars')
-        .createSignedUrl(filePath, 3600); // 1 hour expiry
-
-      if (signedUrlData?.signedUrl) {
-        onAvatarUpdate(signedUrlData.signedUrl);
-      }
+      // Update parent component with new avatar URL
+      onAvatarUpdate(avatarUrl);
 
       setUploadStatus('success');
       setTimeout(() => {
@@ -123,7 +120,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       // Remove avatar from database
       const { error: updateError } = await supabase
         .from('users')
-        .update({ avatar: null })
+        .update({ avatar_url: null })
         .eq('id', userId);
 
       if (updateError) {
