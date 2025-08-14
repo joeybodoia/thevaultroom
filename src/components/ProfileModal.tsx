@@ -73,18 +73,32 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       
       const { data, error } = await supabase.storage
         .from('avatars')
+      // Add a small delay to ensure UI updates
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      setDebugInfo(prev => prev + '\n\nCalling supabase.storage.from("avatars").upload()...');
+      console.log('About to call Supabase upload');
+      
+      // Try the upload with more detailed error handling
         .upload(uploadPath, file, {
           cacheControl: '3600',
           upsert: true
         });
 
+      console.log('Supabase upload completed');
+      console.log('Upload data:', data);
+      console.log('Upload error:', error);
+      
       setDebugInfo(`Upload response - Data: ${JSON.stringify(data, null, 2)} | Error: ${error ? JSON.stringify(error, null, 2) : 'null'} | Full URL will be: ${fullUploadUrl}`);
+      console.log('Upload Response:', uploadResponse);
       
       if (error) {
         setDebugInfo(`Upload failed with error: ${error.message} | Error code: ${error.statusCode || 'unknown'} | Error details: ${JSON.stringify(error, null, 2)}`);
+        console.error('Upload Error Details:', errorDetails);
         throw error;
       }
 
+      console.log('Upload Success:', successMsg);
       setDebugInfo(`Upload successful! Data: ${JSON.stringify(data, null, 2)} | Generated URL: ${fullUploadUrl}`);
       // Generate public URL (note: includes /public/ in the path)
       const avatarUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/public/avatars/${file.name}`;
@@ -92,6 +106,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       // Update user avatar URL in database
       setDebugInfo(`Updating database with avatar URL: ${avatarUrl} for user ID: ${userId}`);
       const { error: updateError } = await supabase
+      console.log('Database Update:', dbUpdateMsg);
+      
         .from('users')
         .update({ avatar_url: avatarUrl })
         .eq('id', userId);
@@ -149,16 +165,21 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       if (updateError) {
         throw updateError;
       }
+        console.error('Database Error:', dbErrorMsg);
+      console.log('Final Success:', finalSuccessMsg);
+      
 
       // Update parent component
       onAvatarUpdate(null);
       setUploadStatus('success');
       
     } catch (err: any) {
+      console.error('Catch Block Error:', errorMsg);
       setError(err.message || 'Failed to remove avatar');
       setUploadStatus('error');
     } finally {
       setIsRemovingAvatar(false);
+      console.log('Upload process completed, isUploading set to false');
     }
   };
 
