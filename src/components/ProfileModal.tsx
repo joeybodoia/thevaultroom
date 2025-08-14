@@ -23,6 +23,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isRemovingAvatar, setIsRemovingAvatar] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = () => {
@@ -50,12 +51,14 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
     setIsUploading(true);
     setError(null);
     setUploadStatus('idle');
+    setDebugInfo(null);
 
     try {
       const userId = user.id;
       const fileExt = file.name.split('.').pop();
       const filename = `avatar.${fileExt}`;
 
+      setDebugInfo(`Starting upload: userId=${userId}, filename=${filename}`);
       // Upload file to storage
       const { data, error: uploadError } = await supabase.storage
         .from('avatars')
@@ -68,8 +71,10 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
         throw uploadError;
       }
 
+      setDebugInfo(`Upload successful. Data: ${JSON.stringify(data)}`);
       // Generate public URL
       const avatarUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/public/avatars/avatars/${userId}/${filename}`;
+      setDebugInfo(`Generated public URL: ${avatarUrl}`);
 
       // Update user avatar URL in database
       const { error: updateError } = await supabase
@@ -78,9 +83,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
         .eq('id', userId);
 
       if (updateError) {
+        setDebugInfo(`Database update error: ${updateError.message}`);
         throw updateError;
       }
 
+      setDebugInfo(`Database updated successfully with URL: ${avatarUrl}`);
       // Update parent component with new avatar URL
       onAvatarUpdate(avatarUrl);
 
@@ -90,6 +97,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       }, 1500);
 
     } catch (err: any) {
+      setDebugInfo(`Error occurred: ${err.message}`);
       setError(err.message || 'Failed to upload avatar');
       setUploadStatus('error');
     } finally {
@@ -214,6 +222,17 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
           </div>
 
           {/* Status Messages */}
+          {debugInfo && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2 text-blue-800">
+                <span className="font-semibold font-pokemon">Debug Info:</span>
+              </div>
+              <p className="text-blue-600 text-sm mt-1 font-pokemon break-all">
+                {debugInfo}
+              </p>
+            </div>
+          )}
+
           {uploadStatus === 'success' && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="flex items-center space-x-2 text-green-800">
