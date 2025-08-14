@@ -164,16 +164,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       if (updateError) {
         throw updateError;
       }
-        console.error('Database Error:', dbErrorMsg);
-      console.log('Final Success:', finalSuccessMsg);
-      
 
       // Update parent component
       onAvatarUpdate(null);
       setUploadStatus('success');
       
     } catch (err: any) {
-      console.error('Catch Block Error:', errorMsg);
       setError(err.message || 'Failed to remove avatar');
       setUploadStatus('error');
     } finally {
