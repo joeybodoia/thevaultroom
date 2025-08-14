@@ -58,11 +58,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       const fileExt = file.name.split('.').pop();
       const filename = `avatar.${fileExt}`;
 
-      setDebugInfo(`Starting upload: userId=${userId}, filename=${filename}`);
+      setDebugInfo(`Starting upload: userId=${userId}, original filename=${file.name}, generated filename=${filename}`);
       // Upload file to storage
       const uploadPath = `${userId}/${filename}`;
       const fullUploadUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/avatars/${uploadPath}`;
-      setDebugInfo(`Attempting upload to path: ${uploadPath} | Full URL: ${fullUploadUrl}`);
+      setDebugInfo(`File: ${file.name} -> Generated: ${filename} | Upload path: ${uploadPath} | Full URL: ${fullUploadUrl}`);
       
       const { data, error: uploadError } = await supabase.storage
         .from('avatars')
