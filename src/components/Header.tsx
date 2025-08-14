@@ -99,6 +99,21 @@ const Header: React.FC = () => {
     setAvatarUrl(newAvatarUrl);
   };
 
+  const handleForceLogout = async () => {
+    try {
+      console.log('Force logout initiated...');
+      await supabase.auth.signOut();
+      setUser(null);
+      setAvatarUrl(null);
+      console.log('Force logout completed');
+    } catch (error) {
+      console.error('Force logout error:', error);
+      // Force local logout even if server call fails
+      setUser(null);
+      setAvatarUrl(null);
+    }
+  };
+
   const handleLogoClick = () => {
     if (isLoggedIn) {
       openProfileModal();
@@ -140,6 +155,14 @@ const Header: React.FC = () => {
               <Users className="h-4 w-4" />
               <span className="text-sm font-pokemon">1,247 online</span>
             </div>
+            {isLoggedIn && (
+              <button
+                onClick={handleForceLogout}
+                className="bg-gray-600 text-white px-3 py-1 rounded text-sm font-pokemon hover:bg-gray-700 transition-all"
+              >
+                Force Logout
+              </button>
+            )}
             <WalletButton />
             {isLoggedIn ? (
               <button
