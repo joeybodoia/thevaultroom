@@ -53,7 +53,6 @@ const PokemonSection: React.FC = () => {
         setTimeout(() => reject(new Error('Connection test timeout after 10 seconds')), 10000);
       });
       
-      const { data: testData, error: testError } = await supabase
       const { data: testData, error: testError } = await Promise.race([
         connectionTestPromise,
         timeoutPromise
