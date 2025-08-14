@@ -65,89 +65,44 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
 
     try {
       const userId = user.id;
-      const uploadPath = file.name;
 
-      const fullUploadUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/public/avatars/${uploadPath}`;
-      
-      setDebugInfo(`Starting upload - File: ${file.name} | Size: ${file.size} bytes | Type: ${file.type} | Upload path: ${uploadPath}`);
-      
-      // First, let's check basic Supabase connectivity
-      setDebugInfo(prev => (prev || '') + '\n\nChecking Supabase connection...');
-      console.log('Checking Supabase connection...');
-      
-      try {
-        // Add timeout to all Supabase calls
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Supabase connection timeout after 10 seconds')), 10000);
-        });
-        
-        console.log('About to call supabase.storage.listBuckets()...');
-        setDebugInfo(prev => (prev || '') + '\n\nCalling supabase.storage.listBuckets()...');
-        
-        const bucketsPromise = supabase.storage.listBuckets();
-        const { data: buckets, error: bucketError } = await Promise.race([bucketsPromise, timeoutPromise]) as any;
-        
-        console.log('listBuckets completed:', { buckets, bucketError });
-        setDebugInfo(prev => (prev || '') + `\n\nlistBuckets response - Buckets: ${JSON.stringify(buckets)} | Error: ${bucketError ? JSON.stringify(bucketError) : 'none'}`);
-        
-        if (bucketError) {
-          console.error('Bucket error:', bucketError);
-          throw new Error(`Storage access error: ${bucketError.message}`);
-        }
-        
-        if (!buckets) {
-          throw new Error('No buckets returned from Supabase');
-        }
-        
-        const avatarBucket = buckets?.find(bucket => bucket.name === 'avatars');
-        setDebugInfo(prev => (prev || '') + `\n\nLooking for 'avatars' bucket in: ${buckets.map(b => b.name).join(', ')}`);
-        
-        if (!avatarBucket) {
-          throw new Error('Avatars storage bucket not found. Available buckets: ' + buckets?.map(b => b.name).join(', '));
-        }
-        
-        setDebugInfo(prev => (prev || '') + '\n\n✅ Storage bucket verified successfully!');
-        console.log('Storage bucket verified successfully');
-        
-      } catch (bucketErr: any) {
-        console.error('Bucket check failed:', bucketErr);
-        setDebugInfo(prev => (prev || '') + `\n\n❌ Bucket check failed: ${bucketErr.message}`);
-        throw bucketErr;
-      }
+      setDebugInfo(`Starting upload - File: ${file.name} | Size: ${file.size} bytes | Type: ${file.type}`);
       
       setDebugInfo(prev => (prev || '') + '\n\nStarting file upload...');
       console.log('About to call Supabase upload');
       
-      // Now try the upload with timeout
-      const uploadPromise = supabase.storage
-        .from('avatars')
-        .upload(uploadPath, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
-      
+      // Try the upload with timeout
       const uploadTimeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000);
       });
       
-      const { data, error: uploadError } = await Promise.race([uploadPromise, uploadTimeoutPromise]) as any;
+      const uploadPromise = supabase.storage
+        .from('avatars')
+        .upload(file.name, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+      
+      const { data, error } = await Promise.race([uploadPromise, uploadTimeoutPromise]) as any;
 
       console.log('Supabase upload completed');
       console.log('Upload data:', data);
-      console.log('Upload error:', uploadError);
+      console.log('Upload error:', error);
       
-      setDebugInfo(prev => prev + `\n\nUpload response - Data: ${JSON.stringify(data, null, 2)} | Error: ${uploadError ? JSON.stringify(uploadError, null, 2) : 'null'} | Full URL will be: ${fullUploadUrl}`);
+      setDebugInfo(prev => (prev || '') + `\n\nUpload response - Data: ${JSON.stringify(data, null, 2)} | Error: ${error ? JSON.stringify(error, null, 2) : 'null'}`);
       
-      if (uploadError) {
-        setDebugInfo(prev => prev + `\n\nUpload failed with error: ${uploadError.message} | Error code: ${uploadError.statusCode || 'unknown'} | Error details: ${JSON.stringify(uploadError, null, 2)}`);
-        console.error('Upload Error Details:', uploadError);
-        throw uploadError;
+      if (error) {
+        setDebugInfo(prev => (prev || '') + `\n\nUpload failed with error: ${error.message} | Error code: ${error.statusCode || 'unknown'} | Error details: ${JSON.stringify(error, null, 2)}`);
+        console.error('Upload Error Details:', error);
+        throw error;
       }
 
       console.log('Upload Success!');
-      setDebugInfo(prev => prev + `\n\nUpload successful! Data: ${JSON.stringify(data, null, 2)} | Generated URL: ${fullUploadUrl}`);
-      // Generate public URL (note: includes /public/ in the path)
+      setDebugInfo(prev => (prev || '') + `\n\nUpload successful! Data: ${JSON.stringify(data, null, 2)}`);
+
+      // Generate public URL
       const avatarUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/public/avatars/${file.name}`;
+      setDebugInfo(prev => (prev || '') + `\n\nGenerated avatar URL: ${avatarUrl}`);
 
       // Update user avatar URL in database
       setDebugInfo(prev => prev + `\n\nUpdating database with avatar URL: ${avatarUrl} for user ID: ${userId}`);
