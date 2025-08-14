@@ -60,10 +60,10 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
 
       setDebugInfo(`Starting upload: userId=${userId}, filename=${filename}`);
       // Upload file to storage
-      setDebugInfo(`Attempting upload to: avatars/${userId}/${filename}`);
+      setDebugInfo(`Attempting upload to: ${userId}/${filename}`);
       const { data, error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(`avatars/${userId}/${filename}`, file, {
+        .upload(`${userId}/${filename}`, file, {
           cacheControl: '3600',
           upsert: true
         });
@@ -77,7 +77,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       setDebugInfo(`Upload successful. Data: ${JSON.stringify(data)}`);
       // Generate public URL
       const avatarUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/public/avatars/avatars/${userId}/${filename}`;
-      setDebugInfo(`Generated public URL: ${avatarUrl}`);
+      const avatarUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/public/avatars/${userId}/${filename}`;
 
       // Update user avatar URL in database
       const { error: updateError } = await supabase
