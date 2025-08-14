@@ -20,15 +20,21 @@ const Header: React.FC = () => {
   useEffect(() => {
     // Get initial session
     const getSession = async () => {
-      console.log('Checking initial session...');
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('Initial session:', session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await loadUserAvatar(session.user.id);
+      try {
+        console.log('Checking initial session...');
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Initial session:', session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await loadUserAvatar(session.user.id);
+        }
+      } catch (error) {
+        console.error('Error getting session:', error);
+        setUser(null);
+      } finally {
+        setLoading(false);
+        console.log('Loading set to false');
       }
-      setLoading(false);
-      console.log('Loading set to false, user:', session?.user ?? null);
     };
 
     getSession();
