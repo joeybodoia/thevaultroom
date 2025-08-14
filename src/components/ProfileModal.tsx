@@ -59,7 +59,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
 
       const fullUploadUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/public/avatars/${uploadPath}`;
       // Upload file to storage
-      const fullUploadUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/avatars/${file.name}`;
       setDebugInfo(`File: ${file.name} | Upload path: ${uploadPath} | Full URL: ${fullUploadUrl}`);
       
       const { data, error } = await supabase.storage
