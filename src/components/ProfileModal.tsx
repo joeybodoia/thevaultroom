@@ -55,30 +55,29 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
 
     try {
       const userId = user.id;
-      const filename = file.name;
+      const uploadPath = `${userId}/${file.name}`;
 
-      setDebugInfo(`Starting upload: userId=${userId}, original filename=${file.name}, generated filename=${filename}`);
+      setDebugInfo(`Starting upload: userId=${userId}, filename=${file.name}`);
       // Upload file to storage
-      const uploadPath = `${userId}/${filename}`;
       const fullUploadUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/avatars/${uploadPath}`;
-      setDebugInfo(`File: ${file.name} -> Generated: ${filename} | Upload path: ${uploadPath} | Full URL: ${fullUploadUrl}`);
+      setDebugInfo(`File: ${file.name} | Upload path: ${uploadPath} | Full URL: ${fullUploadUrl}`);
       
-      const { data, error: uploadError } = await supabase.storage
+      const { data, error } = await supabase.storage
         .from('avatars')
         .upload(uploadPath, file, {
           cacheControl: '3600',
           upsert: true
         });
 
-      setDebugInfo(`Upload response - Data: ${JSON.stringify(data)}, Error: ${JSON.stringify(uploadError)}`);
-      if (uploadError) {
-        setDebugInfo(`Upload failed with error: ${uploadError.message} (Code: ${uploadError.statusCode})`);
-        throw uploadError;
+      setDebugInfo(`Upload response - Data: ${JSON.stringify(data)}, Error: ${JSON.stringify(error)}`);
+      if (error) {
+        setDebugInfo(`Upload failed with error: ${error.message}`);
+        throw error;
       }
 
       setDebugInfo(`Upload successful. Data: ${JSON.stringify(data)}`);
       // Generate public URL
-      const avatarUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/public/avatars/avatars/${userId}/${filename}`;
+      const avatarUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/public/avatars/${userId}/${file.name}`;
 
       // Update user avatar URL in database
       const { error: updateError } = await supabase
