@@ -55,8 +55,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
 
     try {
       const userId = user.id;
-      const fileExt = file.name.split('.').pop();
-      const filename = `avatar.${fileExt}`;
+      const filename = file.name;
 
       setDebugInfo(`Starting upload: userId=${userId}, original filename=${file.name}, generated filename=${filename}`);
       // Upload file to storage
