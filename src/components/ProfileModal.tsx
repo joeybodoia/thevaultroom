@@ -76,7 +76,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       }
 
       setDebugInfo(`Upload successful. Data: ${JSON.stringify(data)}`);
-      // Generate public URL
+      // Generate public URL (note: includes /public/ in the path)
       const avatarUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/public/avatars/${file.name}`;
 
       // Update user avatar URL in database
