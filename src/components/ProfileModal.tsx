@@ -258,23 +258,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
           )}
 
           {/* Upload Button */}
-          <button
-            onClick={handleFileSelect}
-            disabled={isUploading}
-            className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon flex items-center justify-center space-x-2"
-          >
-            {isUploading ? (
-              <>
-                <Loader className="h-4 w-4 animate-spin" />
-                <span>Uploading...</span>
-              </>
-            ) : (
-              <>
-                <User className="h-4 w-4" />
-                <span>Choose New Avatar</span>
-              </>
-            )}
-          </button>
 
           {/* Sign Out Button */}
           <button
