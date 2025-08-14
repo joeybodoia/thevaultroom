@@ -274,12 +274,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
               <div className="flex items-center space-x-2 text-blue-800">
                 <span className="font-semibold font-pokemon">Debug Info:</span>
               </div>
-              <p className="text-blue-600 text-sm mt-1 font-pokemon break-all">
+              <pre className="text-blue-600 text-xs mt-1 font-mono whitespace-pre-wrap break-all">
                 {debugInfo}
-              </p>
+              </pre>
             </div>
           )}
-
           {uploadStatus === 'success' && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="flex items-center space-x-2 text-green-800">
