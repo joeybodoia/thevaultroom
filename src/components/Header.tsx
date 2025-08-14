@@ -126,41 +126,41 @@ const Header: React.FC = () => {
               <span className="text-sm font-pokemon">1,247 online</span>
             </div>
             <WalletButton />
-            {!loading && (
-              user ? (
-                <button
-                  onClick={openProfileModal}
-                  className="w-10 h-10 bg-gradient-to-br from-red-600 to-yellow-400 rounded-full flex items-center justify-center hover:scale-110 transition-transform border-2 border-white/20"
-                  title="User Profile"
+            {loading ? (
+              <div className="w-20 h-10 bg-gray-200 animate-pulse rounded-lg"></div>
+            ) : user ? (
+              <button
+                onClick={openProfileModal}
+                className="w-10 h-10 bg-gradient-to-br from-red-600 to-yellow-400 rounded-full flex items-center justify-center hover:scale-110 transition-transform border-2 border-white/20"
+                title="User Profile"
+              >
+                {avatarUrl ? (
+                  <img 
+                    src={avatarUrl} 
+                    alt="User avatar" 
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                ) : (
+                  <span className="text-white font-bold font-pokemon text-lg">
+                    {user.email?.charAt(0).toUpperCase() || 'U'}
+                  </span>
+                )}
+              </button>
+            ) : (
+              <>
+                <button 
+                  onClick={() => openAuthModal('signup')}
+                  className="bg-yellow-400 text-black px-4 py-2 rounded-lg font-semibold hover:bg-yellow-500 transition-all font-pokemon"
                 >
-                  {avatarUrl ? (
-                    <img 
-                      src={avatarUrl} 
-                      alt="User avatar" 
-                      className="w-full h-full object-cover rounded-full"
-                    />
-                  ) : (
-                    <span className="text-white font-bold font-pokemon text-lg">
-                      {user.email?.charAt(0).toUpperCase() || 'U'}
-                    </span>
-                  )}
+                  Sign Up
                 </button>
-              ) : (
-                <>
-                  <button 
-                    onClick={() => openAuthModal('signup')}
-                    className="bg-yellow-400 text-black px-4 py-2 rounded-lg font-semibold hover:bg-yellow-500 transition-all font-pokemon"
-                  >
-                    Sign Up
-                  </button>
-                  <button 
-                    onClick={() => openAuthModal('signin')}
-                    className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-all font-pokemon"
-                  >
-                    Sign In
-                  </button>
-                </>
-              )
+                <button 
+                  onClick={() => openAuthModal('signin')}
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-all font-pokemon"
+                >
+                  Sign In
+                </button>
+              </>
             )}
           </div>
         </div>
