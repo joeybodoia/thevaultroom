@@ -145,7 +145,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       // Add timeout to sign out process
       const signOutPromise = supabase.auth.signOut();
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Sign out timeout after 10 seconds')), 10000);
+        setTimeout(() => reject(new Error('Sign out timeout after 30 seconds')), 30000);
       });
       
       const { error } = await Promise.race([signOutPromise, timeoutPromise]) as any;
