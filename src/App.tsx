@@ -15,47 +15,24 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminPortal, setShowAdminPortal] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Get initial session
-    const getSession = async () => {
-      try {
-        console.log('Getting initial session...');
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log('Session result:', session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await checkAdminStatus(session.user.id);
-        }
-      } catch (error) {
-        console.error('Error getting session:', error);
-        setUser(null);
-      } finally {
-        console.log('Setting loading to false');
-        setLoading(false);
-      }
-    };
-
-    getSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change:', event, session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await checkAdminStatus(session.user.id);
-        } else {
-          setIsAdmin(false);
-          setShowAdminPortal(false);
-        }
-        // Ensure loading is false after auth state changes
-        setLoading(false);
-      }
-    );
-
-    return () => subscription.unsubscribe();
+    // Force logout and clear all auth state
+    console.log('Force clearing auth state...');
+    setUser(null);
+    setIsAdmin(false);
+    setShowAdminPortal(false);
+    setLoading(false);
+    
+    // Clear any stored session data
+    localStorage.removeItem('sb-bzqnxgohxamuqgyrjwls-auth-token');
+    sessionStorage.clear();
+    
+    // Try to sign out from Supabase (but don't wait for it)
+    supabase.auth.signOut().catch(err => {
+      console.log('Server signout failed (expected):', err.message);
+    });
   }, []);
 
   const checkAdminStatus = async (userId: string) => {
