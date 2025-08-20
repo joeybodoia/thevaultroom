@@ -409,6 +409,9 @@ const AdminPortal: React.FC = () => {
       if (!highValueCards[roundId]) {
         fetchHighValueCards(roundId);
       }
+      if (!pulledCards[roundId]) {
+        fetchPulledCards(roundId);
+      }
     }
   };
 
@@ -801,33 +804,97 @@ const AdminPortal: React.FC = () => {
                     {/* Expanded High Value Cards */}
                     {expandedRound === round.id && (
                       <div className="mt-4 pt-4 border-t border-gray-200">
-                        <h4 className="font-semibold text-black font-pokemon mb-3">High Value Cards</h4>
-                        {highValueCards[round.id] ? (
-                          highValueCards[round.id].length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                              {highValueCards[round.id].map((card) => (
-                                <div key={card.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                                  <h5 className="font-semibold text-black font-pokemon text-sm">
-                                    {card.direct_bid_cards.card_name}
-                                  </h5>
-                                  <p className="text-gray-600 text-xs font-pokemon">
-                                    {card.direct_bid_cards.set_name}
-                                  </p>
-                                  <p className="text-green-600 font-semibold text-sm font-pokemon">
-                                    ${card.direct_bid_cards.ungraded_market_price}
-                                  </p>
+                        <div className="space-y-6">
+                          {/* High Value Cards Section */}
+                          <div>
+                            <h4 className="font-semibold text-black font-pokemon mb-3">High Value Cards</h4>
+                            {highValueCards[round.id] ? (
+                              highValueCards[round.id].length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                  {highValueCards[round.id].map((card) => (
+                                    <div key={card.id} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                      <h5 className="font-semibold text-black font-pokemon text-sm">
+                                        {card.direct_bid_cards.card_name}
+                                      </h5>
+                                      <p className="text-gray-600 text-xs font-pokemon">
+                                        {card.direct_bid_cards.set_name}
+                                      </p>
+                                      <p className="text-green-600 font-semibold text-sm font-pokemon">
+                                        ${card.direct_bid_cards.ungraded_market_price}
+                                      </p>
+                                    </div>
+                                  ))}
                                 </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-gray-500 text-sm font-pokemon">No high value cards assigned to this round</p>
-                          )
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <Loader className="h-4 w-4 animate-spin text-gray-400" />
-                            <span className="text-gray-500 text-sm font-pokemon">Loading cards...</span>
+                              ) : (
+                                <p className="text-gray-500 text-sm font-pokemon">No high value cards assigned to this round</p>
+                              )
+                            ) : (
+                              <div className="flex items-center space-x-2">
+                                <Loader className="h-4 w-4 animate-spin text-gray-400" />
+                                <span className="text-gray-500 text-sm font-pokemon">Loading cards...</span>
+                              </div>
+                            )}
                           </div>
-                        )}
+
+                          {/* Pulled Cards Section */}
+                          <div>
+                            <h4 className="font-semibold text-black font-pokemon mb-3">
+                              Pulled Cards ({pulledCards[round.id]?.length || 0})
+                            </h4>
+                            {pulledCards[round.id] ? (
+                              pulledCards[round.id].length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                  {pulledCards[round.id].map((card) => (
+                                    <div key={card.id} className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                                      {/* Card Image */}
+                                      {card.image_url && (
+                                        <div className="aspect-square mb-3 bg-white rounded-lg overflow-hidden border border-gray-200">
+                                          <img 
+                                            src={card.image_url} 
+                                            alt={card.card_name}
+                                            className="w-full h-full object-contain"
+                                            onError={(e) => {
+                                              const target = e.target as HTMLImageElement;
+                                              target.style.display = 'none';
+                                            }}
+                                          />
+                                        </div>
+                                      )}
+                                      
+                                      {/* Card Details */}
+                                      <div className="space-y-1">
+                                        <h5 className="font-semibold text-black font-pokemon text-sm">
+                                          {card.card_name}
+                                        </h5>
+                                        <p className="text-gray-600 text-xs font-pokemon">
+                                          {card.set_name}
+                                        </p>
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-gray-500 text-xs font-pokemon">
+                                            {card.rarity}
+                                          </span>
+                                          <span className="text-blue-600 font-semibold text-sm font-pokemon">
+                                            ${card.ungraded_market_price}
+                                          </span>
+                                        </div>
+                                        <p className="text-gray-400 text-xs font-pokemon">
+                                          Added {new Date(card.date_updated).toLocaleDateString()}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-gray-500 text-sm font-pokemon">No cards pulled yet for this round</p>
+                              )
+                            ) : (
+                              <div className="flex items-center space-x-2">
+                                <Loader className="h-4 w-4 animate-spin text-gray-400" />
+                                <span className="text-gray-500 text-sm font-pokemon">Loading pulled cards...</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     )}
 
