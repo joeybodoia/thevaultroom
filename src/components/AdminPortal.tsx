@@ -24,8 +24,23 @@ interface HighValueCard {
   };
 }
 
+interface Stream {
+  id: string;
+  title: string;
+  scheduled_date: string | null;
+  created_at: string;
+}
+
 const AdminPortal: React.FC = () => {
   const [rounds, setRounds] = useState<Round[]>([]);
+  const [streams, setStreams] = useState<Stream[]>([]);
+  const [selectedStreamId, setSelectedStreamId] = useState<string>('');
+  const [showCreateStreamForm, setShowCreateStreamForm] = useState(false);
+  const [streamFormData, setStreamFormData] = useState({
+    title: '',
+    scheduled_date: ''
+  });
+  const [savingStream, setSavingStream] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -41,8 +56,24 @@ const AdminPortal: React.FC = () => {
   const [highValueCards, setHighValueCards] = useState<{ [roundId: string]: HighValueCard[] }>({});
 
   useEffect(() => {
+    fetchStreams();
     fetchRounds();
   }, []);
+
+  const fetchStreams = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('streams')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setStreams(data || []);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch streams');
+    }
+  };
 
   const fetchRounds = async () => {
     try {
@@ -61,6 +92,36 @@ const AdminPortal: React.FC = () => {
       setError(err.message || 'Failed to fetch rounds');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateStream = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingStream(true);
+    setError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('streams')
+        .insert([{
+          title: streamFormData.title,
+          scheduled_date: streamFormData.scheduled_date || null
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setStreams(prev => [data, ...prev]);
+      setShowCreateStreamForm(false);
+      setStreamFormData({
+        title: '',
+        scheduled_date: ''
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to create stream');
+    } finally {
+      setSavingStream(false);
     }
   };
 
@@ -245,6 +306,128 @@ const AdminPortal: React.FC = () => {
             <p className="text-red-600 text-sm mt-1 font-pokemon">{error}</p>
           </div>
         )}
+
+        {/* Stream Management Section */}
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-8">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-2xl font-bold text-black font-pokemon">Stream Management</h2>
+          </div>
+
+          <div className="p-6">
+            {streams.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500 font-pokemon mb-4">No streams created yet</p>
+                <button
+                  onClick={() => setShowCreateStreamForm(true)}
+                  className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all font-pokemon flex items-center space-x-2 mx-auto"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Create New Stream</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2 font-pokemon">
+                      Select Stream
+                    </label>
+                    <select
+                      value={selectedStreamId}
+                      onChange={(e) => setSelectedStreamId(e.target.value)}
+                      className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none font-pokemon"
+                    >
+                      <option value="">Select a stream</option>
+                      {streams.map(stream => (
+                        <option key={stream.id} value={stream.id}>
+                          {stream.title} {stream.scheduled_date && `- ${new Date(stream.scheduled_date).toLocaleDateString()}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => setShowCreateStreamForm(true)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-all font-pokemon flex items-center space-x-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Create New Stream</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Create Stream Form */}
+            {showCreateStreamForm && (
+              <div className="bg-gray-50 rounded-lg p-6 mt-6 border border-gray-200">
+                <h3 className="text-lg font-bold text-black font-pokemon mb-4">Create New Stream</h3>
+                
+                <form onSubmit={handleCreateStream} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2 font-pokemon">
+                        Stream Title <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={streamFormData.title}
+                        onChange={(e) => setStreamFormData(prev => ({ ...prev, title: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none font-pokemon"
+                        placeholder="Enter stream title"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2 font-pokemon">
+                        Scheduled Date
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={streamFormData.scheduled_date}
+                        onChange={(e) => setStreamFormData(prev => ({ ...prev, scheduled_date: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none font-pokemon"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex space-x-3">
+                    <button
+                      type="submit"
+                      disabled={savingStream}
+                      className="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon flex items-center space-x-2"
+                    >
+                      {savingStream ? (
+                        <>
+                          <Loader className="h-4 w-4 animate-spin" />
+                          <span>Creating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4" />
+                          <span>Create Stream</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCreateStreamForm(false);
+                        setStreamFormData({
+                          title: '',
+                          scheduled_date: ''
+                        });
+                      }}
+                      className="bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-gray-700 transition-all font-pokemon flex items-center space-x-2"
+                    >
+                      <X className="h-4 w-4" />
+                      <span>Cancel</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Round Management Section */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-8">
