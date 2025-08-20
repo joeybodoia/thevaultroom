@@ -82,6 +82,8 @@ const AdminPortal: React.FC = () => {
   const [allCards, setAllCards] = useState<AllCard[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<AllCard[]>([]);
+  const [selectedSetFilter, setSelectedSetFilter] = useState('');
+  const [selectedRarityFilter, setSelectedRarityFilter] = useState('');
   const [pulledCards, setPulledCards] = useState<{ [roundId: string]: PulledCard[] }>({});
   const [loadingCards, setLoadingCards] = useState(false);
   const [addingCard, setAddingCard] = useState(false);
@@ -95,15 +97,26 @@ const AdminPortal: React.FC = () => {
 
   useEffect(() => {
     if (searchTerm.trim()) {
-      const filtered = allCards.filter(card =>
+      let filtered = allCards.filter(card =>
         card.card_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (card.set_name && card.set_name.toLowerCase().includes(searchTerm.toLowerCase()))
       );
+
+      // Apply set filter
+      if (selectedSetFilter) {
+        filtered = filtered.filter(card => card.set_name === selectedSetFilter);
+      }
+
+      // Apply rarity filter
+      if (selectedRarityFilter) {
+        filtered = filtered.filter(card => card.rarity === selectedRarityFilter);
+      }
+
       setSearchResults(filtered.slice(0, 20)); // Limit to 20 results
     } else {
       setSearchResults([]);
     }
-  }, [searchTerm, allCards]);
+  }, [searchTerm, allCards, selectedSetFilter, selectedRarityFilter]);
 
   const fetchStreams = async () => {
     try {
@@ -411,8 +424,14 @@ const AdminPortal: React.FC = () => {
   const stopTrackingCards = () => {
     setTrackingRound(null);
     setSearchTerm('');
+    setSelectedSetFilter('');
+    setSelectedRarityFilter('');
     setSearchResults([]);
   };
+
+  // Get unique sets and rarities for filter options
+  const uniqueSets = [...new Set(allCards.map(card => card.set_name).filter(Boolean))];
+  const uniqueRarities = [...new Set(allCards.map(card => card.rarity).filter(Boolean))];
 
   const setOptions = [
     'SV: Prismatic Evolutions',
@@ -827,7 +846,7 @@ const AdminPortal: React.FC = () => {
                         </div>
 
                         {/* Search Bar */}
-                        <div className="mb-4">
+                        <div className="mb-4 space-y-3">
                           <input
                             type="text"
                             placeholder="Search cards by name or set..."
@@ -835,6 +854,40 @@ const AdminPortal: React.FC = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-600 focus:outline-none font-pokemon"
                           />
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1 font-pokemon">
+                                Filter by Set
+                              </label>
+                              <select
+                                value={selectedSetFilter}
+                                onChange={(e) => setSelectedSetFilter(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-600 focus:outline-none font-pokemon"
+                              >
+                                <option value="">All Sets</option>
+                                {uniqueSets.map(set => (
+                                  <option key={set} value={set}>{set}</option>
+                                ))}
+                              </select>
+                            </div>
+                            
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1 font-pokemon">
+                                Filter by Rarity
+                              </label>
+                              <select
+                                value={selectedRarityFilter}
+                                onChange={(e) => setSelectedRarityFilter(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-600 focus:outline-none font-pokemon"
+                              >
+                                <option value="">All Rarities</option>
+                                {uniqueRarities.map(rarity => (
+                                  <option key={rarity} value={rarity}>{rarity}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
                         </div>
 
                         {/* Search Results */}
