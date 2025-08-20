@@ -41,14 +41,6 @@ const AdminPortal: React.FC = () => {
     scheduled_date: ''
   });
   const [savingStream, setSavingStream] = useState(false);
-  const [streams, setStreams] = useState<Stream[]>([]);
-  const [selectedStreamId, setSelectedStreamId] = useState<string>('');
-  const [showCreateStreamForm, setShowCreateStreamForm] = useState(false);
-  const [streamFormData, setStreamFormData] = useState({
-    title: '',
-    scheduled_date: ''
-  });
-  const [savingStream, setSavingStream] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -65,24 +57,8 @@ const AdminPortal: React.FC = () => {
 
   useEffect(() => {
     fetchStreams();
-    fetchStreams();
     fetchRounds();
   }, []);
-
-  const fetchStreams = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('streams')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setStreams(data || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch streams');
-    }
-  };
 
   const fetchStreams = async () => {
     try {
