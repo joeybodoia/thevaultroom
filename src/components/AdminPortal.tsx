@@ -125,36 +125,6 @@ const AdminPortal: React.FC = () => {
     }
   };
 
-  const handleCreateStream = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingStream(true);
-    setError(null);
-
-    try {
-      const { data, error } = await supabase
-        .from('streams')
-        .insert([{
-          title: streamFormData.title,
-          scheduled_date: streamFormData.scheduled_date || null
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setStreams(prev => [data, ...prev]);
-      setShowCreateStreamForm(false);
-      setStreamFormData({
-        title: '',
-        scheduled_date: ''
-      });
-    } catch (err: any) {
-      setError(err.message || 'Failed to create stream');
-    } finally {
-      setSavingStream(false);
-    }
-  };
-
   const fetchHighValueCards = async (roundId: string) => {
     try {
       const { data, error } = await supabase
