@@ -351,6 +351,18 @@ const AdminPortal: React.FC = () => {
         .single();
 
       if (error) throw error;
+          card_name: card.card_name,
+          card_number: card.card_number,
+          set_name: card.set_name,
+          rarity: card.rarity,
+          image_url: card.image_url,
+          ungraded_market_price: card.ungraded_market_price,
+          date_updated: card.date_updated
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
 
       // Update local state
       setPulledCards(prev => ({
