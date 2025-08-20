@@ -15,24 +15,44 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminPortal, setShowAdminPortal] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Force logout and clear all auth state
-    console.log('Force clearing auth state...');
-    setUser(null);
-    setIsAdmin(false);
-    setShowAdminPortal(false);
-    setLoading(false);
-    
-    // Clear any stored session data
-    localStorage.removeItem('sb-bzqnxgohxamuqgyrjwls-auth-token');
-    sessionStorage.clear();
-    
-    // Try to sign out from Supabase (but don't wait for it)
-    supabase.auth.signOut().catch(err => {
-      console.log('Server signout failed (expected):', err.message);
-    });
+    // Get initial session
+    const getSession = async () => {
+      try {
+        console.log('Checking initial session...');
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Initial session:', session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await checkAdminStatus(session.user.id);
+        }
+      } catch (error) {
+        console.error('Error getting session:', error);
+        setUser(null);
+      } finally {
+        setLoading(false);
+        console.log('Loading set to false');
+      }
+    };
+
+    getSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await checkAdminStatus(session.user.id);
+        } else {
+          setIsAdmin(false);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const checkAdminStatus = async (userId: string) => {
