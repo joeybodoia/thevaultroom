@@ -160,13 +160,21 @@ const AdminPortal: React.FC = () => {
 
   const handleCreateRound = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedStreamId) {
+      setError('Please select a stream first');
+      return;
+    }
+    
     setSaving(true);
     setError(null);
 
     try {
       const { data, error } = await supabase
         .from('rounds')
-        .insert([formData])
+        .insert([{
+          ...formData,
+          stream_id: selectedStreamId
+        }])
         .select()
         .single();
 
@@ -443,13 +451,19 @@ const AdminPortal: React.FC = () => {
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-black font-pokemon">Round Management</h2>
               <button
+                disabled={!selectedStreamId}
                 onClick={() => setShowCreateForm(true)}
-                className="bg-yellow-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-yellow-700 transition-all font-pokemon flex items-center space-x-2"
+                className="bg-yellow-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-yellow-700 transition-all font-pokemon flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-yellow-600"
               >
                 <Plus className="h-4 w-4" />
                 <span>Create New Round</span>
               </button>
             </div>
+            {!selectedStreamId && (
+              <p className="text-gray-500 text-sm mt-2 font-pokemon">
+                Please select a stream above to create rounds
+              </p>
+            )}
           </div>
 
           <div className="p-6">
