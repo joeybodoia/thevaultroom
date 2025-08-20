@@ -18,6 +18,27 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Force logout on app load
+    const forceLogout = async () => {
+      console.log('Force logout initiated...');
+      // Force clear local session first
+      setUser(null);
+      setIsAdmin(false);
+      
+      // Clear any stored session data
+      localStorage.removeItem('sb-bzqnxgohxamuqgyrjwls-auth-token');
+      sessionStorage.clear();
+      
+      // Try to sign out from Supabase (but don't wait for it)
+      supabase.auth.signOut().catch(err => {
+        console.log('Server signout failed (expected):', err.message);
+      });
+      
+      console.log('Force logout completed');
+    };
+    
+    forceLogout();
+    
     // Get initial session
     const getSession = async () => {
       try {
