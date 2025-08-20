@@ -24,6 +24,30 @@ interface HighValueCard {
   };
 }
 
+interface AllCard {
+  id: string;
+  card_name: string;
+  card_number: string | null;
+  set_name: string | null;
+  rarity: string | null;
+  image_url: string | null;
+  ungraded_market_price: number | null;
+  date_updated: string;
+}
+
+interface PulledCard {
+  id: string;
+  round_id: string;
+  all_card_id: string;
+  card_name: string;
+  card_number: string | null;
+  set_name: string | null;
+  rarity: string | null;
+  image_url: string | null;
+  ungraded_market_price: number | null;
+  date_updated: string;
+}
+
 interface Stream {
   id: string;
   title: string;
@@ -54,12 +78,32 @@ const AdminPortal: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [expandedRound, setExpandedRound] = useState<string | null>(null);
   const [highValueCards, setHighValueCards] = useState<{ [roundId: string]: HighValueCard[] }>({});
+  const [trackingRound, setTrackingRound] = useState<string | null>(null);
+  const [allCards, setAllCards] = useState<AllCard[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<AllCard[]>([]);
+  const [pulledCards, setPulledCards] = useState<{ [roundId: string]: PulledCard[] }>({});
+  const [loadingCards, setLoadingCards] = useState(false);
+  const [addingCard, setAddingCard] = useState(false);
 
   useEffect(() => {
     console.log('AdminPortal useEffect running...');
     fetchStreams();
     fetchRounds();
+    fetchAllCards();
   }, []);
+
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      const filtered = allCards.filter(card =>
+        card.card_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (card.set_name && card.set_name.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+      setSearchResults(filtered.slice(0, 20)); // Limit to 20 results
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchTerm, allCards]);
 
   const fetchStreams = async () => {
     try {
@@ -100,6 +144,43 @@ const AdminPortal: React.FC = () => {
     } finally {
       console.log('Setting AdminPortal loading to false');
       setLoading(false);
+    }
+  };
+
+  const fetchAllCards = async () => {
+    try {
+      console.log('Fetching all cards...');
+      const { data, error } = await supabase
+        .from('all_cards')
+        .select('*')
+        .order('card_name');
+
+      if (error) throw error;
+
+      console.log('All cards fetched:', data?.length);
+      setAllCards(data || []);
+    } catch (err: any) {
+      console.error('Error fetching all cards:', err);
+      setError(err.message || 'Failed to fetch cards');
+    }
+  };
+
+  const fetchPulledCards = async (roundId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('pulled_cards')
+        .select('*')
+        .eq('round_id', roundId)
+        .order('date_updated', { ascending: false });
+
+      if (error) throw error;
+
+      setPulledCards(prev => ({
+        ...prev,
+        [roundId]: data || []
+      }));
+    } catch (err: any) {
+      console.error('Failed to fetch pulled cards:', err);
     }
   };
 
@@ -248,6 +329,45 @@ const AdminPortal: React.FC = () => {
     }
   };
 
+  const handleAddPulledCard = async (card: AllCard, roundId: string) => {
+    setAddingCard(true);
+    setError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('pulled_cards')
+        .insert([{
+          round_id: roundId,
+          all_card_id: card.id,
+          card_name: card.card_name,
+          card_number: card.card_number,
+          set_name: card.set_name,
+          rarity: card.rarity,
+          image_url: card.image_url,
+          ungraded_market_price: card.ungraded_market_price,
+          date_updated: card.date_updated
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update local state
+      setPulledCards(prev => ({
+        ...prev,
+        [roundId]: [data, ...(prev[roundId] || [])]
+      }));
+
+      // Clear search
+      setSearchTerm('');
+      setSearchResults([]);
+    } catch (err: any) {
+      setError(err.message || 'Failed to add pulled card');
+    } finally {
+      setAddingCard(false);
+    }
+  };
+
   const startEdit = (round: Round) => {
     setEditingRound(round);
     setFormData({
@@ -277,6 +397,21 @@ const AdminPortal: React.FC = () => {
         fetchHighValueCards(roundId);
       }
     }
+  };
+
+  const startTrackingCards = (roundId: string) => {
+    setTrackingRound(roundId);
+    setSearchTerm('');
+    setSearchResults([]);
+    if (!pulledCards[roundId]) {
+      fetchPulledCards(roundId);
+    }
+  };
+
+  const stopTrackingCards = () => {
+    setTrackingRound(null);
+    setSearchTerm('');
+    setSearchResults([]);
   };
 
   const setOptions = [
@@ -608,6 +743,13 @@ const AdminPortal: React.FC = () => {
                           <span>View Cards</span>
                         </button>
                         <button
+                          onClick={() => startTrackingCards(round.id)}
+                          className="bg-green-600 text-white px-3 py-1 rounded font-pokemon text-sm hover:bg-green-700 transition-all flex items-center space-x-1"
+                        >
+                          <Plus className="h-3 w-3" />
+                          <span>Track Pulled Cards</span>
+                        </button>
+                        <button
                           onClick={() => startEdit(round)}
                           className="bg-gray-600 text-white px-3 py-1 rounded font-pokemon text-sm hover:bg-gray-700 transition-all flex items-center space-x-1"
                         >
@@ -667,6 +809,95 @@ const AdminPortal: React.FC = () => {
                             <span className="text-gray-500 text-sm font-pokemon">Loading cards...</span>
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {/* Pulled Cards Tracking */}
+                    {trackingRound === round.id && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-semibold text-black font-pokemon">Track Pulled Cards</h4>
+                          <button
+                            onClick={stopTrackingCards}
+                            className="bg-gray-600 text-white px-3 py-1 rounded font-pokemon text-sm hover:bg-gray-700 transition-all flex items-center space-x-1"
+                          >
+                            <X className="h-3 w-3" />
+                            <span>Close</span>
+                          </button>
+                        </div>
+
+                        {/* Search Bar */}
+                        <div className="mb-4">
+                          <input
+                            type="text"
+                            placeholder="Search cards by name or set..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-600 focus:outline-none font-pokemon"
+                          />
+                        </div>
+
+                        {/* Search Results */}
+                        {searchResults.length > 0 && (
+                          <div className="mb-6">
+                            <h5 className="font-semibold text-black font-pokemon mb-2">Search Results</h5>
+                            <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-lg">
+                              {searchResults.map((card) => (
+                                <div key={card.id} className="flex items-center justify-between p-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
+                                  <div className="flex-1">
+                                    <h6 className="font-semibold text-black font-pokemon text-sm">
+                                      {card.card_name}
+                                    </h6>
+                                    <p className="text-gray-600 text-xs font-pokemon">
+                                      {card.set_name} • {card.rarity} • ${card.ungraded_market_price}
+                                    </p>
+                                  </div>
+                                  <button
+                                    onClick={() => handleAddPulledCard(card, round.id)}
+                                    disabled={addingCard}
+                                    className="bg-green-600 text-white px-3 py-1 rounded font-pokemon text-xs hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+                                  >
+                                    {addingCard ? (
+                                      <Loader className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Plus className="h-3 w-3" />
+                                    )}
+                                    <span>Add</span>
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Already Pulled Cards */}
+                        <div>
+                          <h5 className="font-semibold text-black font-pokemon mb-2">
+                            Pulled Cards ({pulledCards[round.id]?.length || 0})
+                          </h5>
+                          {pulledCards[round.id] && pulledCards[round.id].length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                              {pulledCards[round.id].map((card) => (
+                                <div key={card.id} className="bg-green-50 rounded-lg p-3 border border-green-200">
+                                  <h6 className="font-semibold text-black font-pokemon text-sm">
+                                    {card.card_name}
+                                  </h6>
+                                  <p className="text-gray-600 text-xs font-pokemon">
+                                    {card.set_name} • {card.rarity}
+                                  </p>
+                                  <p className="text-green-600 font-semibold text-sm font-pokemon">
+                                    ${card.ungraded_market_price}
+                                  </p>
+                                  <p className="text-gray-500 text-xs font-pokemon">
+                                    Added {new Date(card.date_updated).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 text-sm font-pokemon">No cards pulled yet for this round</p>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
