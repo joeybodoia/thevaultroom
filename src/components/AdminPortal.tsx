@@ -56,12 +56,14 @@ const AdminPortal: React.FC = () => {
   const [highValueCards, setHighValueCards] = useState<{ [roundId: string]: HighValueCard[] }>({});
 
   useEffect(() => {
+    console.log('AdminPortal useEffect running...');
     fetchStreams();
     fetchRounds();
   }, []);
 
   const fetchStreams = async () => {
     try {
+      console.log('Fetching streams...');
       const { data, error } = await supabase
         .from('streams')
         .select('*')
@@ -69,8 +71,10 @@ const AdminPortal: React.FC = () => {
 
       if (error) throw error;
 
+      console.log('Streams fetched:', data);
       setStreams(data || []);
     } catch (err: any) {
+      console.error('Error fetching streams:', err);
       setError(err.message || 'Failed to fetch streams');
     }
   };
@@ -79,6 +83,7 @@ const AdminPortal: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('Fetching rounds...');
 
       const { data, error } = await supabase
         .from('rounds')
@@ -87,10 +92,13 @@ const AdminPortal: React.FC = () => {
 
       if (error) throw error;
 
+      console.log('Rounds fetched:', data);
       setRounds(data || []);
     } catch (err: any) {
+      console.error('Error fetching rounds:', err);
       setError(err.message || 'Failed to fetch rounds');
     } finally {
+      console.log('Setting AdminPortal loading to false');
       setLoading(false);
     }
   };

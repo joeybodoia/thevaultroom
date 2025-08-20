@@ -21,14 +21,18 @@ function App() {
     // Get initial session
     const getSession = async () => {
       try {
+        console.log('Getting initial session...');
         const { data: { session } } = await supabase.auth.getSession();
+        console.log('Session result:', session);
         setUser(session?.user ?? null);
         if (session?.user) {
           await checkAdminStatus(session.user.id);
         }
       } catch (error) {
         console.error('Error getting session:', error);
+        setUser(null);
       } finally {
+        console.log('Setting loading to false');
         setLoading(false);
       }
     };
@@ -38,6 +42,7 @@ function App() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session);
         setUser(session?.user ?? null);
         if (session?.user) {
           await checkAdminStatus(session.user.id);
@@ -45,6 +50,8 @@ function App() {
           setIsAdmin(false);
           setShowAdminPortal(false);
         }
+        // Ensure loading is false after auth state changes
+        setLoading(false);
       }
     );
 
@@ -53,12 +60,14 @@ function App() {
 
   const checkAdminStatus = async (userId: string) => {
     try {
+      console.log('Checking admin status for user:', userId);
       const { data: userData } = await supabase
         .from('users')
         .select('is_admin')
         .eq('id', userId)
         .single();
 
+      console.log('Admin status result:', userData);
       setIsAdmin(userData?.is_admin || false);
     } catch (error) {
       console.error('Error checking admin status:', error);
