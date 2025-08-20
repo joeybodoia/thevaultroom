@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Plus, Edit, Lock, Unlock, Eye, Save, X, AlertCircle, CheckCircle, Loader } from 'lucide-react';
+import { Shield, Plus, Edit, Lock, Unlock, Eye, Save, X, AlertCircle, Loader } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Round {
@@ -41,6 +41,14 @@ const AdminPortal: React.FC = () => {
     scheduled_date: ''
   });
   const [savingStream, setSavingStream] = useState(false);
+  const [streams, setStreams] = useState<Stream[]>([]);
+  const [selectedStreamId, setSelectedStreamId] = useState<string>('');
+  const [showCreateStreamForm, setShowCreateStreamForm] = useState(false);
+  const [streamFormData, setStreamFormData] = useState({
+    title: '',
+    scheduled_date: ''
+  });
+  const [savingStream, setSavingStream] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -57,8 +65,24 @@ const AdminPortal: React.FC = () => {
 
   useEffect(() => {
     fetchStreams();
+    fetchStreams();
     fetchRounds();
   }, []);
+
+  const fetchStreams = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('streams')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setStreams(data || []);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch streams');
+    }
+  };
 
   const fetchStreams = async () => {
     try {
@@ -92,6 +116,36 @@ const AdminPortal: React.FC = () => {
       setError(err.message || 'Failed to fetch rounds');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateStream = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingStream(true);
+    setError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('streams')
+        .insert([{
+          title: streamFormData.title,
+          scheduled_date: streamFormData.scheduled_date || null
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setStreams(prev => [data, ...prev]);
+      setShowCreateStreamForm(false);
+      setStreamFormData({
+        title: '',
+        scheduled_date: ''
+      });
+    } catch (err: any) {
+      setError(err.message || 'Failed to create stream');
+    } finally {
+      setSavingStream(false);
     }
   };
 

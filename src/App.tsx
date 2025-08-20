@@ -96,7 +96,7 @@ function App() {
   // Show admin portal if user is admin and hash is #admin
   if (showAdminPortal && isAdmin) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-gray-50">
         <Header />
         <AdminPortal />
       </div>
