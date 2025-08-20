@@ -1,6 +1,6 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { Play, Users, Trophy } from 'lucide-react';
+import { Play, Users, Trophy, Shield } from 'lucide-react';
 import WalletButton from './WalletButton';
 import AuthModal from './AuthModal';
 import ProfileModal from './ProfileModal';
@@ -16,6 +16,7 @@ const Header: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [profileModal, setProfileModal] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // Get initial session
@@ -27,6 +28,7 @@ const Header: React.FC = () => {
         setUser(session?.user ?? null);
         if (session?.user) {
           await loadUserAvatar(session.user.id);
+          await checkAdminStatus(session.user.id);
         }
       } catch (error) {
         console.error('Error getting session:', error);
@@ -46,8 +48,10 @@ const Header: React.FC = () => {
         setUser(session?.user ?? null);
         if (session?.user) {
           await loadUserAvatar(session.user.id);
+          await checkAdminStatus(session.user.id);
         } else {
           setAvatarUrl(null);
+          setIsAdmin(false);
         }
         if (event === 'SIGNED_IN') {
           closeAuthModal();
@@ -63,18 +67,33 @@ const Header: React.FC = () => {
       // Get user avatar URL from database
       const { data: userData } = await supabase
         .from('users')
-        .select('avatar_url')
+        .select('avatar, is_admin')
         .eq('id', userId)
         .single();
 
-      if (userData?.avatar_url) {
-        setAvatarUrl(userData.avatar_url);
+      if (userData?.avatar) {
+        setAvatarUrl(userData.avatar);
       }
+      setIsAdmin(userData?.is_admin || false);
     } catch (error) {
       console.error('Error loading avatar:', error);
     }
   };
 
+  const checkAdminStatus = async (userId: string) => {
+    try {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('is_admin')
+        .eq('id', userId)
+        .single();
+
+      setIsAdmin(userData?.is_admin || false);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      setIsAdmin(false);
+    }
+  };
   const openAuthModal = (mode: 'signin' | 'signup') => {
     setAuthModal({ isOpen: true, mode });
   };
@@ -105,6 +124,7 @@ const Header: React.FC = () => {
       // Force clear local session first
       setUser(null);
       setAvatarUrl(null);
+      setIsAdmin(false);
       
       // Clear any stored session data
       localStorage.removeItem('sb-bzqnxgohxamuqgyrjwls-auth-token');
@@ -121,6 +141,7 @@ const Header: React.FC = () => {
       // Force local logout even if server call fails
       setUser(null);
       setAvatarUrl(null);
+      setIsAdmin(false);
     }
   };
 
@@ -198,6 +219,12 @@ const Header: React.FC = () => {
             <a href="#" className="text-white/80 hover:text-white transition-colors font-pokemon">
               Past Streams
             </a>
+            {isLoggedIn && isAdmin && (
+              <a href="#admin" className="text-yellow-400 hover:text-yellow-300 transition-colors font-pokemon flex items-center space-x-1">
+                <Shield className="h-4 w-4" />
+                <span>Admin Portal</span>
+              </a>
+            )}
           </nav>
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1 text-white/80">
