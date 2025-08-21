@@ -602,8 +602,12 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         <span className="text-xl font-bold text-white font-pokemon">Pokeball Pattern</span>
                       </div>
                       <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
-                      <button className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-all font-pokemon">
-                        Enter for $1
+                      <button 
+                        onClick={() => handleLotteryEntry('Pokeball Pattern')}
+                        disabled={lotterySubmitting === 'Pokeball Pattern'}
+                        className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {lotterySubmitting === 'Pokeball Pattern' ? 'Entering...' : 'Enter for $1'}
                       </button>
                     </div>
                   </div>
