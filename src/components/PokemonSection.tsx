@@ -699,12 +699,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-yellow-500 rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">Hyper Rare</span>
                       </div>
-                      <div className="mb-4">
-                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
-                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
-                          {lotteryParticipants['Hyper Rare'] || 0} participants
-                        </p>
-                      </div>
+                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
                       <button 
                         onClick={() => handleLotteryEntry('Hyper Rare')}
                         disabled={lotterySubmitting === 'Hyper Rare'}
@@ -712,11 +707,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       >
                         {lotterySubmitting === 'Hyper Rare' ? 'Entering...' : 'Enter for $1'}
                       </button>
-                      {lotterySuccess === 'Successfully entered lottery for Hyper Rare!' && (
-                        <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
-                          Successfully Entered $1 lottery
-                        </div>
-                      )}
                     </div>
                   </div>
 
@@ -726,7 +716,12 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-blue-600 rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">Ultra Rare</span>
                       </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
+                          {lotteryParticipants['Ultra Rare'] || 0} participants
+                        </p>
+                      </div>
                       <button 
                         onClick={() => handleLotteryEntry('Ultra Rare')}
                         disabled={lotterySubmitting === 'Ultra Rare'}
@@ -734,6 +729,11 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       >
                         {lotterySubmitting === 'Ultra Rare' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {lotterySuccess === 'Successfully entered lottery for Ultra Rare!' && (
+                        <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
+                          Successfully Entered $1 lottery
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -827,7 +827,12 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-blue-600 rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">Ultra Rare</span>
                       </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
+                          {lotteryParticipants['Ultra Rare'] || 0} participants
+                        </p>
+                      </div>
                       <button 
                         onClick={() => handleLotteryEntry('Ultra Rare')}
                         disabled={lotterySubmitting === 'Ultra Rare'}
@@ -835,6 +840,11 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       >
                         {lotterySubmitting === 'Ultra Rare' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {lotterySuccess === 'Successfully entered lottery for Ultra Rare!' && (
+                        <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
+                          Successfully Entered $1 lottery
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -945,12 +955,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-yellow-500 rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">Hyper Rare</span>
                       </div>
-                      <div className="mb-4">
-                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
-                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
-                          {lotteryParticipants['Hyper Rare'] || 0} participants
-                        </p>
-                      </div>
+                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
                       <button 
                         onClick={() => handleLotteryEntry('Hyper Rare')}
                         disabled={lotterySubmitting === 'Hyper Rare'}
@@ -958,11 +963,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       >
                         {lotterySubmitting === 'Hyper Rare' ? 'Entering...' : 'Enter for $1'}
                       </button>
-                      {lotterySuccess === 'Successfully entered lottery for Hyper Rare!' && (
-                        <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
-                          Successfully Entered $1 lottery
-                        </div>
-                      )}
                     </div>
                   </div>
 
