@@ -469,6 +469,11 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                   key={poke.id}
                   pokemon={poke}
                   isPopular={index === 0} // Make first card popular
+                  currentRoundId={currentRound?.id || null}
+                  onBidSuccess={() => {
+                    // Optionally refresh data or show notification
+                    console.log('Bid submitted successfully for card:', poke.card_name);
+                  }}
                 />
               ))}
             </div>

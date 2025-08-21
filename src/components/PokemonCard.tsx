@@ -1,27 +1,94 @@
 import React from 'react';
 import { Star, TrendingUp, DollarSign, Calendar } from 'lucide-react';
 import { PokemonCard as PokemonCardType } from '../types/pokemon';
+import { supabase } from '../lib/supabase';
 
 interface PokemonCardProps {
   pokemon: PokemonCardType;
   isPopular?: boolean;
+  currentRoundId?: string | null;
+  onBidSuccess?: () => void;
 }
 
-const PokemonCard: React.FC<PokemonCardProps> = ({ pokemon, isPopular = false }) => {
+const PokemonCard: React.FC<PokemonCardProps> = ({ 
+  pokemon, 
+  isPopular = false, 
+  currentRoundId,
+  onBidSuccess 
+}) => {
   const [bidAmount, setBidAmount] = React.useState('');
   const [currentBid, setCurrentBid] = React.useState(parseFloat(((pokemon.ungraded_market_price || 0) * 0.01).toFixed(2))); // Start at 1% of market price
+  const [isSubmittingBid, setIsSubmittingBid] = React.useState(false);
+  const [bidError, setBidError] = React.useState<string | null>(null);
+  const [bidSuccess, setBidSuccess] = React.useState(false);
 
   const formatPrice = (price: number | null) => {
     if (!price) return 'N/A';
     return `$${price.toFixed(2)}`;
   };
 
-  const handleBid = () => {
+  const handleBid = async () => {
     const amount = parseFloat(bidAmount);
-    if (amount > currentBid) {
+    
+    // Validation
+    if (!amount || amount <= currentBid) {
+      setBidError('Bid must be higher than current bid');
+      return;
+    }
+
+    if (!currentRoundId) {
+      setBidError('No active round found for this set');
+      return;
+    }
+
+    setIsSubmittingBid(true);
+    setBidError(null);
+    setBidSuccess(false);
+
+    try {
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('You must be logged in to place a bid');
+      }
+
+      // Insert bid into direct_bids table
+      const { data, error } = await supabase
+        .from('direct_bids')
+        .insert([{
+          user_id: user.id,
+          round_id: currentRoundId,
+          card_id: pokemon.id,
+          bid_amount: amount
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      // Success - update UI
       setCurrentBid(amount);
       setBidAmount('');
-      // Here you would typically send the bid to your backend
+      setBidSuccess(true);
+      
+      // Call success callback if provided
+      if (onBidSuccess) {
+        onBidSuccess();
+      }
+
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setBidSuccess(false);
+      }, 3000);
+
+    } catch (err: any) {
+      console.error('Bid submission error:', err);
+      setBidError(err.message || 'Failed to submit bid');
+    } finally {
+      setIsSubmittingBid(false);
     }
   };
 
@@ -98,15 +165,30 @@ const PokemonCard: React.FC<PokemonCardProps> = ({ pokemon, isPopular = false })
               onChange={(e) => setBidAmount(e.target.value)}
               className="flex-1 bg-white border border-gray-300 rounded-lg px-3 py-2 text-black placeholder-gray-400 focus:border-red-600 focus:outline-none font-pokemon"
               min={currentBid + 1}
+              disabled={isSubmittingBid}
             />
             <button
               onClick={handleBid}
-              disabled={!bidAmount || parseFloat(bidAmount) <= currentBid}
+              disabled={!bidAmount || parseFloat(bidAmount) <= currentBid || isSubmittingBid}
               className="bg-black text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon"
             >
-              Bid
+              {isSubmittingBid ? 'Bidding...' : 'Bid'}
             </button>
           </div>
+          
+          {/* Error Message */}
+          {bidError && (
+            <div className="mt-2 text-red-600 text-sm font-pokemon">
+              {bidError}
+            </div>
+          )}
+          
+          {/* Success Message */}
+          {bidSuccess && (
+            <div className="mt-2 text-green-600 text-sm font-pokemon">
+              Bid submitted successfully!
+            </div>
+          )}
         </div>
       </div>
 
