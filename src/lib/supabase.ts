@@ -5,3 +5,5 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
 console.log('Supabase URL:', supabaseUrl)
 console.log('Supabase Anon Key:', supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'undefined')
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
