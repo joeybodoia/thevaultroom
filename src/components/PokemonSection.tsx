@@ -42,10 +42,10 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   }, []);
 
   useEffect(() => {
-    if (currentStreamId && biddingMode === 'direct') {
+    if (currentStreamId) {
       fetchCurrentRound();
     }
-  }, [currentStreamId, activeTab, biddingMode]);
+  }, [currentStreamId, activeTab, lotteryActiveTab, biddingMode]);
 
   useEffect(() => {
     // Reset filters when switching tabs
@@ -519,6 +519,29 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                   Prismatic Evolutions - $1 Lottery
                 </h3>
                 
+                {/* Round ID Display */}
+                <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
+                  <div className="text-center">
+                    <h4 className="font-semibold text-blue-800 font-pokemon mb-2">Current Round for Prismatic Evolutions</h4>
+                    {roundLoading ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <Loader className="h-4 w-4 animate-spin text-blue-600" />
+                        <span className="text-blue-600 font-pokemon">Loading round...</span>
+                      </div>
+                    ) : currentRound ? (
+                      <div className="space-y-1">
+                        <p className="text-blue-700 font-bold font-pokemon">Round ID: {currentRound.id}</p>
+                        <p className="text-blue-600 text-sm font-pokemon">
+                          Round {currentRound.round_number} • {currentRound.packs_opened} packs • 
+                          {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-blue-600 font-pokemon">No round found</p>
+                    )}
+                  </div>
+                </div>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {/* Pokeball Pattern */}
                   <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
@@ -620,6 +643,29 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                   Crown Zenith - $1 Lottery
                 </h3>
                 
+                {/* Round ID Display */}
+                <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
+                  <div className="text-center">
+                    <h4 className="font-semibold text-blue-800 font-pokemon mb-2">Current Round for Crown Zenith</h4>
+                    {roundLoading ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <Loader className="h-4 w-4 animate-spin text-blue-600" />
+                        <span className="text-blue-600 font-pokemon">Loading round...</span>
+                      </div>
+                    ) : currentRound ? (
+                      <div className="space-y-1">
+                        <p className="text-blue-700 font-bold font-pokemon">Round ID: {currentRound.id}</p>
+                        <p className="text-blue-600 text-sm font-pokemon">
+                          Round {currentRound.round_number} • {currentRound.packs_opened} packs • 
+                          {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-blue-600 font-pokemon">No round found</p>
+                    )}
+                  </div>
+                </div>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {/* Ultra Rare */}
                   <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
@@ -678,7 +724,32 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
             {lotteryActiveTab === 'destined_rivals' && (
               <div className="space-y-6">
-                <h3 className="text-2xl font-bold text-black font-pokemon">Destined Rivals - $1 Lottery</h3>
+                <h3 className="text-2xl font-bold text-black font-pokemon text-center mb-8">
+                  Destined Rivals - $1 Lottery
+                </h3>
+                
+                {/* Round ID Display */}
+                <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
+                  <div className="text-center">
+                    <h4 className="font-semibold text-blue-800 font-pokemon mb-2">Current Round for Destined Rivals</h4>
+                    {roundLoading ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <Loader className="h-4 w-4 animate-spin text-blue-600" />
+                        <span className="text-blue-600 font-pokemon">Loading round...</span>
+                      </div>
+                    ) : currentRound ? (
+                      <div className="space-y-1">
+                        <p className="text-blue-700 font-bold font-pokemon">Round ID: {currentRound.id}</p>
+                        <p className="text-blue-600 text-sm font-pokemon">
+                          Round {currentRound.round_number} • {currentRound.packs_opened} packs • 
+                          {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-blue-600 font-pokemon">No round found</p>
+                    )}
+                  </div>
+                </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {/* Ultra Rare */}
