@@ -750,7 +750,12 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-green-600 rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">IR</span>
                       </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
+                          {lotteryParticipants['IR'] || 0} participants
+                        </p>
+                      </div>
                       <button 
                         onClick={() => handleLotteryEntry('IR')}
                         disabled={lotterySubmitting === 'IR'}
@@ -758,6 +763,11 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       >
                         {lotterySubmitting === 'IR' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {lotterySuccess === 'Successfully entered lottery for IR!' && (
+                        <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
+                          Successfully Entered $1 lottery
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -767,12 +777,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-black rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">ACE SPEC</span>
                       </div>
-                      <div className="mb-4">
-                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
-                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
-                          {lotteryParticipants['ACE SPEC'] || 0} participants
-                        </p>
-                      </div>
+                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
                       <button 
                         onClick={() => handleLotteryEntry('ACE SPEC')}
                         disabled={lotterySubmitting === 'ACE SPEC'}
@@ -780,11 +785,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       >
                         {lotterySubmitting === 'ACE SPEC' ? 'Entering...' : 'Enter for $1'}
                       </button>
-                      {lotterySuccess === 'Successfully entered lottery for ACE SPEC!' && (
-                        <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
-                          Successfully Entered $1 lottery
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -979,7 +979,12 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-green-600 rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">IR</span>
                       </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
+                          {lotteryParticipants['IR'] || 0} participants
+                        </p>
+                      </div>
                       <button 
                         onClick={() => handleLotteryEntry('IR')}
                         disabled={lotterySubmitting === 'IR'}
@@ -987,6 +992,11 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       >
                         {lotterySubmitting === 'IR' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {lotterySuccess === 'Successfully entered lottery for IR!' && (
+                        <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
+                          Successfully Entered $1 lottery
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
