@@ -39,6 +39,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [lotterySubmitting, setLotterySubmitting] = useState<string | null>(null);
   const [lotteryError, setLotteryError] = useState<string | null>(null);
   const [lotterySuccess, setLotterySuccess] = useState<string | null>(null);
+  const [lotteryParticipants, setLotteryParticipants] = useState<{ [key: string]: number }>({});
 
   useEffect(() => {
     fetchAllCards();
@@ -47,6 +48,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   useEffect(() => {
     if (currentStreamId) {
       fetchCurrentRound();
+      fetchLotteryParticipants();
     }
   }, [currentStreamId, activeTab, lotteryActiveTab, biddingMode]);
 
@@ -94,6 +96,30 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       setCurrentRound(null);
     } finally {
       setRoundLoading(false);
+    }
+  };
+
+  const fetchLotteryParticipants = async () => {
+    if (!currentRound) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('lottery_entries')
+        .select('selected_rarity')
+        .eq('round_id', currentRound.id);
+
+      if (error) throw error;
+
+      // Count participants by rarity
+      const counts: { [key: string]: number } = {};
+      data?.forEach(entry => {
+        const rarity = entry.selected_rarity;
+        counts[rarity] = (counts[rarity] || 0) + 1;
+      });
+
+      setLotteryParticipants(counts);
+    } catch (err: any) {
+      console.error('Error fetching lottery participants:', err);
     }
   };
 
@@ -259,6 +285,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
       console.log('Lottery entry successful:', data);
       setLotterySuccess(`Successfully entered lottery for ${rarity}!`);
+      
+      // Refresh participant counts
+      fetchLotteryParticipants();
       
       // Clear success message after 3 seconds
       setTimeout(() => {
@@ -616,7 +645,12 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-red-600 rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">Pokeball Pattern</span>
                       </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
+                          {lotteryParticipants['Pokeball Pattern'] || 0} participants
+                        </p>
+                      </div>
                       <button 
                         onClick={() => handleLotteryEntry('Pokeball Pattern')}
                         disabled={lotterySubmitting === 'Pokeball Pattern'}
@@ -624,6 +658,11 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       >
                         {lotterySubmitting === 'Pokeball Pattern' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {lotterySuccess === 'Successfully entered lottery for Pokeball Pattern!' && (
+                        <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
+                          Successfully Entered $1 lottery
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -633,7 +672,12 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-purple-600 rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">Masterball Pattern</span>
                       </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
+                          {lotteryParticipants['Masterball Pattern'] || 0} participants
+                        </p>
+                      </div>
                       <button 
                         onClick={() => handleLotteryEntry('Masterball Pattern')}
                         disabled={lotterySubmitting === 'Masterball Pattern'}
@@ -641,6 +685,11 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       >
                         {lotterySubmitting === 'Masterball Pattern' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {lotterySuccess === 'Successfully entered lottery for Masterball Pattern!' && (
+                        <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
+                          Successfully Entered $1 lottery
+                        </div>
+                      )}
                     </div>
                   </div>
 
