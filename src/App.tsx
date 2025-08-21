@@ -22,6 +22,16 @@ function App() {
     // Get initial session
     const getSession = async () => {
       try {
+        // Force logout on every page load for debugging
+        console.log('Force clearing session on page load...');
+        localStorage.removeItem('sb-bzqnxgohxamuqgyrjwls-auth-token');
+        sessionStorage.clear();
+        
+        // Try to sign out from Supabase (but don't wait for it)
+        supabase.auth.signOut().catch(err => {
+          console.log('Server signout failed (expected):', err.message);
+        });
+        
         console.log('Checking initial session...');
         const { data: { session } } = await supabase.auth.getSession();
         console.log('Initial session:', session);
