@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Users } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+
+interface Stream {
+  id: string;
+  title: string;
+  scheduled_date: string | null;
+  created_at: string;
+}
 
 const StreamCountdown: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState({
@@ -8,16 +16,55 @@ const StreamCountdown: React.FC = () => {
     minutes: 0,
     seconds: 0
   });
+  const [nextStream, setNextStream] = useState<Stream | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Set next stream to 2 days from now for demo
-    const targetDate = new Date();
-    targetDate.setDate(targetDate.getDate() + 2);
-    targetDate.setHours(19, 0, 0, 0); // 7 PM
+    fetchNextStream();
+  }, []);
 
+  const fetchNextStream = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const now = new Date().toISOString();
+      
+      const { data, error } = await supabase
+        .from('streams')
+        .select('*')
+        .gt('scheduled_date', now)
+        .order('scheduled_date', { ascending: true })
+        .limit(1)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+        throw error;
+      }
+
+      setNextStream(data);
+    } catch (err: any) {
+      console.error('Error fetching next stream:', err);
+      setError(err.message || 'Failed to fetch stream data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!nextStream?.scheduled_date) return;
+
+    const targetDate = new Date(nextStream.scheduled_date);
     const timer = setInterval(() => {
       const now = new Date().getTime();
       const distance = targetDate.getTime() - now;
+
+      if (distance < 0) {
+        // Stream has passed, fetch next stream
+        fetchNextStream();
+        return;
+      }
 
       const days = Math.floor(distance / (1000 * 60 * 60 * 24));
       const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -28,13 +75,63 @@ const StreamCountdown: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [nextStream]);
+
+  const formatStreamDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const options: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZoneName: 'short'
+    };
+    return date.toLocaleDateString('en-US', options);
+  };
+
+  if (loading) {
+    return (
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="flex items-center justify-center space-x-2 mb-4">
+            <Clock className="h-8 w-8 animate-spin text-red-600" />
+            <span className="text-xl font-pokemon text-black">Loading Stream Info...</span>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error || !nextStream?.scheduled_date) {
+    return (
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-black mb-8 font-pokemon">
+            Next Live Stream
+          </h2>
+          <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
+            <div className="text-center">
+              <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-gray-600 font-pokemon mb-2">
+                {error ? 'Unable to Load Stream' : 'No Upcoming Streams'}
+              </h3>
+              <p className="text-gray-500 font-pokemon">
+                {error ? error : 'Check back soon for new stream announcements!'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="max-w-4xl mx-auto text-center">
         <h2 className="text-3xl md:text-4xl font-bold text-black mb-8 font-pokemon">
-          Next Live Stream
+          {nextStream.title}
         </h2>
         
         <div className="bg-white rounded-2xl p-8 border border-gray-200 mb-8 shadow-lg">
@@ -61,16 +158,16 @@ const StreamCountdown: React.FC = () => {
           <div className="flex items-center justify-center space-x-6 text-gray-500">
             <div className="flex items-center space-x-2">
               <Calendar className="h-5 w-5" />
-              <span>Friday, 7:00 PM EST</span>
+              <span className="font-pokemon">{formatStreamDate(nextStream.scheduled_date)}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Users className="h-5 w-5" />
-              <span>Expected: 2,500+ viewers</span>
+              <span className="font-pokemon">Expected: 2,500+ viewers</span>
             </div>
           </div>
         </div>
 
-        <button className="bg-red-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-red-700 transition-all transform hover:scale-105">
+        <button className="bg-red-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-red-700 transition-all transform hover:scale-105 font-pokemon">
           Set Reminder
         </button>
       </div>
