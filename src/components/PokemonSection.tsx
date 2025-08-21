@@ -99,6 +99,11 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       setLoading(true);
       setError(null);
 
+      // Check if Supabase is properly configured
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        throw new Error('Supabase configuration missing. Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set in your .env file.');
+      }
+
       // Test basic Supabase connection first
       console.log('Testing Supabase connection...');
       
