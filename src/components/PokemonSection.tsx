@@ -168,7 +168,10 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     if (activeTab === 'prismatic') {
       currentCards = allCards.filter(card => card.set_name === 'SV: Prismatic Evolutions');
     } else if (activeTab === 'crown_zenith') {
-      currentCards = allCards.filter(card => card.set_name === 'Crown Zenith: Galarian Gallery');
+      currentCards = allCards.filter(card => 
+        card.set_name === 'Crown Zenith: Galarian Gallery' || 
+        card.set_name === 'Crown Zenith'
+      );
     } else if (activeTab === 'destined_rivals') {
       currentCards = allCards.filter(card => card.set_name === 'SV10: Destined Rivals');
     }
@@ -208,7 +211,10 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     if (activeTab === 'prismatic') {
       return allCards.filter(card => card.set_name === 'SV: Prismatic Evolutions');
     } else if (activeTab === 'crown_zenith') {
-      return allCards.filter(card => card.set_name === 'Crown Zenith: Galarian Gallery');
+      return allCards.filter(card => 
+        card.set_name === 'Crown Zenith: Galarian Gallery' || 
+        card.set_name === 'Crown Zenith'
+      );
     } else if (activeTab === 'destined_rivals') {
       return allCards.filter(card => card.set_name === 'SV10: Destined Rivals');
     }
@@ -283,7 +289,10 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     { 
       id: 'crown_zenith' as SetName, 
       name: 'Crown Zenith', 
-      count: allCards.filter(card => card.set_name === 'Crown Zenith: Galarian Gallery').length 
+      count: allCards.filter(card => 
+        card.set_name === 'Crown Zenith: Galarian Gallery' || 
+        card.set_name === 'Crown Zenith'
+      ).length 
     },
     { 
       id: 'destined_rivals' as SetName, 
