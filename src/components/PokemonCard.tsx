@@ -2,6 +2,7 @@ import React from 'react';
 import { Star, TrendingUp, DollarSign, Calendar } from 'lucide-react';
 import { PokemonCard as PokemonCardType } from '../types/pokemon';
 import { supabase } from '../lib/supabase';
+import type { User } from '@supabase/supabase-js';
 
 interface PokemonCardProps {
   pokemon: PokemonCardType;
@@ -22,7 +23,32 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
   const [bidError, setBidError] = React.useState<string | null>(null);
   const [bidSuccess, setBidSuccess] = React.useState(false);
   const [loadingCurrentBid, setLoadingCurrentBid] = React.useState(false);
+  const [user, setUser] = React.useState<User | null>(null);
+  const [loadingUser, setLoadingUser] = React.useState(true);
 
+  // Check user authentication status
+  React.useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+      } catch (error) {
+        console.error('Error checking user:', error);
+        setUser(null);
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+
+    checkUser();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
   // Fetch current highest bid when component mounts or round changes
   React.useEffect(() => {
     if (currentRoundId) {
@@ -224,12 +250,19 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
             />
             <button
               onClick={handleBid}
-              disabled={!bidAmount || parseFloat(bidAmount) <= currentBid || isSubmittingBid}
+              disabled={!user || !bidAmount || parseFloat(bidAmount) <= currentBid || isSubmittingBid || loadingUser}
               className="bg-black text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon"
             >
-              {isSubmittingBid ? 'Bidding...' : 'Bid'}
+              {loadingUser ? 'Loading...' : !user ? 'Login to Bid' : isSubmittingBid ? 'Bidding...' : 'Bid'}
             </button>
           </div>
+          
+          {/* Login Required Message */}
+          {!loadingUser && !user && (
+            <div className="mt-2 text-orange-600 text-sm font-pokemon">
+              Please sign in to place a bid
+            </div>
+          )}
           
           {/* Error Message */}
           {bidError && (
@@ -249,13 +282,22 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
 
       {/* Buy Now Option */}
       <div className="mb-4">
-        <button className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-all flex items-center justify-center space-x-2 font-pokemon">
+        <button 
+          disabled={!user || loadingUser}
+          className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-all flex items-center justify-center space-x-2 font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           <DollarSign className="h-4 w-4" />
-          <span>Buy Now - ${buyNowPrice}</span>
+          <span>{loadingUser ? 'Loading...' : !user ? 'Login to Buy Now' : `Buy Now - $${buyNowPrice}`}</span>
         </button>
-        <p className="text-gray-400 text-xs text-center mt-1 font-pokemon">
-          Secure your slot for this Pokemon
-        </p>
+        {!loadingUser && !user ? (
+          <p className="text-orange-600 text-xs text-center mt-1 font-pokemon">
+            Please sign in to purchase
+          </p>
+        ) : (
+          <p className="text-gray-400 text-xs text-center mt-1 font-pokemon">
+            Secure your slot for this Pokemon
+          </p>
+        )}
       </div>
 
       {/* Market Info */}

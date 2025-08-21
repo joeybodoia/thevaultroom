@@ -3,6 +3,7 @@ import { Loader, AlertCircle, Sparkles, Search, Filter, ArrowUpDown } from 'luci
 import { supabase } from '../lib/supabase';
 import { DirectBidCard, PokemonCard as PokemonCardType } from '../types/pokemon';
 import PokemonCard from './PokemonCard';
+import type { User } from '@supabase/supabase-js';
 
 type SetName = 'prismatic' | 'crown_zenith' | 'destined_rivals';
 type BiddingMode = 'direct' | 'lottery';
@@ -40,7 +41,32 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [lotteryError, setLotteryError] = useState<string | null>(null);
   const [lotterySuccess, setLotterySuccess] = useState<string | null>(null);
   const [lotteryParticipants, setLotteryParticipants] = useState<{ [key: string]: number }>({});
+  const [user, setUser] = useState<User | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
 
+  // Check user authentication status
+  useEffect(() => {
+    const checkUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+      } catch (error) {
+        console.error('Error checking user:', error);
+        setUser(null);
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+
+    checkUser();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
   useEffect(() => {
     fetchAllCards();
   }, []);
@@ -653,11 +679,16 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       </div>
                       <button 
                         onClick={() => handleLotteryEntry('Pokeball Pattern')}
-                        disabled={lotterySubmitting === 'Pokeball Pattern'}
+                        disabled={!user || loadingUser || lotterySubmitting === 'Pokeball Pattern'}
                         className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {lotterySubmitting === 'Pokeball Pattern' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Pokeball Pattern' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
                       {lotterySuccess === 'Successfully entered lottery for Pokeball Pattern!' && (
                         <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
                           Successfully Entered $1 lottery
@@ -680,11 +711,16 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       </div>
                       <button 
                         onClick={() => handleLotteryEntry('Masterball Pattern')}
-                        disabled={lotterySubmitting === 'Masterball Pattern'}
+                        disabled={!user || loadingUser || lotterySubmitting === 'Masterball Pattern'}
                         className="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {lotterySubmitting === 'Masterball Pattern' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Masterball Pattern' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
                       {lotterySuccess === 'Successfully entered lottery for Masterball Pattern!' && (
                         <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
                           Successfully Entered $1 lottery
