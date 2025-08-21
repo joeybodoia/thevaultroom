@@ -36,6 +36,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [sortBy, setSortBy] = useState('price-high');
   const [currentRound, setCurrentRound] = useState<Round | null>(null);
   const [roundLoading, setRoundLoading] = useState(false);
+  const [lotterySubmitting, setLotterySubmitting] = useState<string | null>(null);
+  const [lotteryError, setLotteryError] = useState<string | null>(null);
+  const [lotterySuccess, setLotterySuccess] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAllCards();
@@ -204,6 +207,55 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     }
 
     setFilteredPokemon(filtered);
+  };
+
+  const handleLotteryEntry = async (rarity: string) => {
+    if (!currentRound) {
+      setLotteryError('No active round found for this set');
+      return;
+    }
+
+    setLotterySubmitting(rarity);
+    setLotteryError(null);
+    setLotterySuccess(null);
+
+    try {
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('You must be logged in to enter the lottery');
+      }
+
+      // Insert lottery entry
+      const { data, error } = await supabase
+        .from('lottery_entries')
+        .insert([{
+          user_id: user.id,
+          round_id: currentRound.id,
+          selected_rarity: rarity,
+          payment_confirmed: false
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      setLotterySuccess(`Successfully entered lottery for ${rarity}!`);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setLotterySuccess(null);
+      }, 3000);
+
+    } catch (err: any) {
+      console.error('Lottery entry error:', err);
+      setLotteryError(err.message || 'Failed to enter lottery');
+    } finally {
+      setLotterySubmitting(null);
+    }
   };
 
   // Get unique sets and rarities for filter options
