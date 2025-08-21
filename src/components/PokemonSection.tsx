@@ -8,7 +8,21 @@ type SetName = 'prismatic' | 'crown_zenith' | 'destined_rivals';
 type BiddingMode = 'direct' | 'lottery';
 type LotterySetName = 'prismatic' | 'crown_zenith' | 'destined_rivals';
 
-const PokemonSection: React.FC = () => {
+interface Round {
+  id: string;
+  stream_id: string | null;
+  set_name: string;
+  round_number: number;
+  packs_opened: number;
+  locked: boolean;
+  created_at: string;
+}
+
+interface PokemonSectionProps {
+  currentStreamId?: string | null;
+}
+
+const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [activeTab, setActiveTab] = useState<SetName>('prismatic');
   const [biddingMode, setBiddingMode] = useState<BiddingMode>('direct');
   const [lotteryActiveTab, setLotteryActiveTab] = useState<LotterySetName>('prismatic');
@@ -20,10 +34,18 @@ const PokemonSection: React.FC = () => {
   const [selectedSet, setSelectedSet] = useState('');
   const [selectedRarity, setSelectedRarity] = useState('');
   const [sortBy, setSortBy] = useState('price-high');
+  const [currentRound, setCurrentRound] = useState<Round | null>(null);
+  const [roundLoading, setRoundLoading] = useState(false);
 
   useEffect(() => {
     fetchAllCards();
   }, []);
+
+  useEffect(() => {
+    if (currentStreamId && biddingMode === 'direct') {
+      fetchCurrentRound();
+    }
+  }, [currentStreamId, activeTab, biddingMode]);
 
   useEffect(() => {
     // Reset filters when switching tabs
@@ -34,6 +56,43 @@ const PokemonSection: React.FC = () => {
   useEffect(() => {
     filterAndSortPokemon();
   }, [activeTab, allCards, searchTerm, selectedRarity, sortBy]);
+
+  const fetchCurrentRound = async () => {
+    if (!currentStreamId) {
+      setCurrentRound(null);
+      return;
+    }
+
+    setRoundLoading(true);
+    try {
+      let setName = '';
+      if (activeTab === 'prismatic') {
+        setName = 'SV: Prismatic Evolutions';
+      } else if (activeTab === 'crown_zenith') {
+        setName = 'Crown Zenith: Galarian Gallery';
+      } else if (activeTab === 'destined_rivals') {
+        setName = 'SV10: Destined Rivals';
+      }
+
+      const { data, error } = await supabase
+        .from('rounds')
+        .select('*')
+        .eq('stream_id', currentStreamId)
+        .eq('set_name', setName)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+        throw error;
+      }
+
+      setCurrentRound(data);
+    } catch (err: any) {
+      console.error('Error fetching current round:', err);
+      setCurrentRound(null);
+    } finally {
+      setRoundLoading(false);
+    }
+  };
 
   const fetchAllCards = async () => {
     try {
@@ -368,6 +427,29 @@ const PokemonSection: React.FC = () => {
                 <span className="text-gray-600 font-pokemon">
                   Showing {filteredPokemon.length} of {currentPokemon.length} Pokemon
                 </span>
+              </div>
+            </div>
+
+            {/* Round ID Display */}
+            <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
+              <div className="text-center">
+                <h4 className="font-semibold text-blue-800 font-pokemon mb-2">Current Round for {tabs.find(t => t.id === activeTab)?.name}</h4>
+                {roundLoading ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <Loader className="h-4 w-4 animate-spin text-blue-600" />
+                    <span className="text-blue-600 font-pokemon">Loading round...</span>
+                  </div>
+                ) : currentRound ? (
+                  <div className="space-y-1">
+                    <p className="text-blue-700 font-bold font-pokemon">Round ID: {currentRound.id}</p>
+                    <p className="text-blue-600 text-sm font-pokemon">
+                      Round {currentRound.round_number} • {currentRound.packs_opened} packs • 
+                      {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-blue-600 font-pokemon">No round found</p>
+                )}
               </div>
             </div>
 

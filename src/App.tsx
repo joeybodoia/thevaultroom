@@ -16,6 +16,7 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminPortal, setShowAdminPortal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [currentStreamId, setCurrentStreamId] = useState<string | null>(null);
 
   useEffect(() => {
     // Get initial session
@@ -115,9 +116,9 @@ function App() {
       <main>
         <HeroBanner />
         <HowItWorks />
-        <StreamCountdown />
+        <StreamCountdown onStreamChange={setCurrentStreamId} />
         <CurrentSetSection />
-        <PokemonSection />
+        <PokemonSection currentStreamId={currentStreamId} />
       </main>
       <Footer />
     </div>

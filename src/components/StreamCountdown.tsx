@@ -9,7 +9,11 @@ interface Stream {
   created_at: string;
 }
 
-const StreamCountdown: React.FC = () => {
+interface StreamCountdownProps {
+  onStreamChange?: (streamId: string | null) => void;
+}
+
+const StreamCountdown: React.FC<StreamCountdownProps> = ({ onStreamChange }) => {
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -23,6 +27,12 @@ const StreamCountdown: React.FC = () => {
   useEffect(() => {
     fetchNextStream();
   }, []);
+
+  useEffect(() => {
+    if (onStreamChange) {
+      onStreamChange(nextStream?.id || null);
+    }
+  }, [nextStream, onStreamChange]);
 
   const fetchNextStream = async () => {
     try {
