@@ -48,6 +48,23 @@ interface PulledCard {
   date_updated: string;
 }
 
+interface DirectBid {
+  id: string;
+  user_id: string;
+  round_id: string;
+  card_id: number;
+  bid_amount: number;
+  created_at: string;
+  users: {
+    username: string;
+  };
+  direct_bid_cards: {
+    card_name: string;
+    image_url: string | null;
+    ungraded_market_price: number | null;
+  };
+}
+
 interface Stream {
   id: string;
   title: string;
@@ -87,6 +104,7 @@ const AdminPortal: React.FC = () => {
   const [pulledCards, setPulledCards] = useState<{ [roundId: string]: PulledCard[] }>({});
   const [loadingCards, setLoadingCards] = useState(false);
   const [addingCard, setAddingCard] = useState(false);
+  const [directBids, setDirectBids] = useState<{ [roundId: string]: DirectBid[] }>({});
 
   useEffect(() => {
     console.log('AdminPortal useEffect running...');
@@ -194,6 +212,35 @@ const AdminPortal: React.FC = () => {
       }));
     } catch (err: any) {
       console.error('Failed to fetch pulled cards:', err);
+    }
+  };
+
+  const fetchDirectBids = async (roundId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('direct_bids')
+        .select(`
+          *,
+          users (
+            username
+          ),
+          direct_bid_cards (
+            card_name,
+            image_url,
+            ungraded_market_price
+          )
+        `)
+        .eq('round_id', roundId)
+        .order('bid_amount', { ascending: false });
+
+      if (error) throw error;
+
+      setDirectBids(prev => ({
+        ...prev,
+        [roundId]: data || []
+      }));
+    } catch (err: any) {
+      console.error('Failed to fetch direct bids:', err);
     }
   };
 
@@ -411,6 +458,9 @@ const AdminPortal: React.FC = () => {
       }
       if (!pulledCards[roundId]) {
         fetchPulledCards(roundId);
+      }
+      if (!directBids[roundId]) {
+        fetchDirectBids(roundId);
       }
     }
   };
@@ -891,6 +941,78 @@ const AdminPortal: React.FC = () => {
                               <div className="flex items-center space-x-2">
                                 <Loader className="h-4 w-4 animate-spin text-gray-400" />
                                 <span className="text-gray-500 text-sm font-pokemon">Loading pulled cards...</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Direct Card Bids Section */}
+                          <div>
+                            <h4 className="font-semibold text-black font-pokemon mb-3">
+                              Direct Card Bids ({directBids[round.id]?.length || 0})
+                            </h4>
+                            {directBids[round.id] ? (
+                              directBids[round.id].length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                  {directBids[round.id].map((bid) => (
+                                    <div key={bid.id} className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                                      {/* Card Image */}
+                                      {bid.direct_bid_cards.image_url && (
+                                        <div className="aspect-square mb-3 bg-white rounded-lg overflow-hidden border border-gray-200">
+                                          <img 
+                                            src={bid.direct_bid_cards.image_url} 
+                                            alt={bid.direct_bid_cards.card_name}
+                                            className="w-full h-full object-contain"
+                                            onError={(e) => {
+                                              const target = e.target as HTMLImageElement;
+                                              target.style.display = 'none';
+                                            }}
+                                          />
+                                        </div>
+                                      )}
+                                      
+                                      {/* Bid Details */}
+                                      <div className="space-y-2">
+                                        <h5 className="font-semibold text-black font-pokemon text-sm">
+                                          {bid.direct_bid_cards.card_name}
+                                        </h5>
+                                        
+                                        <div className="space-y-1">
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-gray-600 text-xs font-pokemon">Bid Amount:</span>
+                                            <span className="text-yellow-600 font-bold text-sm font-pokemon">
+                                              ${bid.bid_amount}
+                                            </span>
+                                          </div>
+                                          
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-gray-600 text-xs font-pokemon">Bidder:</span>
+                                            <span className="text-black font-semibold text-xs font-pokemon">
+                                              {bid.users.username || 'Unknown'}
+                                            </span>
+                                          </div>
+                                          
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-gray-600 text-xs font-pokemon">Market Price:</span>
+                                            <span className="text-green-600 font-semibold text-xs font-pokemon">
+                                              ${bid.direct_bid_cards.ungraded_market_price}
+                                            </span>
+                                          </div>
+                                          
+                                          <p className="text-gray-400 text-xs font-pokemon">
+                                            Bid placed {new Date(bid.created_at).toLocaleDateString()}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-gray-500 text-sm font-pokemon">No direct bids placed yet for this round</p>
+                              )
+                            ) : (
+                              <div className="flex items-center space-x-2">
+                                <Loader className="h-4 w-4 animate-spin text-gray-400" />
+                                <span className="text-gray-500 text-sm font-pokemon">Loading direct bids...</span>
                               </div>
                             )}
                           </div>
