@@ -220,12 +220,24 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     setLotterySuccess(null);
 
     try {
+      console.log('Starting lottery entry for rarity:', rarity);
+      console.log('Current round:', currentRound);
+      
       // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      console.log('User check result:', { user: user?.id, userError });
       
       if (userError || !user) {
         throw new Error('You must be logged in to enter the lottery');
       }
+
+      console.log('Attempting to insert lottery entry:', {
+        user_id: user.id,
+        round_id: currentRound.id,
+        selected_rarity: rarity,
+        payment_confirmed: false
+      });
 
       // Insert lottery entry
       const { data, error } = await supabase
@@ -239,10 +251,13 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         .select()
         .single();
 
+      console.log('Insert result:', { data, error });
       if (error) {
+        console.error('Database insert error:', error);
         throw error;
       }
 
+      console.log('Lottery entry successful:', data);
       setLotterySuccess(`Successfully entered lottery for ${rarity}!`);
       
       // Clear success message after 3 seconds
