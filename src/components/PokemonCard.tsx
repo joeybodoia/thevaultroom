@@ -17,10 +17,55 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
   onBidSuccess 
 }) => {
   const [bidAmount, setBidAmount] = React.useState('');
-  const [currentBid, setCurrentBid] = React.useState(parseFloat(((pokemon.ungraded_market_price || 0) * 0.01).toFixed(2))); // Start at 1% of market price
+  const [currentBid, setCurrentBid] = React.useState(parseFloat(((pokemon.ungraded_market_price || 0) * 0.01).toFixed(2))); // Default to 1% of market price
   const [isSubmittingBid, setIsSubmittingBid] = React.useState(false);
   const [bidError, setBidError] = React.useState<string | null>(null);
   const [bidSuccess, setBidSuccess] = React.useState(false);
+  const [loadingCurrentBid, setLoadingCurrentBid] = React.useState(false);
+
+  // Fetch current highest bid when component mounts or round changes
+  React.useEffect(() => {
+    if (currentRoundId) {
+      fetchCurrentBid();
+    }
+  }, [currentRoundId, pokemon.id]);
+
+  const fetchCurrentBid = async () => {
+    if (!currentRoundId) return;
+
+    setLoadingCurrentBid(true);
+    try {
+      console.log('Fetching current bid for card:', pokemon.card_name, 'in round:', currentRoundId);
+      
+      const { data, error } = await supabase
+        .from('direct_bids')
+        .select('bid_amount')
+        .eq('round_id', currentRoundId)
+        .eq('card_id', pokemon.id)
+        .order('bid_amount', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+        console.error('Error fetching current bid:', error);
+        return;
+      }
+
+      if (data) {
+        console.log('Found highest bid:', data.bid_amount);
+        setCurrentBid(parseFloat(data.bid_amount));
+      } else {
+        console.log('No bids found, using default (1% of market price)');
+        // Keep default 1% of market price if no bids exist
+        const defaultBid = parseFloat(((pokemon.ungraded_market_price || 0) * 0.01).toFixed(2));
+        setCurrentBid(defaultBid);
+      }
+    } catch (err: any) {
+      console.error('Error fetching current bid:', err);
+    } finally {
+      setLoadingCurrentBid(false);
+    }
+  };
 
   const formatPrice = (price: number | null) => {
     if (!price) return 'N/A';
@@ -73,6 +118,9 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
       setCurrentBid(amount);
       setBidAmount('');
       setBidSuccess(true);
+      
+      // Refresh current bid to make sure we have the latest
+      fetchCurrentBid();
       
       // Call success callback if provided
       if (onBidSuccess) {
@@ -151,10 +199,17 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
         <div className="bg-gray-50 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-gray-700 text-sm font-pokemon">Current Bid:</span>
-            <div className="flex items-center space-x-1 text-red-600">
-              <TrendingUp className="h-4 w-4" />
-              <span className="font-bold font-pokemon">${currentBid}</span>
-            </div>
+            {loadingCurrentBid ? (
+              <div className="flex items-center space-x-1 text-gray-400">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                <span className="font-bold font-pokemon text-sm">Loading...</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-1 text-red-600">
+                <TrendingUp className="h-4 w-4" />
+                <span className="font-bold font-pokemon">${currentBid}</span>
+              </div>
+            )}
           </div>
           
           <div className="flex space-x-2">
