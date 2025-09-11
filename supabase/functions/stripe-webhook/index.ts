@@ -1,12 +1,11 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   try {
     const signature = req.headers.get('stripe-signature')
     
@@ -32,14 +31,16 @@ serve(async (req) => {
       const { user_id, round_id, selected_rarity } = session.metadata
 
       // Create lottery entry in database
-      const { error } = await supabaseClient
+      const { data, error } = await supabaseClient
         .from('lottery_entries')
-        .insert([{
+        .upsert([{
           user_id,
           round_id,
           selected_rarity,
           payment_confirmed: true
-        }])
+        }], {
+          onConflict: 'user_id,round_id'
+        })
 
       if (error) {
         console.error('Error creating lottery entry:', error)

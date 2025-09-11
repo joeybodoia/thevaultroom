@@ -3,6 +3,7 @@ import { Loader, AlertCircle, Sparkles, Search, Filter, ArrowUpDown } from 'luci
 import { supabase } from '../lib/supabase';
 import { DirectBidCard, PokemonCard as PokemonCardType } from '../types/pokemon';
 import PokemonCard from './PokemonCard';
+import StripePaymentModal from './StripePaymentModal';
 import type { User } from '@supabase/supabase-js';
 
 type SetName = 'prismatic' | 'crown_zenith' | 'destined_rivals';
@@ -43,6 +44,12 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [lotteryParticipants, setLotteryParticipants] = useState<{ [key: string]: number }>({});
   const [user, setUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [showStripeModal, setShowStripeModal] = useState(false);
+  const [selectedLotteryEntry, setSelectedLotteryEntry] = useState<{
+    roundId: string;
+    rarity: string;
+    setName: string;
+  } | null>(null);
 
   // Check user authentication status
   useEffect(() => {
@@ -267,65 +274,32 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       return;
     }
 
-    setLotterySubmitting(rarity);
-    setLotteryError(null);
-    setLotterySuccess(null);
-
-    try {
-      console.log('Starting lottery entry for rarity:', rarity);
-      console.log('Current round:', currentRound);
-      
-      // Get current user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      console.log('User check result:', { user: user?.id, userError });
-      
-      if (userError || !user) {
-        throw new Error('You must be logged in to enter the lottery');
-      }
-
-      console.log('Attempting to insert lottery entry:', {
-        user_id: user.id,
-        round_id: currentRound.id,
-        selected_rarity: rarity,
-        payment_confirmed: false
-      });
-
-      // Insert lottery entry
-      const { data, error } = await supabase
-        .from('lottery_entries')
-        .insert([{
-          user_id: user.id,
-          round_id: currentRound.id,
-          selected_rarity: rarity,
-          payment_confirmed: false
-        }])
-        .select()
-        .single();
-
-      console.log('Insert result:', { data, error });
-      if (error) {
-        console.error('Database insert error:', error);
-        throw error;
-      }
-
-      console.log('Lottery entry successful:', data);
-      setLotterySuccess(`Successfully entered lottery for ${rarity}!`);
-      
-      // Refresh participant counts
-      fetchLotteryParticipants();
-      
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setLotterySuccess(null);
-      }, 3000);
-
-    } catch (err: any) {
-      console.error('Lottery entry error:', err);
-      setLotteryError(err.message || 'Failed to enter lottery');
-    } finally {
-      setLotterySubmitting(null);
+    if (!user) {
+      setLotteryError('Please sign in to enter the lottery');
+      return;
     }
+
+    // Open Stripe payment modal
+    setSelectedLotteryEntry({ 
+      roundId: currentRound.id, 
+      rarity, 
+      setName: currentRound.set_name 
+    });
+    setShowStripeModal(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    setShowStripeModal(false);
+    setSelectedLotteryEntry(null);
+    setLotterySuccess(`Successfully entered lottery for ${selectedLotteryEntry?.rarity} cards!`);
+    
+    // Refresh participant counts
+    fetchLotteryParticipants();
+    
+    // Clear success message after 3 seconds
+    setTimeout(() => {
+      setLotterySuccess(null);
+    }, 3000);
   };
 
   // Get unique sets and rarities for filter options
@@ -1200,6 +1174,21 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               </div>
             )}
           </div>
+        )}
+
+        {/* Stripe Payment Modal */}
+        {selectedLotteryEntry && (
+          <StripePaymentModal
+            isOpen={showStripeModal}
+            onClose={() => {
+              setShowStripeModal(false);
+              setSelectedLotteryEntry(null);
+            }}
+            roundId={selectedLotteryEntry.roundId}
+            selectedRarity={selectedLotteryEntry.rarity}
+            setName={selectedLotteryEntry.setName}
+            onPaymentSuccess={handlePaymentSuccess}
+          />
         )}
       </div>
     </section>

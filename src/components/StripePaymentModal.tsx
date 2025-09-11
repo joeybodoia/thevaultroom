@@ -28,6 +28,13 @@ const StripePaymentModal: React.FC<StripePaymentModalProps> = ({
     setError(null);
 
     try {
+      // Get current user and auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('Please sign in to continue');
+      }
+
       // Initialize Stripe
       const stripe = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
       
@@ -36,10 +43,11 @@ const StripePaymentModal: React.FC<StripePaymentModalProps> = ({
       }
 
       // Create checkout session
-      const response = await fetch('/api/create-checkout-session', {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           roundId,

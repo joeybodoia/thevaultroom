@@ -1,12 +1,11 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -45,7 +44,7 @@ serve(async (req) => {
         'line_items[0][quantity]': '1',
         'mode': 'payment',
         'success_url': `${req.headers.get('origin')}/payment-success?session_id={CHECKOUT_SESSION_ID}&round_id=${roundId}&rarity=${encodeURIComponent(selectedRarity)}`,
-        'cancel_url': `${req.headers.get('origin')}/payment-cancelled`,
+        'cancel_url': `${req.headers.get('origin')}/`,
         'metadata[user_id]': user.id,
         'metadata[round_id]': roundId,
         'metadata[selected_rarity]': selectedRarity,
