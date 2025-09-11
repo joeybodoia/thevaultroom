@@ -815,11 +815,16 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       </div>
                       <button 
                         onClick={() => handleLotteryEntry('IR')}
-                        disabled={lotterySubmitting === 'IR'}
+                        disabled={!user || loadingUser || lotterySubmitting === 'IR'}
                         className="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {lotterySubmitting === 'IR' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'IR' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
                       {lotterySuccess === 'Successfully entered lottery for IR!' && (
                         <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
                           Successfully Entered $1 lottery
@@ -1100,11 +1105,16 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       </div>
                       <button 
                         onClick={() => handleLotteryEntry('IR')}
-                        disabled={lotterySubmitting === 'IR'}
+                        disabled={!user || loadingUser || lotterySubmitting === 'IR'}
                         className="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {lotterySubmitting === 'IR' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'IR' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
                       {lotterySuccess === 'Successfully entered lottery for IR!' && (
                         <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
                           Successfully Entered $1 lottery
