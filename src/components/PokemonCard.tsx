@@ -70,7 +70,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
         .eq('card_id', pokemon.id)
         .order('bid_amount', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
         console.error('Error fetching current bid:', error);
