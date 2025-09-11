@@ -735,14 +735,21 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-yellow-500 rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">Hyper Rare</span>
                       </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                      </div>
                       <button 
                         onClick={() => handleLotteryEntry('Hyper Rare')}
-                        disabled={lotterySubmitting === 'Hyper Rare'}
+                        disabled={!user || loadingUser || lotterySubmitting === 'Hyper Rare'}
                         className="w-full bg-yellow-500 text-white font-bold py-3 rounded-lg hover:bg-yellow-600 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {lotterySubmitting === 'Hyper Rare' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Hyper Rare' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -752,14 +759,21 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-blue-600 rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">Ultra Rare</span>
                       </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                      </div>
                       <button 
                         onClick={() => handleLotteryEntry('Ultra Rare')}
-                        disabled={lotterySubmitting === 'Ultra Rare'}
+                        disabled={!user || loadingUser || lotterySubmitting === 'Ultra Rare'}
                         className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {lotterySubmitting === 'Ultra Rare' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Ultra Rare' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -769,14 +783,21 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-pink-600 rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">SIR</span>
                       </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                      </div>
                       <button 
                         onClick={() => handleLotteryEntry('SIR')}
-                        disabled={lotterySubmitting === 'SIR'}
+                        disabled={!user || loadingUser || lotterySubmitting === 'SIR'}
                         className="w-full bg-pink-600 text-white font-bold py-3 rounded-lg hover:bg-pink-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {lotterySubmitting === 'SIR' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'SIR' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -813,14 +834,21 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-black rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">ACE SPEC</span>
                       </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                      </div>
                       <button 
                         onClick={() => handleLotteryEntry('ACE SPEC')}
-                        disabled={lotterySubmitting === 'ACE SPEC'}
+                        disabled={!user || loadingUser || lotterySubmitting === 'ACE SPEC'}
                         className="w-full bg-black text-white font-bold py-3 rounded-lg hover:bg-gray-800 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {lotterySubmitting === 'ACE SPEC' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'ACE SPEC' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -863,14 +891,21 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-blue-600 rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">Ultra Rare</span>
                       </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                      </div>
                       <button 
                         onClick={() => handleLotteryEntry('Ultra Rare')}
-                        disabled={lotterySubmitting === 'Ultra Rare'}
+                        disabled={!user || loadingUser || lotterySubmitting === 'Ultra Rare'}
                         className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {lotterySubmitting === 'Ultra Rare' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Ultra Rare' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -880,14 +915,21 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-orange-600 rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">Holo Rare</span>
                       </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                      </div>
                       <button 
                         onClick={() => handleLotteryEntry('Holo Rare')}
-                        disabled={lotterySubmitting === 'Holo Rare'}
+                        disabled={!user || loadingUser || lotterySubmitting === 'Holo Rare'}
                         className="w-full bg-orange-600 text-white font-bold py-3 rounded-lg hover:bg-orange-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {lotterySubmitting === 'Holo Rare' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Holo Rare' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -897,14 +939,21 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-purple-600 rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">Secret Rare</span>
                       </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                      </div>
                       <button 
                         onClick={() => handleLotteryEntry('Secret Rare')}
-                        disabled={lotterySubmitting === 'Secret Rare'}
+                        disabled={!user || loadingUser || lotterySubmitting === 'Secret Rare'}
                         className="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {lotterySubmitting === 'Secret Rare' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Secret Rare' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -914,14 +963,21 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-yellow-500 rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">Radiant Rare</span>
                       </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                      </div>
                       <button 
                         onClick={() => handleLotteryEntry('Radiant Rare')}
-                        disabled={lotterySubmitting === 'Radiant Rare'}
+                        disabled={!user || loadingUser || lotterySubmitting === 'Radiant Rare'}
                         className="w-full bg-yellow-500 text-white font-bold py-3 rounded-lg hover:bg-yellow-600 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {lotterySubmitting === 'Radiant Rare' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Radiant Rare' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -964,14 +1020,21 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-blue-600 rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">Ultra Rare</span>
                       </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                      </div>
                       <button 
                         onClick={() => handleLotteryEntry('Ultra Rare')}
-                        disabled={lotterySubmitting === 'Ultra Rare'}
+                        disabled={!user || loadingUser || lotterySubmitting === 'Ultra Rare'}
                         className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {lotterySubmitting === 'Ultra Rare' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Ultra Rare' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -981,14 +1044,21 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-yellow-500 rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">Hyper Rare</span>
                       </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                      </div>
                       <button 
                         onClick={() => handleLotteryEntry('Hyper Rare')}
-                        disabled={lotterySubmitting === 'Hyper Rare'}
+                        disabled={!user || loadingUser || lotterySubmitting === 'Hyper Rare'}
                         className="w-full bg-yellow-500 text-white font-bold py-3 rounded-lg hover:bg-yellow-600 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {lotterySubmitting === 'Hyper Rare' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Hyper Rare' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -998,14 +1068,21 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       <div className="bg-pink-600 rounded-lg p-4 mb-4">
                         <span className="text-xl font-bold text-white font-pokemon">SIR</span>
                       </div>
-                      <p className="text-gray-600 text-sm font-pokemon mb-4">Enter lottery for this rarity type</p>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                      </div>
                       <button 
                         onClick={() => handleLotteryEntry('SIR')}
-                        disabled={lotterySubmitting === 'SIR'}
+                        disabled={!user || loadingUser || lotterySubmitting === 'SIR'}
                         className="w-full bg-pink-600 text-white font-bold py-3 rounded-lg hover:bg-pink-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {lotterySubmitting === 'SIR' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'SIR' ? 'Entering...' : 'Enter for $1'}
                       </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
                     </div>
                   </div>
 
