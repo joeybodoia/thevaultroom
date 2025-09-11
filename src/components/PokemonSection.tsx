@@ -879,3 +879,331 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                 </h3>
                 
                 {/* Round ID Display */}
+                <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
+                  <div className="text-center">
+                    <h4 className="font-semibold text-blue-800 font-pokemon mb-2">Current Round for Crown Zenith</h4>
+                    {roundLoading ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <Loader className="h-4 w-4 animate-spin text-blue-600" />
+                        <span className="text-blue-600 font-pokemon">Loading round...</span>
+                      </div>
+                    ) : currentRound ? (
+                      <div className="space-y-1">
+                        <p className="text-blue-700 font-bold font-pokemon">Round ID: {currentRound.id}</p>
+                        <p className="text-blue-600 text-sm font-pokemon">
+                          Round {currentRound.round_number} • {currentRound.packs_opened} packs • 
+                          {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-blue-600 font-pokemon">No round found</p>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {/* VSTAR */}
+                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
+                    <div className="text-center">
+                      <div className="bg-purple-600 rounded-lg p-4 mb-4">
+                        <span className="text-xl font-bold text-white font-pokemon">VSTAR</span>
+                      </div>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
+                          {lotteryParticipants['VSTAR'] || 0} participants
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => handleLotteryEntry('VSTAR')}
+                        disabled={!user || loadingUser || lotterySubmitting === 'VSTAR'}
+                        className="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'VSTAR' ? 'Entering...' : 'Enter for $1'}
+                      </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* VMAX */}
+                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
+                    <div className="text-center">
+                      <div className="bg-red-600 rounded-lg p-4 mb-4">
+                        <span className="text-xl font-bold text-white font-pokemon">VMAX</span>
+                      </div>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
+                          {lotteryParticipants['VMAX'] || 0} participants
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => handleLotteryEntry('VMAX')}
+                        disabled={!user || loadingUser || lotterySubmitting === 'VMAX'}
+                        className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'VMAX' ? 'Entering...' : 'Enter for $1'}
+                      </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* V */}
+                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
+                    <div className="text-center">
+                      <div className="bg-blue-600 rounded-lg p-4 mb-4">
+                        <span className="text-xl font-bold text-white font-pokemon">V</span>
+                      </div>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
+                          {lotteryParticipants['V'] || 0} participants
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => handleLotteryEntry('V')}
+                        disabled={!user || loadingUser || lotterySubmitting === 'V'}
+                        className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'V' ? 'Entering...' : 'Enter for $1'}
+                      </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Radiant */}
+                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
+                    <div className="text-center">
+                      <div className="bg-yellow-500 rounded-lg p-4 mb-4">
+                        <span className="text-xl font-bold text-white font-pokemon">Radiant</span>
+                      </div>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
+                          {lotteryParticipants['Radiant'] || 0} participants
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => handleLotteryEntry('Radiant')}
+                        disabled={!user || loadingUser || lotterySubmitting === 'Radiant'}
+                        className="w-full bg-yellow-500 text-white font-bold py-3 rounded-lg hover:bg-yellow-600 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Radiant' ? 'Entering...' : 'Enter for $1'}
+                      </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {lotteryActiveTab === 'destined_rivals' && (
+              <div className="space-y-6">
+                <h3 className="text-2xl font-bold text-black font-pokemon text-center mb-8">
+                  Destined Rivals - $1 Lottery
+                </h3>
+                
+                {/* Round ID Display */}
+                <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
+                  <div className="text-center">
+                    <h4 className="font-semibold text-blue-800 font-pokemon mb-2">Current Round for Destined Rivals</h4>
+                    {roundLoading ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <Loader className="h-4 w-4 animate-spin text-blue-600" />
+                        <span className="text-blue-600 font-pokemon">Loading round...</span>
+                      </div>
+                    ) : currentRound ? (
+                      <div className="space-y-1">
+                        <p className="text-blue-700 font-bold font-pokemon">Round ID: {currentRound.id}</p>
+                        <p className="text-blue-600 text-sm font-pokemon">
+                          Round {currentRound.round_number} • {currentRound.packs_opened} packs • 
+                          {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-blue-600 font-pokemon">No round found</p>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {/* Hyper Rare */}
+                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
+                    <div className="text-center">
+                      <div className="bg-yellow-500 rounded-lg p-4 mb-4">
+                        <span className="text-xl font-bold text-white font-pokemon">Hyper Rare</span>
+                      </div>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
+                          {lotteryParticipants['Hyper Rare'] || 0} participants
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => handleLotteryEntry('Hyper Rare')}
+                        disabled={!user || loadingUser || lotterySubmitting === 'Hyper Rare'}
+                        className="w-full bg-yellow-500 text-white font-bold py-3 rounded-lg hover:bg-yellow-600 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Hyper Rare' ? 'Entering...' : 'Enter for $1'}
+                      </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Ultra Rare */}
+                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
+                    <div className="text-center">
+                      <div className="bg-blue-600 rounded-lg p-4 mb-4">
+                        <span className="text-xl font-bold text-white font-pokemon">Ultra Rare</span>
+                      </div>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
+                          {lotteryParticipants['Ultra Rare'] || 0} participants
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => handleLotteryEntry('Ultra Rare')}
+                        disabled={!user || loadingUser || lotterySubmitting === 'Ultra Rare'}
+                        className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Ultra Rare' ? 'Entering...' : 'Enter for $1'}
+                      </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* SIR */}
+                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
+                    <div className="text-center">
+                      <div className="bg-pink-600 rounded-lg p-4 mb-4">
+                        <span className="text-xl font-bold text-white font-pokemon">SIR</span>
+                      </div>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
+                          {lotteryParticipants['SIR'] || 0} participants
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => handleLotteryEntry('SIR')}
+                        disabled={!user || loadingUser || lotterySubmitting === 'SIR'}
+                        className="w-full bg-pink-600 text-white font-bold py-3 rounded-lg hover:bg-pink-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'SIR' ? 'Entering...' : 'Enter for $1'}
+                      </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* IR */}
+                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
+                    <div className="text-center">
+                      <div className="bg-green-600 rounded-lg p-4 mb-4">
+                        <span className="text-xl font-bold text-white font-pokemon">IR</span>
+                      </div>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
+                          {lotteryParticipants['IR'] || 0} participants
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => handleLotteryEntry('IR')}
+                        disabled={!user || loadingUser || lotterySubmitting === 'IR'}
+                        className="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'IR' ? 'Entering...' : 'Enter for $1'}
+                      </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ACE SPEC */}
+                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
+                    <div className="text-center">
+                      <div className="bg-black rounded-lg p-4 mb-4">
+                        <span className="text-xl font-bold text-white font-pokemon">ACE SPEC</span>
+                      </div>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
+                          {lotteryParticipants['ACE SPEC'] || 0} participants
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => handleLotteryEntry('ACE SPEC')}
+                        disabled={!user || loadingUser || lotterySubmitting === 'ACE SPEC'}
+                        className="w-full bg-black text-white font-bold py-3 rounded-lg hover:bg-gray-800 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'ACE SPEC' ? 'Entering...' : 'Enter for $1'}
+                      </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Error and Success Messages */}
+            {lotteryError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center">
+                  <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+                  <span className="text-red-800 font-pokemon">{lotteryError}</span>
+                </div>
+              </div>
+            )}
+
+            {lotterySuccess && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center">
+                  <Sparkles className="h-5 w-5 text-green-600 mr-2" />
+                  <span className="text-green-800 font-pokemon">{lotterySuccess}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
+
+export default PokemonSection;
