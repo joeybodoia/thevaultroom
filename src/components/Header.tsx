@@ -417,15 +417,13 @@ const Header: React.FC = () => {
         mode={authModal.mode}
       />
       
-      {user && (
-        <ProfileModal
-          isOpen={profileModal}
-          onClose={closeProfileModal}
-          user={user}
-          currentAvatarUrl={avatarUrl}
-          onAvatarUpdate={handleAvatarUpdate}
-        />
-      )}
+      <ProfileModal
+        isOpen={profileModal && !!user}
+        onClose={closeProfileModal}
+        user={user!}
+        currentAvatarUrl={avatarUrl}
+        onAvatarUpdate={handleAvatarUpdate}
+      />
     </>
   );
 };
