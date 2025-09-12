@@ -70,13 +70,20 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     checkUser();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setUser(session?.user || null);
+      if (session?.user) {
+        await fetchUserCredit(session.user.id);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
-          await fetchUserCredit(session.user.id);
+
+  const fetchUserCredit = async (userId: string) => {
+    // Implementation for fetching user credit
+  };
+
   useEffect(() => {
     fetchAllCards();
   }, []);
