@@ -138,14 +138,14 @@ const StreamCountdown: React.FC<StreamCountdownProps> = ({ onStreamChange }) => 
   }
 
   return (
-    <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
+    <section className="py-8 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="max-w-4xl mx-auto text-center">
-        <h2 className="text-3xl md:text-4xl font-bold text-black mb-8 font-pokemon">
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-black mb-6 sm:mb-8 font-pokemon">
           {nextStream.title}
         </h2>
         
-        <div className="bg-white rounded-2xl p-8 border border-gray-200 mb-8 shadow-lg">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
+        <div className="bg-white rounded-2xl p-4 sm:p-6 lg:p-8 border border-gray-200 mb-6 sm:mb-8 shadow-lg">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
             {[
               { label: 'Days', value: timeLeft.days },
               { label: 'Hours', value: timeLeft.hours },
@@ -153,31 +153,31 @@ const StreamCountdown: React.FC<StreamCountdownProps> = ({ onStreamChange }) => 
               { label: 'Seconds', value: timeLeft.seconds }
             ].map((item) => (
               <div key={item.label} className="text-center">
-                <div className="bg-red-600 text-white rounded-xl p-4 mb-2">
-                  <span className="text-3xl md:text-4xl font-bold">
+                <div className="bg-red-600 text-white rounded-xl p-2 sm:p-3 lg:p-4 mb-2">
+                  <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold">
                     {String(item.value).padStart(2, '0')}
                   </span>
                 </div>
-                <span className="text-gray-600 text-sm uppercase tracking-wider">
+                <span className="text-gray-600 text-xs sm:text-sm uppercase tracking-wider">
                   {item.label}
                 </span>
               </div>
             ))}
           </div>
           
-          <div className="flex items-center justify-center space-x-6 text-gray-500">
+          <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-6 text-gray-500">
             <div className="flex items-center space-x-2">
               <Calendar className="h-5 w-5" />
-              <span className="font-pokemon">{formatStreamDate(nextStream.scheduled_date)}</span>
+              <span className="font-pokemon text-sm sm:text-base">{formatStreamDate(nextStream.scheduled_date)}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Users className="h-5 w-5" />
-              <span className="font-pokemon">Expected: 2,500+ viewers</span>
+              <span className="font-pokemon text-sm sm:text-base">Expected: 2,500+ viewers</span>
             </div>
           </div>
         </div>
 
-        <button className="bg-red-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-red-700 transition-all transform hover:scale-105 font-pokemon">
+        <button className="bg-red-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold text-base sm:text-lg hover:bg-red-700 transition-all transform hover:scale-105 font-pokemon">
           Set Reminder
         </button>
       </div>

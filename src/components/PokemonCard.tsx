@@ -295,10 +295,10 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
   };
 
   return (
-    <div className={`relative bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all hover:transform hover:scale-105 shadow-lg ${isPopular ? 'ring-2 ring-red-600' : ''}`}>
+    <div className={`relative bg-white rounded-xl p-3 sm:p-4 lg:p-6 border border-gray-200 hover:border-gray-300 transition-all hover:transform hover:scale-105 shadow-lg ${isPopular ? 'ring-2 ring-red-600' : ''}`}>
       {isPopular && (
         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-          <div className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center space-x-1">
+          <div className="bg-red-600 text-white px-2 sm:px-3 py-1 rounded-full text-xs font-bold flex items-center space-x-1">
             <Star className="h-3 w-3" />
             <span>FEATURED</span>
           </div>
@@ -306,7 +306,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
       )}
       
       {/* Pokemon Image */}
-      <div className="aspect-square mb-4 bg-gray-100 rounded-lg overflow-hidden">
+      <div className="aspect-square mb-3 sm:mb-4 bg-gray-100 rounded-lg overflow-hidden">
         {pokemon.image_url ? (
           <img 
             src={pokemon.image_url} 
@@ -325,12 +325,12 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
       </div>
 
       {/* Pokemon Name */}
-      <div className="text-center mb-4">
-        <h3 className="text-xl font-bold text-black font-pokemon mb-2">
+      <div className="text-center mb-3 sm:mb-4">
+        <h3 className="text-lg sm:text-xl font-bold text-black font-pokemon mb-2">
           {pokemon.card_name || 'Unknown Pokemon'}
         </h3>
         <div className="space-y-1">
-          <p className="text-sm text-gray-600 font-pokemon">
+          <p className="text-xs sm:text-sm text-gray-600 font-pokemon">
             {pokemon.set_name || 'Unknown Set'}
           </p>
           <div className="flex items-center justify-center space-x-2 text-xs text-gray-500">
@@ -343,45 +343,45 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
 
       {/* Bidding Section */}
       {user && !loadingCredit && (
-        <div className="mb-4 bg-blue-50 rounded-lg p-3 border border-blue-200">
+        <div className="mb-3 sm:mb-4 bg-blue-50 rounded-lg p-2 sm:p-3 border border-blue-200">
           <div className="flex items-center justify-between">
-            <span className="text-blue-700 text-sm font-pokemon">Available Credits:</span>
-            <span className="text-blue-800 font-bold font-pokemon">${userCredit.toFixed(2)}</span>
+            <span className="text-blue-700 text-xs sm:text-sm font-pokemon">Available Credits:</span>
+            <span className="text-blue-800 font-bold font-pokemon text-sm sm:text-base">${userCredit.toFixed(2)}</span>
           </div>
         </div>
       )}
 
-      <div className="space-y-4 mb-4">
-        <div className="bg-gray-50 rounded-lg p-4">
+      <div className="space-y-3 sm:space-y-4 mb-3 sm:mb-4">
+        <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-700 text-sm font-pokemon">Current Bid:</span>
+            <span className="text-gray-700 text-xs sm:text-sm font-pokemon">Current Bid:</span>
             {loadingCurrentBid ? (
               <div className="flex items-center space-x-1 text-gray-400">
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
-                <span className="font-bold font-pokemon text-sm">Loading...</span>
+                <span className="font-bold font-pokemon text-xs sm:text-sm">Loading...</span>
               </div>
             ) : (
               <div className="flex items-center space-x-1 text-red-600">
                 <TrendingUp className="h-4 w-4" />
-                <span className="font-bold font-pokemon">${currentBid}</span>
+                <span className="font-bold font-pokemon text-sm sm:text-base">${currentBid}</span>
               </div>
             )}
           </div>
           
-          <div className="flex space-x-2">
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
             <input
               type="number"
               placeholder="Enter bid"
               value={bidAmount}
               onChange={(e) => setBidAmount(e.target.value)}
-              className="flex-1 bg-white border border-gray-300 rounded-lg px-3 py-2 text-black placeholder-gray-400 focus:border-red-600 focus:outline-none font-pokemon"
+              className="flex-1 bg-white border border-gray-300 rounded-lg px-2 sm:px-3 py-2 text-sm sm:text-base text-black placeholder-gray-400 focus:border-red-600 focus:outline-none font-pokemon"
               min={currentBid + 1}
               disabled={isSubmittingBid}
             />
             <button
               onClick={handleBid}
               disabled={!user || !bidAmount || parseFloat(bidAmount) <= currentBid || isSubmittingBid || loadingUser}
-              className="bg-black text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon"
+              className="bg-black text-white px-3 sm:px-4 py-2 rounded-lg font-semibold hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon text-sm sm:text-base"
             >
               {loadingUser ? 'Loading...' : !user ? 'Login to Bid' : isSubmittingBid ? 'Bidding...' : 'Bid'}
             </button>
@@ -393,7 +393,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
               <button
                 onClick={handleCreditBid}
                 disabled={!bidAmount || parseFloat(bidAmount) <= currentBid || parseFloat(bidAmount) > userCredit || isSubmittingBid}
-                className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon text-sm"
+                className="w-full bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon text-xs sm:text-sm"
               >
                 {isSubmittingBid ? 'Processing...' : `Bid with Credits ($${userCredit.toFixed(2)} available)`}
               </button>
@@ -402,21 +402,21 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
           
           {/* Login Required Message */}
           {!loadingUser && !user && (
-            <div className="mt-2 text-orange-600 text-sm font-pokemon">
+            <div className="mt-2 text-orange-600 text-xs sm:text-sm font-pokemon">
               Please sign in to place a bid
             </div>
           )}
           
           {/* Error Message */}
           {bidError && (
-            <div className="mt-2 text-red-600 text-sm font-pokemon">
+            <div className="mt-2 text-red-600 text-xs sm:text-sm font-pokemon">
               {bidError}
             </div>
           )}
           
           {/* Success Message */}
           {bidSuccess && (
-            <div className="mt-2 text-green-600 text-sm font-pokemon">
+            <div className="mt-2 text-green-600 text-xs sm:text-sm font-pokemon">
               Bid submitted successfully!
             </div>
           )}
@@ -424,10 +424,10 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
       </div>
 
       {/* Buy Now Option */}
-      <div className="mb-4">
+      <div className="mb-3 sm:mb-4">
         <button 
           disabled={!user || loadingUser}
-          className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-all flex items-center justify-center space-x-2 font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-red-600 text-white font-bold py-2 sm:py-3 rounded-lg hover:bg-red-700 transition-all flex items-center justify-center space-x-2 font-pokemon disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
         >
           <DollarSign className="h-4 w-4" />
           <span>{loadingUser ? 'Loading...' : !user ? 'Login to Buy Now' : `Buy Now - $${buyNowPrice}`}</span>
@@ -444,19 +444,19 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
       </div>
 
       {/* Market Info */}
-      <div className="pt-4 border-t border-gray-200 space-y-2">
+      <div className="pt-3 sm:pt-4 border-t border-gray-200 space-y-1 sm:space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-gray-600 text-sm font-pokemon">Market Price (Ungraded NM):</span>
-          <span className="text-black font-bold font-pokemon">
+          <span className="text-gray-600 text-xs sm:text-sm font-pokemon">Market Price (Ungraded NM):</span>
+          <span className="text-black font-bold font-pokemon text-sm sm:text-base">
             {formatPrice(pokemon.ungraded_market_price)}
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-gray-600 text-sm font-pokemon flex items-center space-x-1">
+          <span className="text-gray-600 text-xs sm:text-sm font-pokemon flex items-center space-x-1">
             <Calendar className="h-3 w-3" />
             <span>Last Updated:</span>
           </span>
-          <span className="text-black font-semibold font-pokemon text-sm">
+          <span className="text-black font-semibold font-pokemon text-xs sm:text-sm">
             {pokemon.date_updated ? new Date(pokemon.date_updated).toLocaleDateString() : 'N/A'}
           </span>
         </div>

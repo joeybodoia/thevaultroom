@@ -5,25 +5,61 @@
 @layer base {
   body {
     font-family: 'Fredoka', 'Exo 2', 'Roboto', 'Arial', sans-serif;
-    zoom: 1;
-    transform-origin: 0 0;
+    zoom: 1 !important;
+    transform: none !important;
+    font-size: 16px !important;
   }
   
   html {
-    font-size: 16px;
-    zoom: 1;
+    font-size: 16px !important;
+    zoom: 1 !important;
   }
   
   * {
     box-sizing: border-box;
   }
+  
+  /* Ensure proper mobile viewport handling */
+  @media (max-width: 640px) {
+    html {
+      font-size: 14px !important;
+    }
+  }
 }
 
 @layer utilities {
   .bolt-scale-fix {
-    transform: scale(1);
+    transform: scale(1) !important;
     transform-origin: top left;
     width: 100%;
     height: 100%;
+    zoom: 1 !important;
+  }
+  
+  /* Mobile-first responsive utilities */
+  .mobile-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  @media (min-width: 640px) {
+    .mobile-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+    }
+  }
+  
+  @media (min-width: 768px) {
+    .mobile-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .mobile-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
   }
 }
