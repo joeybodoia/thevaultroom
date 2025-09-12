@@ -1,6 +1,6 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { Play, Users, Trophy, Shield } from 'lucide-react';
+import { Play, Users, Trophy, Shield, Coins } from 'lucide-react';
 import WalletButton from './WalletButton';
 import AuthModal from './AuthModal';
 import ProfileModal from './ProfileModal';
@@ -18,6 +18,8 @@ const Header: React.FC = () => {
   const [profileModal, setProfileModal] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [siteCredits, setSiteCredits] = useState<number>(0);
+  const [loadingCredits, setLoadingCredits] = useState(false);
 
   useEffect(() => {
     // Get initial session
@@ -30,6 +32,7 @@ const Header: React.FC = () => {
         if (session?.user) {
           await loadUserAvatar(session.user.id);
           await checkAdminStatus(session.user.id);
+          await loadSiteCredits(session.user.id);
         }
       } catch (error) {
         console.error('Error getting session:', error);
@@ -50,9 +53,11 @@ const Header: React.FC = () => {
         if (session?.user) {
           await loadUserAvatar(session.user.id);
           await checkAdminStatus(session.user.id);
+          await loadSiteCredits(session.user.id);
         } else {
           setAvatarUrl(null);
           setIsAdmin(false);
+          setSiteCredits(0);
         }
         if (event === 'SIGNED_IN') {
           closeAuthModal();
@@ -68,7 +73,7 @@ const Header: React.FC = () => {
       // Get user avatar URL from database
       const { data: userData } = await supabase
         .from('users')
-        .select('avatar, is_admin')
+        .select('avatar, is_admin, site_credit')
         .eq('id', userId)
         .single();
 
@@ -76,8 +81,27 @@ const Header: React.FC = () => {
         setAvatarUrl(userData.avatar);
       }
       setIsAdmin(userData?.is_admin || false);
+      setSiteCredits(parseFloat(userData?.site_credit || '0'));
     } catch (error) {
       console.error('Error loading avatar:', error);
+    }
+  };
+
+  const loadSiteCredits = async (userId: string) => {
+    try {
+      setLoadingCredits(true);
+      const { data: userData } = await supabase
+        .from('users')
+        .select('site_credit')
+        .eq('id', userId)
+        .single();
+
+      setSiteCredits(parseFloat(userData?.site_credit || '0'));
+    } catch (error) {
+      console.error('Error loading site credits:', error);
+      setSiteCredits(0);
+    } finally {
+      setLoadingCredits(false);
     }
   };
 
@@ -126,6 +150,7 @@ const Header: React.FC = () => {
       setUser(null);
       setAvatarUrl(null);
       setIsAdmin(false);
+      setSiteCredits(0);
       
       // Clear any stored session data
       localStorage.removeItem('sb-bzqnxgohxamuqgyrjwls-auth-token');
@@ -143,6 +168,7 @@ const Header: React.FC = () => {
       setUser(null);
       setAvatarUrl(null);
       setIsAdmin(false);
+      setSiteCredits(0);
     }
   };
 
@@ -232,10 +258,14 @@ const Header: React.FC = () => {
           
           {/* Desktop Right Side */}
           <div className="hidden md:flex items-center space-x-2 lg:space-x-4">
-            <div className="hidden lg:flex items-center space-x-1 text-white/80">
-              <Users className="h-4 w-4" />
-              <span className="text-xs lg:text-sm font-pokemon">1,247 online</span>
-            </div>
+            {user && (
+              <div className="hidden lg:flex items-center space-x-1 text-white/80">
+                <Coins className="h-4 w-4" />
+                <span className="text-xs lg:text-sm font-pokemon">
+                  {loadingCredits ? 'Loading...' : `$${siteCredits.toFixed(2)} credits`}
+                </span>
+              </div>
+            )}
             {isLoggedIn && (
               <button
                 onClick={handleForceLogout}
@@ -336,10 +366,14 @@ const Header: React.FC = () => {
                   <span>Admin Portal</span>
                 </a>
               )}
-              <div className="flex items-center space-x-1 text-white/80 pt-2 border-t border-gray-700">
-                <Users className="h-4 w-4" />
-                <span className="text-sm font-pokemon">1,247 online</span>
-              </div>
+              {user && (
+                <div className="flex items-center space-x-1 text-white/80 pt-2 border-t border-gray-700">
+                  <Coins className="h-4 w-4" />
+                  <span className="text-sm font-pokemon">
+                    {loadingCredits ? 'Loading...' : `$${siteCredits.toFixed(2)} credits`}
+                  </span>
+                </div>
+              )}
               {!isLoggedIn && (
                 <div className="flex space-x-2 pt-2">
                   <button 
