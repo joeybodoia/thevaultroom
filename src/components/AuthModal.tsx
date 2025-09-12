@@ -16,6 +16,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode }) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // Debug logging
+  console.log('AuthModal render - isOpen:', isOpen, 'mode:', mode);
+
   const resetForm = () => {
     setEmail('');
     setPassword('');
@@ -93,7 +96,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
       <div className="bg-white rounded-2xl p-6 max-w-md w-full">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-2xl font-bold text-black font-pokemon">
