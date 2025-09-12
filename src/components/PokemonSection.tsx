@@ -71,7 +71,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
+      async (event, session) => {
     });
 
     return () => subscription.unsubscribe();
