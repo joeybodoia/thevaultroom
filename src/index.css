@@ -5,5 +5,25 @@
 @layer base {
   body {
     font-family: 'Fredoka', 'Exo 2', 'Roboto', 'Arial', sans-serif;
+    zoom: 1;
+    transform-origin: 0 0;
+  }
+  
+  html {
+    font-size: 16px;
+    zoom: 1;
+  }
+  
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@layer utilities {
+  .bolt-scale-fix {
+    transform: scale(1);
+    transform-origin: top left;
+    width: 100%;
+    height: 100%;
   }
 }
