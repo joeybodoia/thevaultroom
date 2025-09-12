@@ -97,19 +97,26 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode }) => {
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 overflow-y-auto" 
       style={{ 
         zIndex: 99999,
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
-        bottom: 0
+        bottom: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
       }}
     >
       <div 
-        className="bg-white rounded-2xl p-6 max-w-md w-full relative"
-        style={{ zIndex: 100000 }}
+        className="bg-white rounded-2xl p-6 max-w-md w-full relative my-8"
+        style={{ 
+          zIndex: 100000,
+          maxHeight: '90vh',
+          overflowY: 'auto'
+        }}
       >
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-2xl font-bold text-black font-pokemon">
