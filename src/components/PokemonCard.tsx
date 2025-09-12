@@ -25,6 +25,8 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
   const [loadingCurrentBid, setLoadingCurrentBid] = React.useState(false);
   const [user, setUser] = React.useState<User | null>(null);
   const [loadingUser, setLoadingUser] = React.useState(true);
+  const [userCredit, setUserCredit] = React.useState<number>(0);
+  const [loadingCredit, setLoadingCredit] = React.useState(false);
 
   // Check user authentication status
   React.useEffect(() => {
@@ -32,6 +34,9 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
       try {
         const { data: { user } } = await supabase.auth.getUser();
         setUser(user);
+        if (user) {
+          await fetchUserCredit(user.id);
+        }
       } catch (error) {
         console.error('Error checking user:', error);
         setUser(null);
@@ -45,10 +50,35 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchUserCredit(session.user.id);
+      } else {
+        setUserCredit(0);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchUserCredit = async (userId: string) => {
+    try {
+      setLoadingCredit(true);
+      const { data, error } = await supabase
+        .from('users')
+        .select('site_credit')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      setUserCredit(parseFloat(data.site_credit || '0'));
+    } catch (error) {
+      console.error('Error fetching user credit:', error);
+      setUserCredit(0);
+    } finally {
+      setLoadingCredit(false);
+    }
+  };
+
   // Fetch current highest bid when component mounts or round changes
   React.useEffect(() => {
     if (currentRoundId) {
@@ -166,6 +196,97 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
     }
   };
 
+  const handleCreditBid = async () => {
+    const amount = parseFloat(bidAmount);
+    
+    // Validation
+    if (!amount || amount <= currentBid) {
+      setBidError('Bid must be higher than current bid');
+      return;
+    }
+
+    if (amount > userCredit) {
+      setBidError(`Insufficient credits. You have $${userCredit.toFixed(2)} available.`);
+      return;
+    }
+
+    if (!currentRoundId) {
+      setBidError('No active round found for this set');
+      return;
+    }
+
+    setIsSubmittingBid(true);
+    setBidError(null);
+    setBidSuccess(false);
+
+    try {
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('You must be logged in to place a bid');
+      }
+
+      // Start transaction: deduct credits and place bid
+      const { data: updatedUser, error: creditError } = await supabase
+        .from('users')
+        .update({ site_credit: userCredit - amount })
+        .eq('id', user.id)
+        .select('site_credit')
+        .single();
+
+      if (creditError) {
+        throw new Error('Failed to deduct credits');
+      }
+
+      // Insert bid into direct_bids table
+      const { data, error } = await supabase
+        .from('direct_bids')
+        .insert([{
+          user_id: user.id,
+          round_id: currentRoundId,
+          card_id: pokemon.id,
+          bid_amount: amount
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        // Rollback credit deduction if bid fails
+        await supabase
+          .from('users')
+          .update({ site_credit: userCredit })
+          .eq('id', user.id);
+        throw error;
+      }
+
+      // Success - update UI
+      setCurrentBid(amount);
+      setBidAmount('');
+      setBidSuccess(true);
+      setUserCredit(parseFloat(updatedUser.site_credit));
+      
+      // Refresh current bid to make sure we have the latest
+      fetchCurrentBid();
+      
+      // Call success callback if provided
+      if (onBidSuccess) {
+        onBidSuccess();
+      }
+
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setBidSuccess(false);
+      }, 3000);
+
+    } catch (err: any) {
+      console.error('Credit bid submission error:', err);
+      setBidError(err.message || 'Failed to submit bid');
+    } finally {
+      setIsSubmittingBid(false);
+    }
+  };
+
   const buyNowPrice = parseFloat(((pokemon.ungraded_market_price || 0) * 0.075).toFixed(2)); // 7.5% of market price for buy now
 
   const formatRarity = (rarity: string | null) => {
@@ -221,6 +342,15 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
       </div>
 
       {/* Bidding Section */}
+      {user && !loadingCredit && (
+        <div className="mb-4 bg-blue-50 rounded-lg p-3 border border-blue-200">
+          <div className="flex items-center justify-between">
+            <span className="text-blue-700 text-sm font-pokemon">Available Credits:</span>
+            <span className="text-blue-800 font-bold font-pokemon">${userCredit.toFixed(2)}</span>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-4 mb-4">
         <div className="bg-gray-50 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
@@ -256,6 +386,19 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
               {loadingUser ? 'Loading...' : !user ? 'Login to Bid' : isSubmittingBid ? 'Bidding...' : 'Bid'}
             </button>
           </div>
+          
+          {/* Credit Bid Button */}
+          {user && userCredit > 0 && (
+            <div className="mt-2">
+              <button
+                onClick={handleCreditBid}
+                disabled={!bidAmount || parseFloat(bidAmount) <= currentBid || parseFloat(bidAmount) > userCredit || isSubmittingBid}
+                className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon text-sm"
+              >
+                {isSubmittingBid ? 'Processing...' : `Bid with Credits ($${userCredit.toFixed(2)} available)`}
+              </button>
+            </div>
+          )}
           
           {/* Login Required Message */}
           {!loadingUser && !user && (
