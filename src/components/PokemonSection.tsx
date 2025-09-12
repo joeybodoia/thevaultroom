@@ -41,6 +41,8 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [lotterySubmitting, setLotterySubmitting] = useState<string | null>(null);
   const [lotteryError, setLotteryError] = useState<string | null>(null);
   const [lotterySuccess, setLotterySuccess] = useState<string | null>(null);
+  const [userCredit, setUserCredit] = useState<number>(0);
+  const [loadingCredit, setLoadingCredit] = useState(false);
   const [lotteryParticipants, setLotteryParticipants] = useState<{ [key: string]: number }>({});
   const [user, setUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
@@ -74,6 +76,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
     return () => subscription.unsubscribe();
   }, []);
+          await fetchUserCredit(session.user.id);
   useEffect(() => {
     fetchAllCards();
   }, []);
