@@ -121,6 +121,7 @@ const Header: React.FC = () => {
   };
   const openAuthModal = (mode: 'signin' | 'signup') => {
     setAuthModal({ isOpen: true, mode });
+    setMobileMenuOpen(false); // Close mobile menu when opening auth modal
   };
 
   const closeAuthModal = () => {
