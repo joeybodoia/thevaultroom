@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Loader, AlertCircle, Sparkles, Search, Filter, ArrowUpDown } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { DirectBidCard, PokemonCard as PokemonCardType } from '../types/pokemon';
 import PokemonCard from './PokemonCard';
 import StripePaymentModal from './StripePaymentModal';
@@ -172,9 +172,46 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       setError(null);
 
       
-      // Check if Supabase is properly configured
-      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-        throw new Error('Supabase configuration missing. Please check your environment variables.');
+      // Check if Supabase is configured
+      if (!isSupabaseConfigured || !supabase) {
+        console.warn('Supabase not configured, using mock data');
+        // Use mock data when Supabase is not available
+        const mockCards: DirectBidCard[] = [
+          {
+            id: 1,
+            card_name: "Charizard ex",
+            card_number: "199",
+            set_name: "SV: Prismatic Evolutions",
+            rarity: "Double Rare",
+            image_url: "https://images.pokemontcg.io/sv4pt5/199.png",
+            ungraded_market_price: 89.99,
+            date_updated: new Date().toISOString()
+          },
+          {
+            id: 2,
+            card_name: "Pikachu ex",
+            card_number: "200",
+            set_name: "SV: Prismatic Evolutions",
+            rarity: "Double Rare",
+            image_url: "https://images.pokemontcg.io/sv4pt5/200.png",
+            ungraded_market_price: 45.50,
+            date_updated: new Date().toISOString()
+          },
+          {
+            id: 3,
+            card_name: "Eevee ex",
+            card_number: "201",
+            set_name: "SV: Prismatic Evolutions",
+            rarity: "Double Rare",
+            image_url: "https://images.pokemontcg.io/sv4pt5/201.png",
+            ungraded_market_price: 32.75,
+            date_updated: new Date().toISOString()
+          }
+        ];
+        
+        setAllCards(mockCards);
+        setError('Demo mode: Using sample cards. Configure Supabase to see real data.');
+        return;
       }
       // Test basic Supabase connection first
       const { data, error } = await supabase
