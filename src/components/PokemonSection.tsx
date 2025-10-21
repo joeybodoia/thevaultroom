@@ -171,6 +171,11 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       setLoading(true);
       setError(null);
 
+      
+      // Check if Supabase is properly configured
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        throw new Error('Supabase configuration missing. Please check your environment variables.');
+      }
       // Test basic Supabase connection first
       const { data, error } = await supabase
         .from('direct_bid_cards_view')
@@ -230,7 +235,18 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       console.log(`Successfully fetched ${cardsData?.length || 0} cards`);
       setAllCards(cardsData || []);
     } catch (err: any) {
-      console.error('fetchAllCards error:', err);
+      
+      // Provide more specific error messages
+      if (err.message.includes('Failed to fetch')) {
+        setError('Unable to connect to the database. Please check your internet connection and try again.');
+      } else if (err.message.includes('Supabase configuration')) {
+        setError('Database configuration error. Please contact support.');
+      } else if (err.message.includes('timeout')) {
+        setError('Connection timeout. Please try again.');
+      } else {
+        setError(`Connection failed: ${err.message}`);
+      }
+      
       console.error('Error stack:', err.stack);
       setError(err.message || 'Failed to fetch Pokemon data');
     } finally {
