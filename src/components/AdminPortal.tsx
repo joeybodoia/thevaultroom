@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Plus, Edit, Lock, Unlock, Eye, Save, X, AlertCircle, Loader } from 'lucide-react';
+import { Shield, Plus, CreditCard as Edit, Lock, Unlock, Eye, Save, X, AlertCircle, Loader } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Round {
@@ -956,11 +956,11 @@ const AdminPortal: React.FC = () => {
                                   {directBids[round.id].map((bid) => (
                                     <div key={bid.id} className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
                                       {/* Card Image */}
-                                      {bid.direct_bid_cards_view.image_url && (
+                                      {bid.direct_bid_cards.image_url && (
                                         <div className="aspect-square mb-3 bg-white rounded-lg overflow-hidden border border-gray-200">
                                           <img 
-                                            src={bid.direct_bid_cards_view.image_url} 
-                                            alt={bid.direct_bid_cards_view.card_name}
+                                            src={bid.direct_bid_cards.image_url} 
+                                            alt={bid.direct_bid_cards.card_name}
                                             className="w-full h-full object-contain"
                                             onError={(e) => {
                                               const target = e.target as HTMLImageElement;
@@ -973,7 +973,7 @@ const AdminPortal: React.FC = () => {
                                       {/* Bid Details */}
                                       <div className="space-y-2">
                                         <h5 className="font-semibold text-black font-pokemon text-sm">
-                                          {bid.direct_bid_cards_view.card_name}
+                                          {bid.direct_bid_cards.card_name}
                                         </h5>
                                         
                                         <div className="space-y-1">
@@ -994,7 +994,7 @@ const AdminPortal: React.FC = () => {
                                           <div className="flex items-center justify-between">
                                             <span className="text-gray-600 text-xs font-pokemon">Market Price:</span>
                                             <span className="text-green-600 font-semibold text-xs font-pokemon">
-                                              ${bid.direct_bid_cards_view.ungraded_market_price}
+                                              ${bid.direct_bid_cards.ungraded_market_price}
                                             </span>
                                           </div>
                                           
