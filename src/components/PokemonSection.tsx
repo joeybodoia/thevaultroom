@@ -219,10 +219,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       });
       
       const { data: cardsData, error: cardsError } = await Promise.race([
-        supabase
-          .from('all_cards')
-          .select('*')
-          .order('ungraded_market_price', { ascending: false }),
+        cardsPromise,
         cardsTimeoutPromise
       ]) as any;
       
