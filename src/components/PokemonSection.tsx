@@ -214,7 +214,8 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       });
       
       const { data: cardsData, error: cardsError } = await Promise.race([
-        cardsPromise,
+      console.log('Direct bid cards fetched from view:', data?.length, 'cards');
+      console.log('Sample card dates:', data?.slice(0, 3).map(card => ({ name: card.card_name, date: card.date_updated })));
         cardsTimeoutPromise
       ]) as any;
 
