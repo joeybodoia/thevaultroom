@@ -1,14 +1,18 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
-// Validate environment variables
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase environment variables:')
-  console.error('VITE_SUPABASE_URL:', supabaseUrl ? 'Present' : 'Missing')
-  console.error('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'Present' : 'Missing')
-  console.error('Please check your .env file and restart the development server')
+// Check if environment variables are available
+export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey)
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+if (!isSupabaseConfigured) {
+  console.warn('⚠️ Supabase configuration missing:')
+  console.warn('VITE_SUPABASE_URL:', supabaseUrl ? '✓ Present' : '✗ Missing')
+  console.warn('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? '✓ Present' : '✗ Missing')
+  console.warn('The app will run in demo mode with mock data.')
+// Create client only if configured, otherwise create a mock client
+export const supabase = isSupabaseConfigured 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null
