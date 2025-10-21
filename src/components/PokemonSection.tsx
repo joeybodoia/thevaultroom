@@ -192,6 +192,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       });
       
       const { data: testData, error: testError } = await Promise.race([
+          .gte('ungraded_market_price', 35)
         connectionTestPromise,
         timeoutPromise
       ]) as any;
@@ -220,7 +221,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       
       const { data: cardsData, error: cardsError } = await Promise.race([
         cardsTimeoutPromise
-      ]) as any;
+          .from('all_cards')
       
       console.log('Direct bid cards fetched from view:', cardsData?.length, 'cards');
       console.log('Sample card dates:', cardsData?.slice(0, 3).map(card => ({ name: card.card_name, date: card.date_updated })));
