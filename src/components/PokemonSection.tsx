@@ -172,7 +172,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       setError(null);
 
       // Test basic Supabase connection first
+      const { data, error } = await supabase
         .from('direct_bid_cards_view')
+        .select('*');
       
       // Add timeout to the connection test
       const connectionTestPromise = supabase
