@@ -10,3 +10,5 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'Present' : 'Missing')
   console.error('Please check your .env file and restart the development server')
 }
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
