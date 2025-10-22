@@ -18,6 +18,53 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [currentStreamId, setCurrentStreamId] = useState<string | null>(null);
 
+  // Force logout function
+  const forceLogout = async () => {
+    console.log('Force logout initiated...');
+    try {
+      // Clear local state immediately
+      setUser(null);
+      setIsAdmin(false);
+      setLoading(false);
+      
+      // Clear any stored session data
+      localStorage.removeItem('sb-bzqnxgohxamuqgyrjwls-auth-token');
+      sessionStorage.clear();
+      
+      // Try to sign out from Supabase (but don't wait for it)
+      supabase.auth.signOut().catch(err => {
+        console.log('Server signout failed (expected for stale tokens):', err.message);
+      });
+      
+      console.log('Force logout completed');
+    } catch (error) {
+      console.error('Force logout error:', error);
+      // Force local logout even if server call fails
+      setUser(null);
+      setIsAdmin(false);
+      setLoading(false);
+    }
+  };
+
+  // Auto-logout after 1 hour
+  useEffect(() => {
+    let logoutTimer: NodeJS.Timeout;
+    
+    if (user) {
+      // Set timer for 1 hour (3600000 ms)
+      logoutTimer = setTimeout(() => {
+        console.log('Auto-logout due to 1 hour timeout');
+        forceLogout();
+      }, 60 * 60 * 1000); // 1 hour
+    }
+
+    return () => {
+      if (logoutTimer) {
+        clearTimeout(logoutTimer);
+      }
+    };
+  }, [user]);
+
   useEffect(() => {
     // Get initial session
     const getSession = async () => {
@@ -25,13 +72,34 @@ function App() {
         console.log('Checking initial session...');
         const { data: { session } } = await supabase.auth.getSession();
         console.log('Initial session:', session);
-        setUser(session?.user ?? null);
+        
         if (session?.user) {
-          await checkAdminStatus(session.user.id);
+          // Check if token is expired or will expire soon (within 5 minutes)
+          const expiresAt = session.expires_at;
+          const now = Math.floor(Date.now() / 1000);
+          const fiveMinutesFromNow = now + (5 * 60);
+          
+          if (expiresAt && expiresAt < fiveMinutesFromNow) {
+            console.log('Token expired or expiring soon, forcing logout');
+            await forceLogout();
+            return;
+          }
+          
+          setUser(session.user);
+          try {
+            await checkAdminStatus(session.user.id);
+          } catch (error) {
+            console.error('Error checking admin status, forcing logout:', error);
+            await forceLogout();
+            return;
+          }
+        } else {
+          setUser(null);
         }
       } catch (error) {
         console.error('Error getting session:', error);
-        setUser(null);
+        console.log('Session error, forcing logout');
+        await forceLogout();
       } finally {
         setLoading(false);
         console.log('Loading set to false');
@@ -44,10 +112,17 @@ function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session);
-        setUser(session?.user ?? null);
+        
         if (session?.user) {
-          await checkAdminStatus(session.user.id);
+          setUser(session.user);
+          try {
+            await checkAdminStatus(session.user.id);
+          } catch (error) {
+            console.error('Error in auth state change, forcing logout:', error);
+            await forceLogout();
+          }
         } else {
+          setUser(null);
           setIsAdmin(false);
         }
       }
@@ -69,7 +144,7 @@ function App() {
       setIsAdmin(userData?.is_admin || false);
     } catch (error) {
       console.error('Error checking admin status:', error);
-      setIsAdmin(false);
+      throw error; // Re-throw to trigger logout in calling function
     }
   };
 

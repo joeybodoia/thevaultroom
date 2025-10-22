@@ -173,7 +173,7 @@ const Header: React.FC = () => {
     }
   };
 
-  // Auto-logout after 30 minutes of inactivity
+  // Auto-logout after 30 minutes of inactivity (in addition to the 1-hour absolute timeout in App.tsx)
   useEffect(() => {
     let inactivityTimer: NodeJS.Timeout;
     let lastActivity = Date.now();
