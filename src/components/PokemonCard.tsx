@@ -352,7 +352,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
       )}
 
       <div className="space-y-3 sm:space-y-4 mb-3 sm:mb-4">
-        <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+        <div className="bg-gray-50 rounded-lg p-2 sm:p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-gray-700 text-xs sm:text-sm font-pokemon">Current Bid:</span>
             {loadingCurrentBid ? (
@@ -368,20 +368,20 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
             )}
           </div>
           
-          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+          <div className="flex flex-col space-y-2">
             <input
               type="number"
               placeholder="Enter bid"
               value={bidAmount}
               onChange={(e) => setBidAmount(e.target.value)}
-              className="flex-1 bg-white border border-gray-300 rounded-lg px-2 sm:px-3 py-2 text-sm sm:text-base text-black placeholder-gray-400 focus:border-red-600 focus:outline-none font-pokemon"
+              className="w-full bg-white border border-gray-300 rounded-md px-2 py-1.5 text-sm text-black placeholder-gray-400 focus:border-red-600 focus:outline-none font-pokemon"
               min={currentBid + 1}
               disabled={isSubmittingBid}
             />
             <button
               onClick={handleBid}
               disabled={!user || !bidAmount || parseFloat(bidAmount) <= currentBid || isSubmittingBid || loadingUser}
-              className="bg-black text-white px-3 sm:px-4 py-2 rounded-lg font-semibold hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon text-sm sm:text-base"
+              className="w-full bg-black text-white px-2 py-1.5 rounded-md font-semibold hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon text-xs whitespace-nowrap overflow-hidden text-ellipsis"
             >
               {loadingUser ? 'Loading...' : !user ? 'Login to Bid' : isSubmittingBid ? 'Bidding...' : 'Bid'}
             </button>
@@ -389,11 +389,11 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
           
           {/* Credit Bid Button */}
           {user && userCredit > 0 && (
-            <div className="mt-2">
+            <div className="mt-1.5">
               <button
                 onClick={handleCreditBid}
                 disabled={!bidAmount || parseFloat(bidAmount) <= currentBid || parseFloat(bidAmount) > userCredit || isSubmittingBid}
-                className="w-full bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon text-xs sm:text-sm"
+                className="w-full bg-blue-600 text-white px-2 py-1.5 rounded-md font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon text-xs"
               >
                 {isSubmittingBid ? 'Processing...' : `Bid with Credits ($${userCredit.toFixed(2)} available)`}
               </button>
@@ -402,21 +402,21 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
           
           {/* Login Required Message */}
           {!loadingUser && !user && (
-            <div className="mt-2 text-orange-600 text-xs sm:text-sm font-pokemon">
+            <div className="mt-1.5 text-orange-600 text-xs font-pokemon">
               Please sign in to place a bid
             </div>
           )}
           
           {/* Error Message */}
           {bidError && (
-            <div className="mt-2 text-red-600 text-xs sm:text-sm font-pokemon">
+            <div className="mt-1.5 text-red-600 text-xs font-pokemon">
               {bidError}
             </div>
           )}
           
           {/* Success Message */}
           {bidSuccess && (
-            <div className="mt-2 text-green-600 text-xs sm:text-sm font-pokemon">
+            <div className="mt-1.5 text-green-600 text-xs font-pokemon">
               Bid submitted successfully!
             </div>
           )}
@@ -427,17 +427,17 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
       <div className="mb-3 sm:mb-4">
         <button 
           disabled={!user || loadingUser}
-          className="w-full bg-red-600 text-white font-bold py-2 sm:py-3 rounded-lg hover:bg-red-700 transition-all flex items-center justify-center space-x-2 font-pokemon disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+          className="w-full bg-red-600 text-white font-bold py-2 rounded-lg hover:bg-red-700 transition-all flex items-center justify-center space-x-2 font-pokemon disabled:opacity-50 disabled:cursor-not-allowed text-sm"
         >
           <DollarSign className="h-4 w-4" />
           <span>{loadingUser ? 'Loading...' : !user ? 'Login to Buy Now' : `Buy Now - $${buyNowPrice}`}</span>
         </button>
         {!loadingUser && !user ? (
-          <p className="text-orange-600 text-xs text-center mt-1 font-pokemon">
+          <p className="text-orange-600 text-xs text-center mt-1.5 font-pokemon">
             Please sign in to purchase
           </p>
         ) : (
-          <p className="text-gray-400 text-xs text-center mt-1 font-pokemon">
+          <p className="text-gray-400 text-xs text-center mt-1.5 font-pokemon">
             Secure your slot for this Pokemon
           </p>
         )}
