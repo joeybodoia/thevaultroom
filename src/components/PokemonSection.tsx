@@ -171,122 +171,25 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       setLoading(true);
       setError(null);
 
+      console.log('Fetching all cards from all_cards table...');
       
-      // Check if Supabase is configured
-      if (!isSupabaseConfigured || !supabase) {
-        console.warn('Supabase not configured, using mock data');
-        // Use mock data when Supabase is not available
-        const mockCards: DirectBidCard[] = [
-          {
-            id: 1,
-            card_name: "Charizard ex",
-            card_number: "199",
-            set_name: "SV: Prismatic Evolutions",
-            rarity: "Double Rare",
-            image_url: "https://images.pokemontcg.io/sv4pt5/199.png",
-            ungraded_market_price: 89.99,
-            date_updated: new Date().toISOString()
-          },
-          {
-            id: 2,
-            card_name: "Pikachu ex",
-            card_number: "200",
-            set_name: "SV: Prismatic Evolutions",
-            rarity: "Double Rare",
-            image_url: "https://images.pokemontcg.io/sv4pt5/200.png",
-            ungraded_market_price: 45.50,
-            date_updated: new Date().toISOString()
-          },
-          {
-            id: 3,
-            card_name: "Eevee ex",
-            card_number: "201",
-            set_name: "SV: Prismatic Evolutions",
-            rarity: "Double Rare",
-            image_url: "https://images.pokemontcg.io/sv4pt5/201.png",
-            ungraded_market_price: 32.75,
-            date_updated: new Date().toISOString()
-          }
-        ];
-        
-        setAllCards(mockCards);
-        setError('Demo mode: Using sample cards. Configure Supabase to see real data.');
-        return;
-      }
-      // Test basic Supabase connection first
       const { data, error } = await supabase
-        .from('direct_bid_cards_view')
-        .select('*');
-      
-      // Add timeout to the connection test
-      const connectionTestPromise = supabase
-        .from('direct_bid_cards')
-        .select('count')
-        .limit(1);
-      
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Connection test timeout after 60 seconds')), 60000);
-      });
-      
-      const { data: testData, error: testError } = await Promise.race([
-        connectionTestPromise,
-        timeoutPromise
-      ]) as any;
-      
-      console.log('Supabase connection test result:', { testData, testError });
-      
-      if (testError) {
-        console.error('Supabase connection failed:', testError);
-        console.error('Error details:', JSON.stringify(testError, null, 2));
-        throw new Error(`Connection failed: ${testError.message}`);
-      }
-      
-      console.log('Connection test successful, proceeding to fetch cards...');
-
-      // Fetch all direct bid cards
-      console.log('Fetching all cards...');
-      
-      const cardsPromise = supabase
-        .from('direct_bid_cards')
+        .from('all_cards')
         .select('*')
         .order('ungraded_market_price', { ascending: false });
-      
-      const cardsTimeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Cards fetch timeout after 90 seconds')), 90000);
-      });
-      
-      const { data: cardsData, error: cardsError } = await Promise.race([
-        cardsPromise,
-        cardsTimeoutPromise
-      ]) as any;
-      
-      console.log('Direct bid cards fetched from view:', cardsData?.length, 'cards');
-      console.log('Sample card dates:', cardsData?.slice(0, 3).map(card => ({ name: card.card_name, date: card.date_updated })));
 
-      console.log('Cards fetch result:', { cardsData, cardsError });
-
-      if (cardsError) {
-        console.error('Cards fetch error details:', JSON.stringify(cardsError, null, 2));
-        throw cardsError;
+      if (error) {
+        console.error('Error fetching cards:', error);
+        throw error;
       }
 
-      console.log(`Successfully fetched ${cardsData?.length || 0} cards`);
-      setAllCards(cardsData || []);
+      console.log(`Successfully fetched ${data?.length || 0} cards`);
+      setAllCards(data || []);
+      
     } catch (err: any) {
-      
-      // Provide more specific error messages
-      if (err.message.includes('Failed to fetch')) {
-        setError('Unable to connect to the database. Please check your internet connection and try again.');
-      } else if (err.message.includes('Supabase configuration')) {
-        setError('Database configuration error. Please contact support.');
-      } else if (err.message.includes('timeout')) {
-        setError('Connection timeout. Please try again.');
-      } else {
-        setError(`Connection failed: ${err.message}`);
-      }
-      
-      console.error('Error stack:', err.stack);
-      setError(err.message || 'Failed to fetch Pokemon data');
+      console.error('Error fetching cards:', err);
+      setError(err.message || 'Failed to fetch cards');
+      setAllCards([]);
     } finally {
       setLoading(false);
     }
