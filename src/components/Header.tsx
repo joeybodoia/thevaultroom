@@ -1,11 +1,12 @@
 import React from 'react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Play, Users, Trophy, Shield, Coins } from 'lucide-react';
 import WalletButton from './WalletButton';
 import AuthModal from './AuthModal';
 import ProfileModal from './ProfileModal';
+import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabase';
-import type { User } from '@supabase/supabase-js';
+import { useEffect } from 'react';
 
 const Header: React.FC = () => {
   const [authModal, setAuthModal] = useState<{ isOpen: boolean; mode: 'signin' | 'signup' }>({
@@ -13,59 +14,24 @@ const Header: React.FC = () => {
     mode: 'signin'
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
   const [profileModal, setProfileModal] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [siteCredits, setSiteCredits] = useState<number>(0);
   const [loadingCredits, setLoadingCredits] = useState(false);
+  
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
-    // Get initial session
-    const getSession = async () => {
-      try {
-        console.log('Checking initial session...');
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log('Initial session:', session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await loadUserAvatar(session.user.id);
-          await checkAdminStatus(session.user.id);
-          await loadSiteCredits(session.user.id);
-        }
-      } catch (error) {
-        console.error('Error getting session:', error);
-        setUser(null);
-      } finally {
-        setLoading(false);
-        console.log('Loading set to false');
-      }
-    };
-
-    getSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await loadUserAvatar(session.user.id);
-          await checkAdminStatus(session.user.id);
-          await loadSiteCredits(session.user.id);
-        } else {
-          setAvatarUrl(null);
-          setIsAdmin(false);
-          setSiteCredits(0);
-        }
-        if (event === 'SIGNED_IN') {
-          closeAuthModal();
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
+    if (user) {
+      loadUserAvatar(user.id);
+      checkAdminStatus(user.id);
+      loadSiteCredits(user.id);
+    } else {
+      setAvatarUrl(null);
+      setIsAdmin(false);
+      setSiteCredits(0);
+    }
   }, []);
 
   const loadUserAvatar = async (userId: string) => {
@@ -119,6 +85,7 @@ const Header: React.FC = () => {
       setIsAdmin(false);
     }
   };
+
   const openAuthModal = (mode: 'signin' | 'signup') => {
     setAuthModal({ isOpen: true, mode });
     setMobileMenuOpen(false); // Close mobile menu when opening auth modal
@@ -143,74 +110,6 @@ const Header: React.FC = () => {
   const handleAvatarUpdate = (newAvatarUrl: string | null) => {
     setAvatarUrl(newAvatarUrl);
   };
-
-  const handleForceLogout = async () => {
-    try {
-      console.log('Force logout initiated...');
-      // Force clear local session first
-      setUser(null);
-      setAvatarUrl(null);
-      setIsAdmin(false);
-      setSiteCredits(0);
-      
-      // Clear any stored session data
-      localStorage.removeItem('sb-bzqnxgohxamuqgyrjwls-auth-token');
-      sessionStorage.clear();
-      
-      // Try to sign out from Supabase (but don't wait for it)
-      supabase.auth.signOut().catch(err => {
-        console.log('Server signout failed (expected):', err.message);
-      });
-      
-      console.log('Force logout completed');
-    } catch (error) {
-      console.error('Force logout error:', error);
-      // Force local logout even if server call fails
-      setUser(null);
-      setAvatarUrl(null);
-      setIsAdmin(false);
-      setSiteCredits(0);
-    }
-  };
-
-  // Auto-logout after 30 minutes of inactivity (in addition to the 1-hour absolute timeout in App.tsx)
-  useEffect(() => {
-    let inactivityTimer: NodeJS.Timeout;
-    let lastActivity = Date.now();
-
-    const resetTimer = () => {
-      lastActivity = Date.now();
-      clearTimeout(inactivityTimer);
-      
-      if (user) {
-        inactivityTimer = setTimeout(() => {
-          console.log('Auto-logout due to inactivity');
-          handleForceLogout();
-        }, 30 * 60 * 1000); // 30 minutes
-      }
-    };
-
-    const handleActivity = () => {
-      resetTimer();
-    };
-
-    // Listen for user activity
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-    
-    if (user) {
-      events.forEach(event => {
-        document.addEventListener(event, handleActivity, true);
-      });
-      resetTimer(); // Start the timer
-    }
-
-    return () => {
-      clearTimeout(inactivityTimer);
-      events.forEach(event => {
-        document.removeEventListener(event, handleActivity, true);
-      });
-    };
-  }, [user]);
 
   const handleLogoClick = () => {
     if (isLoggedIn) {
@@ -269,7 +168,7 @@ const Header: React.FC = () => {
             )}
             {isLoggedIn && (
               <button
-                onClick={handleForceLogout}
+                onClick={signOut}
                 className="hidden lg:block bg-gray-600 text-white px-3 py-1 rounded text-sm font-pokemon hover:bg-gray-700 transition-all"
               >
                 Force Logout
@@ -399,7 +298,7 @@ const Header: React.FC = () => {
               )}
               {isLoggedIn && (
                 <button
-                  onClick={handleForceLogout}
+                  onClick={signOut}
                   className="w-full bg-gray-600 text-white px-3 py-2 rounded text-sm font-pokemon hover:bg-gray-700 transition-all"
                 >
                   Force Logout
