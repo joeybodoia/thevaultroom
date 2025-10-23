@@ -165,14 +165,10 @@ const StreamCountdown: React.FC<StreamCountdownProps> = ({ onStreamChange }) => 
             ))}
           </div>
           
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-6 text-gray-500">
+          <div className="flex items-center justify-center text-gray-500">
             <div className="flex items-center space-x-2">
               <Calendar className="h-5 w-5" />
               <span className="font-pokemon text-sm sm:text-base">{formatStreamDate(nextStream.scheduled_date)}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Users className="h-5 w-5" />
-              <span className="font-pokemon text-sm sm:text-base">Expected: 2,500+ viewers</span>
             </div>
           </div>
         </div>
