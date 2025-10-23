@@ -10,10 +10,10 @@ const Footer: React.FC = () => {
             <div className="flex items-center space-x-2 mb-3 sm:mb-4">
               <img 
                 src="https://i.imgur.com/5ke3mJw.png" 
-                alt="The Vault Room Logo" 
+                alt="Dread's Vault Logo" 
                 className="h-8 sm:h-10 w-auto"
               />
-              <span className="text-lg sm:text-xl font-bold text-white font-pokemon">The Vault Room</span>
+              <span className="text-lg sm:text-xl font-bold text-white font-pokemon">Dread's Vault</span>
             </div>
             <p className="text-white/60 text-xs sm:text-sm mb-3 sm:mb-4 font-pokemon">
               The premier destination for live Pokémon card opening experiences with guaranteed rewards.
@@ -66,7 +66,7 @@ const Footer: React.FC = () => {
 
         <div className="border-t border-white/10 mt-6 sm:mt-8 pt-6 sm:pt-8 text-center">
           <p className="text-white/60 text-xs sm:text-sm font-pokemon">
-            © 2025 The Vault Room. All rights reserved. • Licensed product experience platform with guaranteed tangible rewards.
+            © 2025 Dread's Vault. All rights reserved. • Licensed product experience platform with guaranteed tangible rewards.
           </p>
         </div>
       </div>

@@ -131,10 +131,10 @@ const Header: React.FC = () => {
           >
             <img 
               src="https://i.imgur.com/5ke3mJw.png" 
-              alt="The Vault Room Logo" 
+              alt="Dread's Vault Logo" 
               className="h-8 sm:h-12 w-auto"
             />
-            <span className="text-lg sm:text-xl font-bold text-white font-pokemon">The Vault Room</span>
+            <span className="text-lg sm:text-xl font-bold text-white font-pokemon">Dread's Vault</span>
           </div>
           
           {/* Desktop Navigation */}

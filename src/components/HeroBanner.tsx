@@ -5,7 +5,7 @@ const HeroBanner: React.FC = () => {
     <section className="py-8 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8 bg-yellow-400">
       <div className="max-w-4xl mx-auto text-center">
         <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-black mb-4 sm:mb-6 lg:mb-8 font-pokemon">
-          Welcome to The Vault Room
+          Welcome to Dread's Vault
         </h1>
         
         <div className="flex justify-center mb-4 sm:mb-6 lg:mb-8">
