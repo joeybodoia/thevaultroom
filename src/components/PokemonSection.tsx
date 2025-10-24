@@ -96,7 +96,22 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   }, [showConfirmModal]);
 
   const fetchUserCredit = async (userId: string) => {
-    // Implementation for fetching user credit
+    try {
+      setLoadingCredit(true);
+      const { data, error } = await supabase
+        .from('users')
+        .select('site_credit')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      setUserCredit(parseFloat(data.site_credit || '0'));
+    } catch (error) {
+      console.error('Error fetching user credit:', error);
+      setUserCredit(0);
+    } finally {
+      setLoadingCredit(false);
+    }
   };
 
   useEffect(() => {
