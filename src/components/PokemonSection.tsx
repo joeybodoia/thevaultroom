@@ -637,7 +637,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         disabled={!user || loadingUser || lotterySubmitting === 'Pokeball Pattern'}
                         className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Pokeball Pattern' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Pokeball Pattern' ? 'Entering...' : 'Enter for 5 Credits'}
                       </button>
                       {!loadingUser && !user && (
                         <div className="mt-2 text-orange-600 text-sm font-pokemon">
@@ -669,7 +669,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         disabled={!user || loadingUser || lotterySubmitting === 'Masterball Pattern'}
                         className="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Masterball Pattern' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Masterball Pattern' ? 'Entering...' : 'Enter for 5 Credits'}
                       </button>
                       {!loadingUser && !user && (
                         <div className="mt-2 text-orange-600 text-sm font-pokemon">
@@ -701,7 +701,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         disabled={!user || loadingUser || lotterySubmitting === 'Hyper Rare'}
                         className="w-full bg-yellow-500 text-white font-bold py-3 rounded-lg hover:bg-yellow-600 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Hyper Rare' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Hyper Rare' ? 'Entering...' : 'Enter for 5 Credits'}
                       </button>
                       {!loadingUser && !user && (
                         <div className="mt-2 text-orange-600 text-sm font-pokemon">
@@ -728,7 +728,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         disabled={!user || loadingUser || lotterySubmitting === 'Ultra Rare'}
                         className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Ultra Rare' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Ultra Rare' ? 'Entering...' : 'Enter for 5 Credits'}
                       </button>
                       {!loadingUser && !user && (
                         <div className="mt-2 text-orange-600 text-sm font-pokemon">
@@ -755,7 +755,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         disabled={!user || loadingUser || lotterySubmitting === 'SIR'}
                         className="w-full bg-pink-600 text-white font-bold py-3 rounded-lg hover:bg-pink-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'SIR' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'SIR' ? 'Entering...' : 'Enter for 5 Credits'}
                       </button>
                       {!loadingUser && !user && (
                         <div className="mt-2 text-orange-600 text-sm font-pokemon">
@@ -782,7 +782,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         disabled={!user || loadingUser || lotterySubmitting === 'IR'}
                         className="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'IR' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'IR' ? 'Entering...' : 'Enter for 5 Credits'}
                       </button>
                       {!loadingUser && !user && (
                         <div className="mt-2 text-orange-600 text-sm font-pokemon">
@@ -814,7 +814,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         disabled={!user || loadingUser || lotterySubmitting === 'ACE SPEC'}
                         className="w-full bg-black text-white font-bold py-3 rounded-lg hover:bg-gray-800 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'ACE SPEC' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'ACE SPEC' ? 'Entering...' : 'Enter for 5 Credits'}
                       </button>
                       {!loadingUser && !user && (
                         <div className="mt-2 text-orange-600 text-sm font-pokemon">
@@ -874,7 +874,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         disabled={!user || loadingUser || lotterySubmitting === 'VSTAR'}
                         className="w-full bg-purple-600 text-white font-bold py-3 rounded-lg hover:bg-purple-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'VSTAR' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'VSTAR' ? 'Entering...' : 'Enter for 5 Credits'}
                       </button>
                       {!loadingUser && !user && (
                         <div className="mt-2 text-orange-600 text-sm font-pokemon">
@@ -901,7 +901,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         disabled={!user || loadingUser || lotterySubmitting === 'VMAX'}
                         className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'VMAX' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'VMAX' ? 'Entering...' : 'Enter for 5 Credits'}
                       </button>
                       {!loadingUser && !user && (
                         <div className="mt-2 text-orange-600 text-sm font-pokemon">
@@ -928,7 +928,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         disabled={!user || loadingUser || lotterySubmitting === 'V'}
                         className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'V' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'V' ? 'Entering...' : 'Enter for 5 Credits'}
                       </button>
                       {!loadingUser && !user && (
                         <div className="mt-2 text-orange-600 text-sm font-pokemon">
@@ -955,7 +955,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         disabled={!user || loadingUser || lotterySubmitting === 'Radiant'}
                         className="w-full bg-yellow-500 text-white font-bold py-3 rounded-lg hover:bg-yellow-600 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Radiant' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Radiant' ? 'Entering...' : 'Enter for 5 Credits'}
                       </button>
                       {!loadingUser && !user && (
                         <div className="mt-2 text-orange-600 text-sm font-pokemon">
@@ -1015,7 +1015,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         disabled={!user || loadingUser || lotterySubmitting === 'Hyper Rare'}
                         className="w-full bg-yellow-500 text-white font-bold py-3 rounded-lg hover:bg-yellow-600 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Hyper Rare' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Hyper Rare' ? 'Entering...' : 'Enter for 5 Credits'}
                       </button>
                       {!loadingUser && !user && (
                         <div className="mt-2 text-orange-600 text-sm font-pokemon">
@@ -1042,7 +1042,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         disabled={!user || loadingUser || lotterySubmitting === 'Ultra Rare'}
                         className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Ultra Rare' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Ultra Rare' ? 'Entering...' : 'Enter for 5 Credits'}
                       </button>
                       {!loadingUser && !user && (
                         <div className="mt-2 text-orange-600 text-sm font-pokemon">
@@ -1069,7 +1069,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         disabled={!user || loadingUser || lotterySubmitting === 'SIR'}
                         className="w-full bg-pink-600 text-white font-bold py-3 rounded-lg hover:bg-pink-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'SIR' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'SIR' ? 'Entering...' : 'Enter for 5 Credits'}
                       </button>
                       {!loadingUser && !user && (
                         <div className="mt-2 text-orange-600 text-sm font-pokemon">
@@ -1096,7 +1096,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         disabled={!user || loadingUser || lotterySubmitting === 'IR'}
                         className="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'IR' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'IR' ? 'Entering...' : 'Enter for 5 Credits'}
                       </button>
                       {!loadingUser && !user && (
                         <div className="mt-2 text-orange-600 text-sm font-pokemon">
@@ -1123,7 +1123,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         disabled={!user || loadingUser || lotterySubmitting === 'ACE SPEC'}
                         className="w-full bg-black text-white font-bold py-3 rounded-lg hover:bg-gray-800 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'ACE SPEC' ? 'Entering...' : 'Enter for $1'}
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'ACE SPEC' ? 'Entering...' : 'Enter for 5 Credits'}
                       </button>
                       {!loadingUser && !user && (
                         <div className="mt-2 text-orange-600 text-sm font-pokemon">
