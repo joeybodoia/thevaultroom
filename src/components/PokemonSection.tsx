@@ -382,16 +382,18 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
             <div className="bg-gray-50 rounded-xl p-6 mb-4">
               <h4 className="font-bold text-black mb-3 font-pokemon">Option 1: Direct Card Bidding</h4>
               <ul className="text-left space-y-2 mb-4">
-                <li>• Bid on high-value cards (e.g., Umbreon EX) from each set</li>
+                <li>• Use credits to bid on high-value cards (e.g., Umbreon EX) from each set</li>
                 <li>• Highest bidder wins all pulled copies of their card</li>
-                <li>• If not pulled, you get nothing for that card</li>
+                <li>• If bid card is not pulled, winning bidder receives nothing for that round</li>
+                <li>• A user's credits are only applied for winning bidder. That is, credits placed on a direct card bid are returned to a user once that user is outbid</li>
               </ul>
               
-              <h4 className="font-bold text-black mb-3 font-pokemon">Option 2: $1 Lottery + Rarity Selection</h4>
+              <h4 className="font-bold text-black mb-3 font-pokemon">Option 2: Lottery + Rarity Selection</h4>
               <ul className="text-left space-y-2 mb-4">
-                <li>• Enter for $1 and choose a rarity type from the set</li>
+                <li>• Enter using credits and choose a rarity type from the set</li>
                 <li>• If your rarity type is pulled, you're entered into the prize pool</li>
-                <li>• 2 random winners per round each get 5 packs (minus direct bid wins)</li>
+                <li>• 2 random winners per round. Each winner receives cards from 5 of the opened packs (minus direct bid wins)</li>
+                <li>• Lottery winner #1 receives all cards from first 5 opened packs, winner #2 receives remaining cards from that round (barring any cards won through direct card bids) </li>
               </ul>
             </div>
             <p className="text-red-600 font-semibold">
@@ -422,7 +424,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                $1 Lottery
+                Lottery
               </button>
             </nav>
           </div>
@@ -530,28 +532,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
           {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
         </p>
 
-        <p className="text-gray-600 flex items-start space-x-2 font-pokemon">
-          <span className="text-red-600 font-bold">•</span>
-          <span>Use credits to bid on high-value cards (e.g., Umbreon) from each set</span>
-        </p>
-
-        <p className="text-gray-600 flex items-start space-x-2 font-pokemon">
-          <span className="text-red-600 font-bold">•</span>
-          <span>Highest bidder wins all pulled copies of their card</span>
-        </p>
-
-        <p className="text-gray-600 flex items-start space-x-2 font-pokemon">
-          <span className="text-red-600 font-bold">•</span>
-          <span>If bid card is not pulled, you get nothing for that round</span>
-        </p>
-
-        <p className="text-gray-600 flex items-start space-x-2 font-pokemon">
-          <span className="text-red-600 font-bold">•</span>
-          <span>
-            A user's credits are only applied for winning bidder. That is, credits placed on a direct card bid are
-            returned to a user once that user is outbid
-          </span>
-        </p>
       </div>
     ) : (
       <p className="text-blue-600 font-pokemon">No round found</p>
