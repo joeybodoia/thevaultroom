@@ -10,7 +10,7 @@ const HowItWorks: React.FC = () => {
             How It Works
           </h2>
           <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto font-pokemon px-2">
-            Pay a fixed entry fee to join our exclusive live Pokemon card opening events. All participants receive equal site credits to use as they choose!
+            Pay a fixed entry fee to join our exclusive live Pokemon card opening events. All participants receive equal site credits to use as they see fit!
           </p>
         </div>
 
