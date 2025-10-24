@@ -3,7 +3,6 @@ import { Loader, AlertCircle, Sparkles, Search, Filter, ArrowUpDown } from 'luci
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { DirectBidCard, PokemonCard as PokemonCardType } from '../types/pokemon';
 import PokemonCard from './PokemonCard';
-import StripePaymentModal from './StripePaymentModal';
 import type { User } from '@supabase/supabase-js';
 
 type SetName = 'prismatic' | 'crown_zenith' | 'destined_rivals';
@@ -46,7 +45,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [lotteryParticipants, setLotteryParticipants] = useState<{ [key: string]: number }>({});
   const [user, setUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
-  const [showStripeModal, setShowStripeModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedLotteryEntry, setSelectedLotteryEntry] = useState<{
     roundId: string;
     rarity: string;
@@ -250,17 +249,17 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       return;
     }
 
-    // Open Stripe payment modal
+    // Show confirmation modal
     setSelectedLotteryEntry({ 
       roundId: currentRound.id, 
       rarity, 
       setName: currentRound.set_name 
     });
-    setShowStripeModal(true);
+    setShowConfirmModal(true);
   };
 
   const handlePaymentSuccess = () => {
-    setShowStripeModal(false);
+    setShowConfirmModal(false);
     setSelectedLotteryEntry(null);
     setLotterySuccess(`Successfully entered lottery for ${selectedLotteryEntry?.rarity} cards!`);
     
@@ -525,13 +524,10 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         <p className="text-blue-700 font-bold font-pokemon">
           Round ID: {currentRound.id}
         </p>
-
-        {/* ✅ Close this <p> */}
         <p className="text-blue-600 text-sm font-pokemon">
           Round {currentRound.round_number} • {currentRound.packs_opened} packs •
           {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
         </p>
-
       </div>
     ) : (
       <p className="text-blue-600 font-pokemon">No round found</p>
@@ -1157,19 +1153,51 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
           </div>
         )}
 
-        {/* Stripe Payment Modal */}
-        {selectedLotteryEntry && (
-          <StripePaymentModal
-            isOpen={showStripeModal}
-            onClose={() => {
-              setShowStripeModal(false);
-              setSelectedLotteryEntry(null);
-            }}
-            roundId={selectedLotteryEntry.roundId}
-            selectedRarity={selectedLotteryEntry.rarity}
-            setName={selectedLotteryEntry.setName}
-            onPaymentSuccess={handlePaymentSuccess}
-          />
+        {/* Confirmation Modal */}
+        {showConfirmModal && selectedLotteryEntry && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+              <div className="text-center mb-6">
+                <h3 className="text-xl font-bold text-black font-pokemon mb-4">Confirm Lottery Entry</h3>
+                <p className="text-gray-600 font-pokemon">
+                  Please confirm that you want to apply 5 credits to entering the lottery for <strong>{selectedLotteryEntry.rarity}</strong> cards.
+                </p>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700 font-pokemon">Cost:</span>
+                  <span className="font-bold text-black font-pokemon">5 credits</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700 font-pokemon">Your Credits:</span>
+                  <span className="font-bold text-black font-pokemon">{userCredit.toFixed(2)} credits</span>
+                </div>
+                <div className="flex justify-between items-center border-t border-gray-200 pt-2 mt-2">
+                  <span className="text-gray-700 font-pokemon">After Entry:</span>
+                  <span className="font-bold text-black font-pokemon">{(userCredit - 5).toFixed(2)} credits</span>
+                </div>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={handlePaymentSuccess}
+                  className="flex-1 bg-yellow-400 text-black font-bold py-3 rounded-lg hover:bg-yellow-500 transition-all font-pokemon"
+                >
+                  Yes, Enter Lottery
+                </button>
+                <button
+                  onClick={() => {
+                    setShowConfirmModal(false);
+                    setSelectedLotteryEntry(null);
+                  }}
+                  className="flex-1 bg-gray-600 text-white font-bold py-3 rounded-lg hover:bg-gray-700 transition-all font-pokemon"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </section>
