@@ -288,19 +288,69 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     });
     setShowConfirmModal(true);
   };
-
-  const handlePaymentSuccess = () => {
-    setShowConfirmModal(false);
-    setSelectedLotteryEntry(null);
-    setLotterySuccess(`Successfully entered lottery for ${selectedLotteryEntry?.rarity} cards!`);
-    
+    if (!user?.id || !currentRoundId || !selectedRarity) {
+      setError('Missing required information for lottery entry');
+      return;
     // Refresh participant counts
-    fetchLotteryParticipants();
-    
-    // Clear success message after 3 seconds
-    setTimeout(() => {
-      setLotterySuccess(null);
-    }, 3000);
+
+    setIsProcessing(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      // First, deduct 5 credits from user's account
+      const newCreditBalance = userCredits - 5;
+      
+      const { error: creditError } = await supabase
+        .from('users')
+        .update({ site_credit: newCreditBalance })
+        .eq('id', user.id);
+
+      if (creditError) {
+        throw new Error('Failed to deduct credits: ' + creditError.message);
+      }
+
+      // Then, insert lottery entry
+      const { error: lotteryError } = await supabase
+        .from('lottery_entries')
+        .insert([{
+          user_id: user.id,
+          round_id: currentRoundId,
+          selected_rarity: selectedRarity,
+          created_at: new Date().toISOString(),
+          credits_used: 5
+        }]);
+
+      if (lotteryError) {
+        // Rollback credit deduction if lottery entry fails
+        await supabase
+          .from('users')
+          .update({ site_credit: userCredits })
+          .eq('id', user.id);
+        
+        throw new Error('Failed to create lottery entry: ' + lotteryError.message);
+      }
+
+      // Update local state
+      setUserCredits(newCreditBalance);
+      setShowConfirmModal(false);
+      setSelectedRarity('');
+      
+      // Refresh lottery entries to show the new entry
+      fetchLotteryEntries(currentRoundId);
+      
+      // Show success message
+      setSuccess('Successfully entered the lottery! 5 credits deducted.');
+      setTimeout(() => {
+        setSuccess('');
+      }, 3000);
+
+    } catch (err: any) {
+      console.error('Lottery entry error:', err);
+      setError(err.message || 'Failed to enter lottery');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Get unique sets and rarities for filter options
@@ -1213,9 +1263,17 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               <div className="flex space-x-3">
                 <button
                   onClick={handlePaymentSuccess}
-                  className="flex-1 bg-yellow-400 text-black font-bold py-3 rounded-lg hover:bg-yellow-500 transition-all font-pokemon"
+                  disabled={isProcessing}
+                  className="flex-1 bg-yellow-400 text-black font-bold py-3 rounded-lg hover:bg-yellow-500 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                 >
-                  Yes, Enter Lottery
+                  {isProcessing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    'Yes, Enter Lottery'
+                  )}
                 </button>
                 <button
                   onClick={() => {
