@@ -1155,7 +1155,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
         {/* Confirmation Modal */}
         {showConfirmModal && selectedLotteryEntry && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
             <div className="bg-white rounded-2xl p-6 max-w-md w-full">
               <div className="text-center mb-6">
                 <h3 className="text-xl font-bold text-black font-pokemon mb-4">Confirm Lottery Entry</h3>
