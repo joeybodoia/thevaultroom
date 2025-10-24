@@ -532,7 +532,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
         <p className="text-gray-600 flex items-start space-x-2 font-pokemon">
           <span className="text-red-600 font-bold">•</span>
-          <span>Use credits to bid on high-value cards (e.g., Umbreon EX) from each set</span>
+          <span>Use credits to bid on high-value cards (e.g., Umbreon) from each set</span>
         </p>
 
         <p className="text-gray-600 flex items-start space-x-2 font-pokemon">
