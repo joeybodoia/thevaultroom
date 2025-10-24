@@ -23,6 +23,8 @@ interface PokemonSectionProps {
   currentStreamId?: string | null;
 }
 
+
+
 const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [activeTab, setActiveTab] = useState<SetName>('prismatic');
   const [biddingMode, setBiddingMode] = useState<BiddingMode>('direct');
@@ -1238,7 +1240,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         )}
 
         {/* Confirmation Modal */}
-        {showConfirmModal && selectedLotteryEntry && (
+        {/* {showConfirmModal && selectedLotteryEntry && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
             <div className="bg-white rounded-2xl p-6 max-w-md w-full">
               <div className="text-center mb-6">
@@ -1290,7 +1292,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               </div>
             </div>
           </div>
-        )}
+        )} */}
 
       {/* Fixed Modal with Auto-scroll */}
       {showConfirmModal && (
