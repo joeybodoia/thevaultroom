@@ -510,17 +510,21 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
             <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
               <div className="text-center">
                 <h4 className="font-semibold text-blue-800 font-pokemon mb-2">Current Round for {tabs.find(t => t.id === activeTab)?.name}</h4>
-                {roundLoading ? (
-                  <div className="flex items-center justify-center space-x-2">
-                    <Loader className="h-4 w-4 animate-spin text-blue-600" />
-                    <span className="text-blue-600 font-pokemon">Loading round...</span>
-                  </div>
-                ) : currentRound ? (
-                  <div className="space-y-1">
-                    <p className="text-blue-700 font-bold font-pokemon">Round ID: {currentRound.id}</p>
-                    <p className="text-blue-600 text-sm font-pokemon">
-                      Round {currentRound.round_number} • {currentRound.packs_opened} packs • 
-                      {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
+                    <p className="text-gray-600 flex items-start space-x-2 font-pokemon">
+                      <span className="text-red-600 font-bold">•</span>
+                      <span>Use credits to bid on high-value cards (e.g., Umbreon EX) from each set</span>
+                    </p>
+                    <p className="text-gray-600 flex items-start space-x-2 font-pokemon">
+                      <span className="text-red-600 font-bold">•</span>
+                      <span>Highest bidder wins all pulled copies of their card</span>
+                    </p>
+                    <p className="text-gray-600 flex items-start space-x-2 font-pokemon">
+                      <span className="text-red-600 font-bold">•</span>
+                      <span>If bid card is not pulled, you get nothing for that round</span>
+                    </p>
+                    <p className="text-gray-600 flex items-start space-x-2 font-pokemon">
+                      <span className="text-red-600 font-bold">•</span>
+                      <span>A user's credits are only applied for winning bidder. That is, credits placed on a direct card bid are returned to a user once that user is outbid</span>
                     </p>
                   </div>
                 ) : (
