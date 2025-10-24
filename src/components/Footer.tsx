@@ -16,7 +16,7 @@ const Footer: React.FC = () => {
               <span className="text-lg sm:text-xl font-bold text-white font-pokemon">Dread's Vault</span>
             </div>
             <p className="text-white/60 text-xs sm:text-sm mb-3 sm:mb-4 font-pokemon">
-              The premier destination for live Pokémon card opening experiences with guaranteed rewards.
+              The premier destination for live Pokémon card opening experiences. Pay once, play with credits, win real cards!
             </p>
             <div className="flex space-x-4">
               <a href="#" className="text-white/60 hover:text-white transition-colors">

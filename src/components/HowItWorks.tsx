@@ -10,7 +10,7 @@ const HowItWorks: React.FC = () => {
             How It Works
           </h2>
           <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto font-pokemon px-2">
-            Join our live Pokemon card opening experience with three rounds of pack openings and two ways to win!
+            Pay a fixed entry fee to join our exclusive live Pokemon card opening events. All participants receive equal site credits to use as they choose!
           </p>
         </div>
 
@@ -22,11 +22,11 @@ const HowItWorks: React.FC = () => {
                   <Users className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg sm:text-xl font-bold text-black mb-2 font-pokemon">1. Choose Your Entry</h3>
+                  <h3 className="text-lg sm:text-xl font-bold text-black mb-2 font-pokemon">1. Pay Entry Fee & Receive Credits</h3>
                   <p className="text-sm sm:text-base text-gray-600 font-pokemon">
-                    <strong>Option 1:</strong> Bid on high-value cards directly. Highest bidder for a particular card wins that card (all copies) if pulled.
+                    Pay a fixed entry fee to join the stream event. All participants receive the same amount of site credits (no monetary value) to use however they choose.
                     <br />
-                    <strong>Option 2:</strong> Enter the $1 lottery and select a rarity type. All users who select a rarity type which is pulled during round are added into final pool from which winners are randomly selected.
+                    <strong>Use credits for:</strong> Direct card bidding, lottery entries, giveaways, and other interactive stream activities.
                   </p>
                 </div>
               </div>
@@ -54,7 +54,7 @@ const HowItWorks: React.FC = () => {
                 <div>
                   <h3 className="text-lg sm:text-xl font-bold text-black mb-2 font-pokemon">3. Win Your Prizes</h3>
                   <p className="text-sm sm:text-base text-gray-600 font-pokemon">
-                    Direct bidders win all copies of their card if pulled. Lottery winners each win all cards from the packs opened that round, minus any direct bid wins. Lottery winner #1 receives all cards from first 5 packs and lottery winner #2 receives all cards from last 5 packs.
+                    Highest credit bidders win all copies of their card if pulled. Lottery winners each win all cards from the packs opened that round, minus any direct bid wins. Lottery winner #1 receives all cards from first 5 packs and lottery winner #2 receives all cards from last 5 packs.
                   </p>
                 </div>
               </div>
@@ -110,14 +110,14 @@ const HowItWorks: React.FC = () => {
                 <Trophy className="h-8 w-8" />
               </div>
               <h4 className="text-base sm:text-lg font-bold text-black mb-2 font-pokemon">Strategic Bidding</h4>
-              <p className="text-sm sm:text-base text-gray-600 font-pokemon">Bid smart on the Pokemon you want most - highest bidder takes all copies!</p>
+              <p className="text-sm sm:text-base text-gray-600 font-pokemon">Use your credits strategically on the Pokemon you want most - highest credit bidder takes all copies!</p>
             </div>
             <div className="text-center">
               <div className="bg-gray-600 text-white rounded-full p-3 sm:p-4 w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 flex items-center justify-center">
                 <Users className="h-8 w-8" />
               </div>
               <h4 className="text-base sm:text-lg font-bold text-black mb-2 font-pokemon">Competitive Fun</h4>
-              <p className="text-sm sm:text-base text-gray-600 font-pokemon">Compete with other collectors for the Pokemon cards you want most!</p>
+              <p className="text-sm sm:text-base text-gray-600 font-pokemon">Compete with other participants using your credits for the Pokemon cards you want most!</p>
             </div>
           </div>
         </div>

@@ -17,7 +17,7 @@ const HeroBanner: React.FC = () => {
         </div>
         
         <p className="text-sm sm:text-lg md:text-xl lg:text-2xl text-black max-w-4xl mx-auto leading-relaxed font-pokemon px-2">
-          <span className="font-bold text-red-600">Live Pokemon Card Opening Experience:</span> Three exciting rounds of pack openings per stream! Choose between direct card bidding for high-value cards or enter the $1 lottery with rarity selection. Watch live as we open 30 packs total across three premium sets!
+          <span className="font-bold text-red-600">Live Pokemon Card Opening Experience:</span> Pay a fixed entry fee to join our exclusive stream events! All participants receive equal site credits to bid on specific cards, enter lotteries, or participate in giveaways. Watch live as we open 30 packs total across three premium sets!
         </p>
       </div>
     </section>
