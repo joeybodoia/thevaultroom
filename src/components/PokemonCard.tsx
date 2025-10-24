@@ -388,60 +388,9 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
           </div>
           
           {/* Credit Bid Button */}
-          {user && userCredit > 0 && (
-            <div className="mt-1.5">
-              <button
-                onClick={handleCreditBid}
-                disabled={!bidAmount || parseFloat(bidAmount) <= currentBid || parseFloat(bidAmount) > userCredit || isSubmittingBid}
-                className="w-full bg-blue-600 text-white px-2 py-1.5 rounded-md font-semibold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon text-xs"
-              >
-                {isSubmittingBid ? 'Processing...' : `Bid with Credits ($${userCredit.toFixed(2)} available)`}
-              </button>
-            </div>
-          )}
-          
-          {/* Login Required Message */}
-          {!loadingUser && !user && (
-            <div className="mt-1.5 text-orange-600 text-xs font-pokemon">
-              Please sign in to place a bid
-            </div>
-          )}
-          
-          {/* Error Message */}
-          {bidError && (
-            <div className="mt-1.5 text-red-600 text-xs font-pokemon">
-              {bidError}
-            </div>
-          )}
-          
-          {/* Success Message */}
-          {bidSuccess && (
-            <div className="mt-1.5 text-green-600 text-xs font-pokemon">
-              Bid submitted successfully!
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Buy Now Option */}
-      <div className="mb-3 sm:mb-4">
-        <button 
-          disabled={!user || loadingUser}
-          className="w-full bg-red-600 text-white font-bold py-2 rounded-lg hover:bg-red-700 transition-all flex items-center justify-center space-x-2 font-pokemon disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-        >
-          <DollarSign className="h-4 w-4" />
-          <span>{loadingUser ? 'Loading...' : !user ? 'Login to Buy Now' : `Buy Now - $${buyNowPrice}`}</span>
-        </button>
-        {!loadingUser && !user ? (
-          <p className="text-orange-600 text-xs text-center mt-1.5 font-pokemon">
-            Please sign in to purchase
-          </p>
-        ) : (
-          <p className="text-gray-400 text-xs text-center mt-1.5 font-pokemon">
-            Secure your slot for this Pokemon
-          </p>
-        )}
-      </div>
 
       {/* Market Info */}
       <div className="pt-3 sm:pt-4 border-t border-gray-200 space-y-1 sm:space-y-2">
