@@ -113,7 +113,8 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
       } else {
         console.log('No bids found, using default (1% of market price)');
         // Keep default 1% of market price if no bids exist
-        const defaultBid = parseFloat(((pokemon.ungraded_market_price || 0) * 0.01).toFixed(2));
+        //const defaultBid = parseFloat(((pokemon.ungraded_market_price || 0) * 0.01).toFixed(2));
+        const defaultBid = 0;
         setCurrentBid(defaultBid);
       }
     } catch (err: any) {
