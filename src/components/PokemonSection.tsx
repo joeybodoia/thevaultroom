@@ -287,7 +287,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       setName: currentRound.set_name 
     });
     setShowConfirmModal(true);
-  };
+  const handleCreditLotteryEntry = async () => {
     if (!user?.id || !currentRoundId || !selectedRarity) {
       setError('Missing required information for lottery entry');
       return;
