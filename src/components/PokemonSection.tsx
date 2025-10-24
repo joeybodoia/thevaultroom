@@ -593,7 +593,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
             {lotteryActiveTab === 'prismatic' && (
               <div className="space-y-6">
                 <h3 className="text-2xl font-bold text-black font-pokemon text-center mb-8">
-                  Prismatic Evolutions - $1 Lottery
+                  Prismatic Evolutions - Lottery
                 </h3>
                 
                 {/* Round ID Display */}
@@ -646,7 +646,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       )}
                       {lotterySuccess === 'Successfully entered lottery for Pokeball Pattern!' && (
                         <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
-                          Successfully Entered $1 lottery
+                          Successfully Entered lottery
                         </div>
                       )}
                     </div>
@@ -678,7 +678,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       )}
                       {lotterySuccess === 'Successfully entered lottery for Masterball Pattern!' && (
                         <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
-                          Successfully Entered $1 lottery
+                          Successfully Entered lottery
                         </div>
                       )}
                     </div>
@@ -791,7 +791,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       )}
                       {lotterySuccess === 'Successfully entered lottery for IR!' && (
                         <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
-                          Successfully Entered $1 lottery
+                          Successfully Entered lottery
                         </div>
                       )}
                     </div>
@@ -830,7 +830,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
             {lotteryActiveTab === 'crown_zenith' && (
               <div className="space-y-6">
                 <h3 className="text-2xl font-bold text-black font-pokemon text-center mb-8">
-                  Crown Zenith - $1 Lottery
+                  Crown Zenith - Lottery
                 </h3>
                 
                 {/* Round ID Display */}
@@ -971,7 +971,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
             {lotteryActiveTab === 'destined_rivals' && (
               <div className="space-y-6">
                 <h3 className="text-2xl font-bold text-black font-pokemon text-center mb-8">
-                  Destined Rivals - $1 Lottery
+                  Destined Rivals - Lottery
                 </h3>
                 
                 {/* Round ID Display */}
