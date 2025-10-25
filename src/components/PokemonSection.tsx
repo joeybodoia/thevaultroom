@@ -296,8 +296,8 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     console.log("correct function for inserting lottery entry")
     console.log("current round id = ", currentRound.id)
     console.log("current user = ", user.id)
-    console.log("selected rarity = ", selectedRarity)
-    if (!user?.id || !currentRound.id || !selectedRarity) {
+    console.log("selected rarity = ", selectedLotteryEntry.rarity)
+    if (!user?.id || !currentRound.id || !selectedLotteryEntry.rarity) {
       setError('Missing required information for lottery entry');
       return;
     }
@@ -326,7 +326,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         .insert([{
           user_id: user.id,
           round_id: currentRound.id,
-          selected_rarity: selectedRarity,
+          selected_rarity: selectedLotteryEntry.rarity,
           created_at: new Date().toISOString(),
           credits_used: 5
         }]);
