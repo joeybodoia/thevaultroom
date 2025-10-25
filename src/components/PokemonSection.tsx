@@ -304,8 +304,8 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     // Refresh participant counts
 
     setIsProcessingEntry(true);
-    setError('');
-    setSuccess('');
+    setEntryError('');
+    setEntrySuccess('');
 
     try {
       // First, deduct 5 credits from user's account
@@ -350,14 +350,14 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       fetchLotteryEntries(currentRound.id);
       
       // Show success message
-      setSuccess('Successfully entered the lottery! 5 credits deducted.');
+      setEntrySuccess('Successfully entered the lottery! 5 credits deducted.');
       setTimeout(() => {
-        setSuccess('');
+        setEntrySuccess('');
       }, 3000);
 
     } catch (err: any) {
       console.error('Lottery entry error:', err);
-      setError(err.message || 'Failed to enter lottery');
+      setEntryError(err.message || 'Failed to enter lottery');
     } finally {
       setIsProcessingEntry(false);
     }
