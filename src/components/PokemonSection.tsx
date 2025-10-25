@@ -345,7 +345,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       setSelectedRarity('');
       
       // Refresh lottery entries to show the new entry
-      fetchLotteryEntries(currentRoundId);
+      fetchLotteryEntries(currentRound.id);
       
       // Show success message
       setSuccess('Successfully entered the lottery! 5 credits deducted.');
