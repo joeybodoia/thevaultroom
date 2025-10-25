@@ -309,7 +309,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
     try {
       // First, deduct 5 credits from user's account
-      const newCreditBalance = userCredits - 5;
+      const newCreditBalance = userCredit - 5;
       
       const { error: creditError } = await supabase
         .from('users')
@@ -335,14 +335,14 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         // Rollback credit deduction if lottery entry fails
         await supabase
           .from('users')
-          .update({ site_credit: userCredits })
+          .update({ site_credit: userCredit })
           .eq('id', user.id);
         
         throw new Error('Failed to create lottery entry: ' + lotteryError.message);
       }
 
       // Update local state
-      setUserCredits(newCreditBalance);
+      setUserCredit(newCreditBalance);
       setShowConfirmModal(false);
       setSelectedRarity('');
       
