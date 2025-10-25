@@ -272,6 +272,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   };
 
   const handleLotteryEntry = async (rarity: string) => {
+    console.log("handling lottery entry")
     if (!currentRound) {
       setLotteryError('No active round found for this set');
       return;
