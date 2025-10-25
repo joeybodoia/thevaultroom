@@ -1312,7 +1312,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
             
             <div className="space-y-4">
               <p className="text-gray-700 font-pokemon text-center">
-                Please confirm that you want to apply 5 credits to entering the lottery for <span className="font-bold">{selectedRarity}</span> cards.
+                Please confirm that you want to apply 5 credits to entering the lottery for <span className="font-bold">{selectedLotteryEntry.rarity}</span> cards.
               </p>
               
               <div className="bg-gray-50 rounded-lg p-4 space-y-2">
