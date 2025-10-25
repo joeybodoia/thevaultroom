@@ -303,7 +303,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     }
     // Refresh participant counts
 
-    setIsProcessing(true);
+    setIsProcessingEntry(true);
     setError('');
     setSuccess('');
 
@@ -359,7 +359,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       console.error('Lottery entry error:', err);
       setError(err.message || 'Failed to enter lottery');
     } finally {
-      setIsProcessing(false);
+      setIsProcessingEntry(false);
     }
   };
 
