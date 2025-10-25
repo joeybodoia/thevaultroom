@@ -1343,7 +1343,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
               <div className="flex space-x-3">
                 <button
-                  onClick={handleLotteryEntry}
+                  onClick={handleCreditLotteryEntry}
                   disabled={isProcessingEntry || userCredit < 5}
                   className="flex-1 bg-yellow-400 text-black font-bold py-2 rounded-lg hover:bg-yellow-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon"
                 >
