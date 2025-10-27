@@ -148,6 +148,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       let setName = ''
       console.log('active tab = ', activeTab)
       console.log('Lottery active tab = ', lotteryActiveTab)
+      console.log('bidding mode = ', biddingMode)
       if (activeTab === 'prismatic') {
         setName = 'SV: Prismatic Evolutions'
         console.log('set name is prismatic');
