@@ -149,15 +149,20 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       console.log('active tab = ', activeTab)
       console.log('Lottery active tab = ', lotteryActiveTab)
       console.log('bidding mode = ', biddingMode)
-      if (activeTab === 'prismatic') {
+      const tabToCheck = biddingMode === 'lottery' ? lotteryActiveTab : activeTab
+    
+      console.log('bidding mode = ', biddingMode)
+      console.log('tab to check = ', tabToCheck)
+    
+      if (tabToCheck === 'prismatic') {
         setName = 'SV: Prismatic Evolutions'
-        console.log('set name is prismatic');
-      } else if (activeTab === 'crown_zenith') {
+        console.log('set name is prismatic')
+      } else if (tabToCheck === 'crown_zenith') {
         setName = 'Crown Zenith: Galarian Gallery'
-        console.log('set name is crown zenith');
-      } else if (activeTab === 'destined_rivals') {
+        console.log('set name is crown zenith')
+      } else if (tabToCheck === 'destined_rivals') {
         setName = 'SV10: Destined Rivals'
-        console.log('set name is destined rivals');
+        console.log('set name is destined rivals')
       }
 
       const { data, error } = await supabase
