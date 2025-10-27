@@ -533,7 +533,10 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
+                      onClick={() => {
+                        setActiveTab(tab.id);
+                        setSelectedRarity('');
+                      }}
                       className={`py-2 px-1 border-b-2 font-medium text-lg font-pokemon transition-colors ${
                         activeTab === tab.id
                           ? 'border-red-600 text-red-600'
