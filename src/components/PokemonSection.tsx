@@ -147,11 +147,14 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     try {
       let setName = '';
       if (activeTab === 'prismatic') {
-        setName = 'SV: Prismatic Evolutions';
+        setName = 'SV: Prismatic Evolutions'
+        console.log('set name is prismatic');
       } else if (activeTab === 'crown_zenith') {
-        setName = 'Crown Zenith: Galarian Gallery';
+        setName = 'Crown Zenith: Galarian Gallery'
+        console.log('set name is crown zenith');
       } else if (activeTab === 'destined_rivals') {
-        setName = 'SV10: Destined Rivals';
+        setName = 'SV10: Destined Rivals'
+        console.log('set name is destined rivals');
       }
 
       const { data, error } = await supabase
@@ -164,7 +167,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
         throw error;
       }
-
+    console.log('round data = ', data)
       setCurrentRound(data);
     } catch (err: any) {
       console.error('Error fetching current round:', err);
