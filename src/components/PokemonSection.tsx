@@ -146,7 +146,8 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     setRoundLoading(true);
     try {
       let setName = ''
-      console.log('active tab = ', activeTab);
+      console.log('active tab = ', activeTab)
+      console.log('Lottery active tab = ', lotteryActiveTab)
       if (activeTab === 'prismatic') {
         setName = 'SV: Prismatic Evolutions'
         console.log('set name is prismatic');
