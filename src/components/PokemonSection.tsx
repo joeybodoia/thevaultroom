@@ -23,10 +23,38 @@ interface PokemonSectionProps {
   currentStreamId?: string | null;
 }
 
-/** ---- NEW: constants for the prismatic lottery ---- */
+/** ----------------- NEW CONSTANTS / HELPERS ----------------- */
 const PACKS = Array.from({ length: 10 }, (_, i) => i + 1);
-const PRISMATIC_RARITIES = ['SIR', 'Masterball Pattern', 'Ultra Rare', 'Pokeball Pattern'] as const;
-type PrismaticRarity = typeof PRISMATIC_RARITIES[number];
+
+const RARITIES = {
+  prismatic: ['SIR', 'Masterball Pattern', 'Ultra Rare', 'Pokeball Pattern'],
+  crown_zenith: [
+    'Secret Rare (includes Pikachu)',
+    'Ultra Rare (Non Galarian Gallery)',
+    'Ultra Rare (Galarian Gallery)',
+  ],
+  destined_rivals: [
+    'SIR / Hyper Rare',
+    'IR',
+    'Ultra Rare / Double Rare',
+  ],
+} as const;
+
+type SetKey = keyof typeof RARITIES;
+
+function rarityBg(rarity: string) {
+  if (rarity.startsWith('SIR')) return 'bg-pink-600 hover:bg-pink-700';
+  if (rarity.includes('Masterball')) return 'bg-purple-600 hover:bg-purple-700';
+  if (rarity.includes('Pokeball')) return 'bg-red-600 hover:bg-red-700';
+  if (rarity.includes('Secret Rare')) return 'bg-yellow-500 hover:bg-yellow-600';
+  if (rarity.includes('Galarian Gallery')) return 'bg-indigo-600 hover:bg-indigo-700';
+  if (rarity.includes('Non Galarian')) return 'bg-blue-600 hover:bg-blue-700';
+  if (rarity === 'IR') return 'bg-green-600 hover:bg-green-700';
+  if (rarity.includes('Hyper Rare')) return 'bg-yellow-500 hover:bg-yellow-600';
+  if (rarity.includes('Double Rare')) return 'bg-blue-600 hover:bg-blue-700';
+  return 'bg-blue-600 hover:bg-blue-700';
+}
+/** ----------------------------------------------------------- */
 
 const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [activeTab, setActiveTab] = useState<SetName>('prismatic');
@@ -49,7 +77,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [userCredit, setUserCredit] = useState<number>(0);
   const [loadingCredit, setLoadingCredit] = useState(false);
 
-  /** ---- CHANGED: participants are now nested [packNumber][rarity] ---- */
+  /** participants are nested [packNumber][rarity] */
   const [lotteryParticipantsByPack, setLotteryParticipantsByPack] = useState<Record<number, Record<string, number>>>({});
 
   const [user, setUser] = useState<User | null>(null);
@@ -59,7 +87,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [entryError, setEntryError] = useState<string | null>(null);
   const [entrySuccess, setEntrySuccess] = useState(false);
 
-  /** ---- CHANGED: include packNumber in the selection ---- */
+  /** include packNumber in the selection */
   const [selectedLotteryEntry, setSelectedLotteryEntry] = useState<{
     roundId: string;
     rarity: string;
@@ -189,7 +217,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     }
   };
 
-  /** ---- CHANGED: fetch pack+rarity counts ---- */
+  /** fetch pack+rarity counts for current round */
   const fetchLotteryParticipants = async () => {
     if (!currentRound) {
       setLotteryParticipantsByPack({});
@@ -278,7 +306,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     setFilteredPokemon(filtered);
   };
 
-  /** ---- CHANGED: include packNumber in selection ---- */
+  /** include packNumber in selection */
   const handleLotteryEntry = (packNumber: number, rarity: string) => {
     if (!currentRound) {
       setLotteryError('No active round found for this set');
@@ -299,7 +327,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     setShowConfirmModal(true);
   };
 
-  /** ---- CHANGED: insert with pack_number, then refresh counts ---- */
+  /** insert with pack_number, then refresh counts */
   const handleCreditLotteryEntry = async () => {
     if (!user?.id || !currentRound?.id || !selectedLotteryEntry?.rarity || !selectedLotteryEntry?.packNumber) {
       setError('Missing required information for lottery entry');
@@ -356,6 +384,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     }
   };
 
+  // Get unique sets and rarities for filter options
   const getCurrentPokemon = () => {
     if (activeTab === 'prismatic') {
       return allCards.filter(card => card.set_name === 'SV: Prismatic Evolutions');
@@ -375,6 +404,91 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     const rarity = card.rarity?.split(',')[0].trim();
     return rarity;
   }).filter(Boolean))];
+
+  /** ----------------- REUSABLE RENDERER FOR A SET ----------------- */
+  function renderSetPacks(setKey: SetKey, title: string) {
+    return (
+      <div className="space-y-6">
+        <h3 className="text-2xl font-bold text-black font-pokemon text-center mb-8">
+          {title} - Lottery
+        </h3>
+
+        {/* Round ID Display */}
+        <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
+          <div className="text-center">
+            <h4 className="font-semibold text-blue-800 font-pokemon mb-2">
+              Current Round for {title}
+            </h4>
+            {roundLoading ? (
+              <div className="flex items-center justify-center space-x-2">
+                <Loader className="h-4 w-4 animate-spin text-blue-600" />
+                <span className="text-blue-600 font-pokemon">Loading round...</span>
+              </div>
+            ) : currentRound ? (
+              <div className="space-y-1">
+                <p className="text-blue-700 font-bold font-pokemon">Round ID: {currentRound.id}</p>
+                <p className="text-blue-600 text-sm font-pokemon">
+                  Round {currentRound.round_number} • {currentRound.packs_opened} packs •
+                  {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
+                </p>
+              </div>
+            ) : (
+              <p className="text-blue-600 font-pokemon">No round found</p>
+            )}
+          </div>
+        </div>
+
+        {/* PACK ROWS */}
+        <div className="space-y-4">
+          {PACKS.map((packNum) => (
+            <div key={`${setKey}-${packNum}`} className="rounded-2xl p-4 border shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-lg font-semibold font-pokemon">Pack {packNum}</h4>
+                {currentRound?.locked && <span className="text-sm">LOCKED</span>}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {RARITIES[setKey].map((rarity) => {
+                  const count = lotteryParticipantsByPack?.[packNum]?.[rarity] || 0;
+                  const disabled = !user || loadingUser || !!currentRound?.locked;
+                  const bg = rarityBg(rarity);
+
+                  return (
+                    <div key={`${packNum}-${rarity}`} className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
+                      <div className="text-center">
+                        <div className={`${bg.split(' ')[0]} rounded-lg p-4 mb-4`}>
+                          <span className="text-lg font-bold text-white font-pokemon">{rarity}</span>
+                        </div>
+                        <div className="mb-4">
+                          <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity</p>
+                          <p className="text-blue-600 font-semibold text-sm font-pokemon">
+                            {count} participants
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleLotteryEntry(packNum, rarity)}
+                          disabled={disabled}
+                          className={`w-full ${bg} text-white font-bold py-3 rounded-lg transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed`}
+                        >
+                          {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : 'Enter for 5 Credits'}
+                        </button>
+                        {!loadingUser && !user && (
+                          <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                            Please sign in to enter lottery
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  /** --------------------------------------------------------------- */
 
   if (loading) {
     return (
@@ -475,7 +589,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                 <li>• Enter using credits and choose a rarity type from the set</li>
                 <li>• If your rarity type is pulled, you're entered into the prize pool</li>
                 <li>• 2 random winners per round. Each winner receives cards from 5 of the opened packs (minus direct bid wins)</li>
-                <li>• Lottery winner #1 receives all cards from first 5 opened packs, winner #2 receives remaining cards from that round (barring any cards won through direct card bids) </li>
+                <li>• Lottery winner #1 receives all cards from first 5 opened packs, winner #2 receives remaining cards from that round (barring any cards won through direct card bids)</li>
               </ul>
             </div>
             <p className="text-red-600 font-semibold">
@@ -665,111 +779,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               </div>
             </div>
 
-            {/* ---- PRISMATIC: 10 ROWS x 4 RARITIES ---- */}
-            {lotteryActiveTab === 'prismatic' && (
-              <div className="space-y-6">
-                <h3 className="text-2xl font-bold text-black font-pokemon text-center mb-8">
-                  Prismatic Evolutions - Lottery
-                </h3>
-
-                {/* Round ID Display */}
-                <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
-                  <div className="text-center">
-                    <h4 className="font-semibold text-blue-800 font-pokemon mb-2">Current Round for Prismatic Evolutions</h4>
-                    {roundLoading ? (
-                      <div className="flex items-center justify-center space-x-2">
-                        <Loader className="h-4 w-4 animate-spin text-blue-600" />
-                        <span className="text-blue-600 font-pokemon">Loading round...</span>
-                      </div>
-                    ) : currentRound ? (
-                      <div className="space-y-1">
-                        <p className="text-blue-700 font-bold font-pokemon">Round ID: {currentRound.id}</p>
-                        <p className="text-blue-600 text-sm font-pokemon">
-                          Round {currentRound.round_number} • {currentRound.packs_opened} packs • 
-                          {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-blue-600 font-pokemon">No round found</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* PACK ROWS */}
-                <div className="space-y-4">
-                  {PACKS.map((packNum) => (
-                    <div key={packNum} className="rounded-2xl p-4 border shadow-sm">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-lg font-semibold font-pokemon">Pack {packNum}</h4>
-                        {currentRound?.locked && <span className="text-sm">LOCKED</span>}
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {PRISMATIC_RARITIES.map((rarity) => {
-                          const count = lotteryParticipantsByPack?.[packNum]?.[rarity] || 0;
-                          const disabled = !user || loadingUser || Boolean(lotterySubmitting === rarity) || !!currentRound?.locked;
-                          const bg =
-                            rarity === 'SIR'
-                              ? 'bg-pink-600 hover:bg-pink-700'
-                              : rarity === 'Masterball Pattern'
-                              ? 'bg-purple-600 hover:bg-purple-700'
-                              : rarity === 'Ultra Rare'
-                              ? 'bg-blue-600 hover:bg-blue-700'
-                              : 'bg-red-600 hover:bg-red-700';
-
-                          return (
-                            <div key={`${packNum}-${rarity}`} className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
-                              <div className="text-center">
-                                <div className={`${bg.split(' ')[0]} rounded-lg p-4 mb-4`}>
-                                  <span className="text-xl font-bold text-white font-pokemon">{rarity}</span>
-                                </div>
-                                <div className="mb-4">
-                                  <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity</p>
-                                  <p className="text-blue-600 font-semibold text-sm font-pokemon">
-                                    {count} participants
-                                  </p>
-                                </div>
-                                <button
-                                  onClick={() => handleLotteryEntry(packNum, rarity)}
-                                  disabled={disabled}
-                                  className={`w-full ${bg} text-white font-bold py-3 rounded-lg transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed`}
-                                >
-                                  {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : 'Enter for 5 Credits'}
-                                </button>
-                                {!loadingUser && !user && (
-                                  <div className="mt-2 text-orange-600 text-sm font-pokemon">
-                                    Please sign in to enter lottery
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Your Crown Zenith / Destined Rivals sections can stay as-is for now */}
-            {lotteryActiveTab === 'crown_zenith' && (
-              <div className="space-y-6">
-                <h3 className="text-2xl font-bold text-black font-pokemon text-center mb-8">
-                  Crown Zenith - Lottery
-                </h3>
-                {/* ... existing Crown Zenith UI unchanged ... */}
-              </div>
-            )}
-
-            {lotteryActiveTab === 'destined_rivals' && (
-              <div className="space-y-6">
-                <h3 className="text-2xl font-bold text-black font-pokemon text-center mb-8">
-                  Destined Rivals - Lottery
-                </h3>
-                {/* ... existing Destined Rivals UI unchanged ... */}
-              </div>
-            )}
+            {lotteryActiveTab === 'prismatic' && renderSetPacks('prismatic', 'Prismatic Evolutions')}
+            {lotteryActiveTab === 'crown_zenith' && renderSetPacks('crown_zenith', 'Crown Zenith')}
+            {lotteryActiveTab === 'destined_rivals' && renderSetPacks('destined_rivals', 'Destined Rivals')}
 
             {/* Error and Success Messages */}
             {lotteryError && (
