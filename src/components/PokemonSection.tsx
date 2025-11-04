@@ -785,32 +785,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                     </div>
                   </div>
 
-                  {/* Hyper Rare */}
-                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
-                    <div className="text-center">
-                      <div className="bg-yellow-500 rounded-lg p-4 mb-4">
-                        <span className="text-xl font-bold text-white font-pokemon">Hyper Rare</span>
-                      </div>
-                      <div className="mb-4">
-                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
-                        <p className="text-blue-600 font-semibold text-sm font-pokemon">
-                          {lotteryParticipants['Hyper Rare'] || 0} participants
-                        </p>
-                      </div>
-                      <button 
-                        onClick={() => handleLotteryEntry('Hyper Rare')}
-                        disabled={!user || loadingUser || lotterySubmitting === 'Hyper Rare'}
-                        className="w-full bg-yellow-500 text-white font-bold py-3 rounded-lg hover:bg-yellow-600 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Hyper Rare' ? 'Entering...' : 'Enter for 5 Credits'}
-                      </button>
-                      {!loadingUser && !user && (
-                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
-                          Please sign in to enter lottery
-                        </div>
-                      )}
-                    </div>
-                  </div>
 
                   {/* Ultra Rare */}
                   <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
@@ -865,67 +839,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       )}
                     </div>
                   </div>
-
-                  {/* IR */}
-                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
-                    <div className="text-center">
-                      <div className="bg-green-600 rounded-lg p-4 mb-4">
-                        <span className="text-xl font-bold text-white font-pokemon">IR</span>
-                      </div>
-                      <div className="mb-4">
-                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
-                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
-                          {lotteryParticipants['IR'] || 0} participants
-                        </p>
-                      </div>
-                      <button 
-                        onClick={() => handleLotteryEntry('IR')}
-                        disabled={!user || loadingUser || lotterySubmitting === 'IR'}
-                        className="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'IR' ? 'Entering...' : 'Enter for 5 Credits'}
-                      </button>
-                      {!loadingUser && !user && (
-                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
-                          Please sign in to enter lottery
-                        </div>
-                      )}
-                      {lotterySuccess === 'Successfully entered lottery for IR!' && (
-                        <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
-                          Successfully Entered lottery
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* ACE SPEC */}
-                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
-                    <div className="text-center">
-                      <div className="bg-black rounded-lg p-4 mb-4">
-                        <span className="text-xl font-bold text-white font-pokemon">ACE SPEC</span>
-                      </div>
-                      <div className="mb-4">
-                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
-                        <p className="text-blue-600 font-semibold text-sm font-pokemon">
-                          {lotteryParticipants['ACE SPEC'] || 0} participants
-                        </p>
-                      </div>
-                      <button 
-                        onClick={() => handleLotteryEntry('ACE SPEC')}
-                        disabled={!user || loadingUser || lotterySubmitting === 'ACE SPEC'}
-                        className="w-full bg-black text-white font-bold py-3 rounded-lg hover:bg-gray-800 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'ACE SPEC' ? 'Entering...' : 'Enter for 5 Credits'}
-                      </button>
-                      {!loadingUser && !user && (
-                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
-                          Please sign in to enter lottery
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
             )}
 
             {lotteryActiveTab === 'crown_zenith' && (
