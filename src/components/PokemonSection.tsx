@@ -752,38 +752,8 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                   {/* SIR END */}
 
                   
-                  {/* Pokeball Pattern */}
-                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
-                    <div className="text-center">
-                      <div className="bg-red-600 rounded-lg p-4 mb-4">
-                        <span className="text-xl font-bold text-white font-pokemon">Pokeball Pattern</span>
-                      </div>
-                      <div className="mb-4">
-                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
-                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
-                          {lotteryParticipants['Pokeball Pattern'] || 0} participants
-                        </p>
-                      </div>
-                      <button 
-                        onClick={() => handleLotteryEntry('Pokeball Pattern')}
-                        disabled={!user || loadingUser || lotterySubmitting === 'Pokeball Pattern'}
-                        className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Pokeball Pattern' ? 'Entering...' : 'Enter for 5 Credits'}
-                      </button>
-                      {!loadingUser && !user && (
-                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
-                          Please sign in to enter lottery
-                        </div>
-                      )}
-                      {lotterySuccess === 'Successfully entered lottery for Pokeball Pattern!' && (
-                        <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
-                          Successfully Entered lottery
-                        </div>
-                      )}
-                    </div>
-                  </div>
 
+                  
                   {/* Masterball Pattern */}
                   <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
                     <div className="text-center">
@@ -817,7 +787,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                   </div>
 
 
-                  {/* Ultra Rare */}
+                  {/* Ultra Rare START*/}
                   <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
                     <div className="text-center">
                       <div className="bg-blue-600 rounded-lg p-4 mb-4">
@@ -843,8 +813,40 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       )}
                     </div>
                   </div>
-
+                  {/* Ultra Rare END*/}
                   
+                  {/* Pokeball Pattern START*/}
+                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
+                    <div className="text-center">
+                      <div className="bg-red-600 rounded-lg p-4 mb-4">
+                        <span className="text-xl font-bold text-white font-pokemon">Pokeball Pattern</span>
+                      </div>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                        <p className="text-blue-600 text-xs font-pokemon font-semibold">
+                          {lotteryParticipants['Pokeball Pattern'] || 0} participants
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => handleLotteryEntry('Pokeball Pattern')}
+                        disabled={!user || loadingUser || lotterySubmitting === 'Pokeball Pattern'}
+                        className="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'Pokeball Pattern' ? 'Entering...' : 'Enter for 5 Credits'}
+                      </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
+                      {lotterySuccess === 'Successfully entered lottery for Pokeball Pattern!' && (
+                        <div className="mt-2 text-green-600 text-sm font-pokemon font-semibold">
+                          Successfully Entered lottery
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {/* Pokeball Pattern END*/}
                 </div>
               </div>
             )}
