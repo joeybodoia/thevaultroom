@@ -406,86 +406,76 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   }).filter(Boolean))];
 
   /** ----------------- REUSABLE RENDERER FOR A SET ----------------- */
-  function renderSetPacks(setKey: SetKey, title: string) {
-    return (
-      <div className="space-y-6">
-        <h3 className="text-2xl font-bold text-black font-pokemon text-center mb-8">
-          {title} - Lottery
-        </h3>
+{/* PACK ROWS */}
+<div className="space-y-4">
+  {PACKS.map((packNum) => (
+    <div key={`${setKey}-${packNum}`} className="rounded-2xl p-4 border shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-lg font-semibold font-pokemon">Pack {packNum}</h4>
+        {currentRound?.locked && <span className="text-sm">LOCKED</span>}
+      </div>
 
-        {/* Round ID Display */}
-        <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
-          <div className="text-center">
-            <h4 className="font-semibold text-blue-800 font-pokemon mb-2">
-              Current Round for {title}
-            </h4>
-            {roundLoading ? (
-              <div className="flex items-center justify-center space-x-2">
-                <Loader className="h-4 w-4 animate-spin text-blue-600" />
-                <span className="text-blue-600 font-pokemon">Loading round...</span>
-              </div>
-            ) : currentRound ? (
-              <div className="space-y-1">
-                <p className="text-blue-700 font-bold font-pokemon">Round ID: {currentRound.id}</p>
-                <p className="text-blue-600 text-sm font-pokemon">
-                  Round {currentRound.round_number} • {currentRound.packs_opened} packs •
-                  {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
-                </p>
-              </div>
-            ) : (
-              <p className="text-blue-600 font-pokemon">No round found</p>
-            )}
-          </div>
-        </div>
+      {/* ✨ Auto-fit grid: evenly spaced 3 or 4 cards (or whatever count) */}
+      <div
+        className="
+          grid
+          [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]
+          gap-5 md:gap-6
+          items-stretch justify-items-stretch
+          mx-auto
+        "
+      >
+        {RARITIES[setKey].map((rarity) => {
+          const count = lotteryParticipantsByPack?.[packNum]?.[rarity] || 0;
+          const disabled = !user || loadingUser || !!currentRound?.locked;
+          const bg = rarityBg(rarity);
 
-        {/* PACK ROWS */}
-        <div className="space-y-4">
-          {PACKS.map((packNum) => (
-            <div key={`${setKey}-${packNum}`} className="rounded-2xl p-4 border shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-lg font-semibold font-pokemon">Pack {packNum}</h4>
-                {currentRound?.locked && <span className="text-sm">LOCKED</span>}
-              </div>
+          return (
+            <div
+              key={`${packNum}-${rarity}`}
+              className="
+                bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300
+                transition-all shadow-lg
+                h-full flex flex-col
+              "
+            >
+              <div className="text-center flex-1 flex flex-col">
+                <div className={`${bg.split(' ')[0]} rounded-lg p-4 mb-4`}>
+                  <span className="text-lg font-bold text-white font-pokemon">{rarity}</span>
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {RARITIES[setKey].map((rarity) => {
-                  const count = lotteryParticipantsByPack?.[packNum]?.[rarity] || 0;
-                  const disabled = !user || loadingUser || !!currentRound?.locked;
-                  const bg = rarityBg(rarity);
+                <div className="mb-4">
+                  <p className="text-gray-600 text-sm font-pokemon mb-2">
+                    Enter lottery for this rarity
+                  </p>
+                  <p className="text-blue-600 font-semibold text-sm font-pokemon">
+                    {count} participants
+                  </p>
+                </div>
 
-                  return (
-                    <div key={`${packNum}-${rarity}`} className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
-                      <div className="text-center">
-                        <div className={`${bg.split(' ')[0]} rounded-lg p-4 mb-4`}>
-                          <span className="text-lg font-bold text-white font-pokemon">{rarity}</span>
-                        </div>
-                        <div className="mb-4">
-                          <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity</p>
-                          <p className="text-blue-600 font-semibold text-sm font-pokemon">
-                            {count} participants
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleLotteryEntry(packNum, rarity)}
-                          disabled={disabled}
-                          className={`w-full ${bg} text-white font-bold py-3 rounded-lg transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed`}
-                        >
-                          {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : 'Enter for 5 Credits'}
-                        </button>
-                        {!loadingUser && !user && (
-                          <div className="mt-2 text-orange-600 text-sm font-pokemon">
-                            Please sign in to enter lottery
-                          </div>
-                        )}
-                      </div>
+                {/* push button to bottom for equal heights */}
+                <div className="mt-auto">
+                  <button
+                    onClick={() => handleLotteryEntry(packNum, rarity)}
+                    disabled={disabled}
+                    className={`w-full ${bg} text-white font-bold py-3 rounded-lg transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : 'Enter for 5 Credits'}
+                  </button>
+                  {!loadingUser && !user && (
+                    <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                      Please sign in to enter lottery
                     </div>
-                  );
-                })}
+                  )}
+                </div>
               </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
+    </div>
+  ))}
+</div>
     );
   }
   /** --------------------------------------------------------------- */
