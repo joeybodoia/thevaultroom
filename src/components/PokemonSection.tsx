@@ -145,24 +145,24 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
     setRoundLoading(true);
     try {
-      let setName = '';
-      console.log('active tab = ', activeTab);
-      console.log('Lottery active tab = ', lotteryActiveTab);
-      console.log('bidding mode = ', biddingMode);
-      const tabToCheck = biddingMode === 'lottery' ? lotteryActiveTab : activeTab;
+      let setName = ''
+      console.log('active tab = ', activeTab)
+      console.log('Lottery active tab = ', lotteryActiveTab)
+      console.log('bidding mode = ', biddingMode)
+      const tabToCheck = biddingMode === 'lottery' ? lotteryActiveTab : activeTab
     
-      console.log('bidding mode = ', biddingMode);
-      console.log('tab to check = ', tabToCheck);
+      console.log('bidding mode = ', biddingMode)
+      console.log('tab to check = ', tabToCheck)
     
       if (tabToCheck === 'prismatic') {
-        setName = 'SV: Prismatic Evolutions';
-        console.log('set name is prismatic');
+        setName = 'SV: Prismatic Evolutions'
+        console.log('set name is prismatic')
       } else if (tabToCheck === 'crown_zenith') {
-        setName = 'Crown Zenith: Galarian Gallery';
-        console.log('set name is crown zenith');
+        setName = 'Crown Zenith: Galarian Gallery'
+        console.log('set name is crown zenith')
       } else if (tabToCheck === 'destined_rivals') {
-        setName = 'SV10: Destined Rivals';
-        console.log('set name is destined rivals');
+        setName = 'SV10: Destined Rivals'
+        console.log('set name is destined rivals')
       }
 
       const { data, error } = await supabase
@@ -175,7 +175,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
         throw error;
       }
-    console.log('round data = ', data);
+    console.log('round data = ', data)
       setCurrentRound(data);
     } catch (err: any) {
       console.error('Error fetching current round:', err);
@@ -283,7 +283,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   };
 
   const handleLotteryEntry = async (rarity: string) => {
-    console.log("handling lottery entry");
+    console.log("handling lottery entry")
     if (!currentRound) {
       setLotteryError('No active round found for this set');
       return;
@@ -304,19 +304,19 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   };
 
   const handleCreditLotteryEntry = async () => {
-    console.log("correct function for inserting lottery entry");
-    console.log("current round id = ", currentRound?.id);
-    console.log("current user = ", user?.id);
-    console.log("selected rarity = ", selectedLotteryEntry?.rarity);
-    if (!user?.id || !currentRound?.id || !selectedLotteryEntry?.rarity) {
-      setEntryError('Missing required information for lottery entry');
+    console.log("correct function for inserting lottery entry")
+    console.log("current round id = ", currentRound.id)
+    console.log("current user = ", user.id)
+    console.log("selected rarity = ", selectedLotteryEntry.rarity)
+    if (!user?.id || !currentRound.id || !selectedLotteryEntry.rarity) {
+      setError('Missing required information for lottery entry');
       return;
     }
     // Refresh participant counts
 
     setIsProcessingEntry(true);
     setEntryError('');
-    setEntrySuccess(false);
+    setEntrySuccess('');
 
     try {
       // First, deduct 5 credits from user's account
@@ -358,12 +358,12 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       setSelectedRarity('');
       
       // Refresh lottery entries to show the new entry
-      fetchLotteryParticipants();
+      fetchLotteryParticipants(currentRound.id);
       
       // Show success message
-      setEntrySuccess(true);
+      setEntrySuccess('Successfully entered the lottery! 5 credits deducted.');
       setTimeout(() => {
-        setEntrySuccess(false);
+        setEntrySuccess('');
       }, 3000);
 
     } catch (err: any) {
@@ -1314,7 +1314,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         )} */}
 
       {/* Fixed Modal with Auto-scroll */}
-      {showConfirmModal && selectedLotteryEntry && (
+      {showConfirmModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
           <div 
             id="lottery-confirm-modal"
