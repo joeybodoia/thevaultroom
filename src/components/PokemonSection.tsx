@@ -644,7 +644,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredPokemon.map((poke, index) => (
                 <PokemonCard
-                  key={poke.id}
+              {['SIR', 'Masterball Pattern', 'Ultra Rare', 'Pokeball Pattern'].map((rarity) => (
                   pokemon={poke}
                   isPopular={index === 0} // Make first card popular
                   currentRoundId={currentRound?.id || null}
