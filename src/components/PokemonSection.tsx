@@ -373,7 +373,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         msg.includes('lottery_entries_user_id_round_id_pack_key') ||
         msg.includes('lottery_entries_user_id_round_id_pack_rarity_key') || // if you use the stricter variant
         msg.includes('duplicate key value') ||
-        msg.includes('uq_lottery_user_round_pack') ||
         msg.includes('unique constraint')
       ) {
         setEntryError('You already entered this pack for this round.');
