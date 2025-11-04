@@ -1207,18 +1207,22 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                 </div>
               </div>
 
-              <div className="flex space-x-3">
-                <button
-                  onClick={handlePaymentSuccess}
-                  disabled={isProcessing}
-                  className="flex-1 bg-yellow-400 text-black font-bold py-3 rounded-lg hover:bg-yellow-500 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                >
-                  {isProcessing ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
-                      <span>Processing...</span>
-                    </>
-                  ) : (
+                    <div className="space-y-6">
+                      {Array.from({ length: 10 }, (_, rowIndex) => (
+                        <div key={rowIndex} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                          {['SIR', 'Masterball Pattern', 'Ultra Rare', 'Pokeball Pattern'].map((rarity) => (
+                            <LotteryCard
+                              key={`${rowIndex}-${rarity}`}
+                              rarity={rarity}
+                              participants={lotteryParticipants[rarity] || 0}
+                              onEnter={() => handleLotteryEntry(rarity)}
+                              isLoggedIn={!!user}
+                              isProcessing={processingLottery}
+                              hasEntered={userLotteryEntries.has(rarity)}
+                            />
+                          ))}
+                        </div>
+                      ))}
                     'Yes, Enter Lottery'
                   )}
                 </button>
