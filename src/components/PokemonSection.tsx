@@ -601,4 +601,297 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
             <div className="bg-gray-50 rounded-xl p-6 mb-4">
               <h4 className="font-bold text-black mb-3 font-pokemon">Option 1: Direct Card Bidding</h4>
               <ul className="text-left space-y-2 mb-4">
-                <li>• Use credits to bid on high-value cards (e.g., U
+                <li>• Use credits to bid on high-value cards (e.g., Umbreon EX) from each set</li>
+                <li>• Highest bidder wins all pulled copies of their card</li>
+                <li>• If bid card is not pulled, winning bidder receives nothing for that round</li>
+                <li>• Credits on non-winning direct bids are returned when outbid</li>
+              </ul>
+              
+              <h4 className="font-bold text-black mb-3 font-pokemon">Option 2: Lottery + Rarity Selection</h4>
+              <ul className="text-left space-y-2 mb-4">
+                <li>• Enter using credits and choose a rarity type from the set</li>
+                <li>• If your rarity type is pulled, you're entered into the prize pool</li>
+                <li>• 2 random winners per round. Each winner receives cards from 5 of the opened packs (minus direct bid wins)</li>
+              </ul>
+            </div>
+            <p className="text-red-600 font-semibold">
+              ⚠️ Choose your strategy: Go for specific high-value cards or try the lottery for complete packs!
+            </p>
+          </div>
+        </div>
+
+        {/* Bidding Mode Tabs */}
+        <div className="mb-8">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setBiddingMode('direct')}
+                className={`py-2 px-1 border-b-2 font-medium text-lg font-pokemon transition-colors ${
+                  biddingMode === 'direct'
+                    ? 'border-red-600 text-red-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Direct Bids
+              </button>
+              <button
+                onClick={() => setBiddingMode('lottery')}
+                className={`py-2 px-1 border-b-2 font-medium text-lg font-pokemon transition-colors ${
+                  biddingMode === 'lottery'
+                    ? 'border-red-600 text-red-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Lottery
+              </button>
+            </nav>
+          </div>
+        </div>
+
+        {/* Content based on bidding mode */}
+        {biddingMode === 'direct' ? (
+          <>
+            {/* Set Tabs */}
+            <div className="mb-8">
+              <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-8">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => {
+                        setActiveTab(tab.id);
+                        setSelectedRarity('');
+                      }}
+                      className={`py-2 px-1 border-b-2 font-medium text-lg font-pokemon transition-colors ${
+                        activeTab === tab.id
+                          ? 'border-red-600 text-red-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      {tab.name}
+                      <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
+                        {tab.count}
+                      </span>
+                    </button>
+                  ))}
+                </nav>
+              </div>
+            </div>
+
+            {/* Search, Filter, Sort */}
+            <div className="bg-gray-50 rounded-xl p-6 mb-8 border border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search Pokemon..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:border-red-600 focus:outline-none font-pokemon"
+                  />
+                </div>
+
+                <div className="relative">
+                  <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <select
+                    value={selectedRarity}
+                    onChange={(e) => setSelectedRarity(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:border-red-600 focus:outline-none font-pokemon appearance-none bg-white"
+                  >
+                    <option value="">All Rarities</option>
+                    {uniqueRarities.map(rarity => (
+                      <option key={rarity} value={rarity}>{rarity}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="relative">
+                  <ArrowUpDown className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:border-red-600 focus:outline-none font-pokemon appearance-none bg-white"
+                  >
+                    <option value="price-high">Price: High to Low</option>
+                    <option value="price-low">Price: Low to High</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-4 text-center">
+                <span className="text-gray-600 font-pokemon">
+                  Showing {filteredPokemon.length} of {currentPokemon.length} Pokemon
+                </span>
+              </div>
+            </div>
+
+            {/* Round Info */}
+            <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
+              <div className="text-center">
+                <h4 className="font-semibold text-blue-800 font-pokemon mb-2">
+                  Current Round for {tabs.find(t => t.id === activeTab)?.name}
+                </h4>
+
+                {roundLoading ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <Loader className="h-4 w-4 animate-spin text-blue-600" />
+                    <span className="text-blue-600 font-pokemon">Loading round...</span>
+                  </div>
+                ) : currentRound ? (
+                  <div className="space-y-1">
+                    <p className="text-blue-700 font-bold font-pokemon">
+                      Round ID: {currentRound.id}
+                    </p>
+                    <p className="text-blue-600 text-sm font-pokemon">
+                      Round {currentRound.round_number} • {currentRound.packs_opened} packs •
+                      {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-blue-600 font-pokemon">No round found</p>
+                )}
+              </div>
+            </div>
+
+            {/* Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredPokemon.map((poke, index) => (
+                <PokemonCard
+                  key={poke.id}
+                  pokemon={poke}
+                  isPopular={index === 0}
+                  currentRoundId={currentRound?.id || null}
+                  onBidSuccess={() => console.log('Bid submitted for card:', poke.card_name)}
+                />
+              ))}
+            </div>
+
+            {filteredPokemon.length === 0 && currentPokemon.length > 0 && (
+              <div className="text-center py-12">
+                <div className="flex items-center justify-center space-x-2 mb-4 text-gray-600">
+                  <Sparkles className="h-8 w-8" />
+                  <span className="text-xl font-pokemon">No Pokemon Found</span>
+                </div>
+                <p className="text-gray-600 font-pokemon">Try adjusting your search or filters</p>
+              </div>
+            )}
+          </>
+        ) : (
+          /* Lottery Tab Content */
+          <div>
+            {/* Lottery Set Tabs */}
+            <div className="mb-8">
+              <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-8">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setLotteryActiveTab(tab.id)}
+                      className={`py-2 px-1 border-b-2 font-medium text-lg font-pokemon transition-colors ${
+                        lotteryActiveTab === tab.id
+                          ? 'border-red-600 text-red-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      {tab.name}
+                    </button>
+                  ))}
+                </nav>
+              </div>
+            </div>
+
+            {lotteryActiveTab === 'prismatic' && renderSetPacks('prismatic', 'Prismatic Evolutions')}
+            {lotteryActiveTab === 'crown_zenith' && renderSetPacks('crown_zenith', 'Crown Zenith')}
+            {lotteryActiveTab === 'destined_rivals' && renderSetPacks('destined_rivals', 'Destined Rivals')}
+
+            {/* Error and Success Messages */}
+            {lotteryError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center">
+                  <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+                  <span className="text-red-800 font-pokemon">{lotteryError}</span>
+                </div>
+              </div>
+            )}
+
+            {lotterySuccess && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center">
+                  <Sparkles className="h-5 w-5 text-green-600 mr-2" />
+                  <span className="text-green-800 font-pokemon">{lotterySuccess}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Confirmation Modal */}
+        {showConfirmModal && selectedLotteryEntry && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+            <div 
+              id="lottery-confirm-modal"
+              className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+            >
+              <h3 className="text-xl font-bold text-black font-pokemon mb-4 text-center">
+                Confirm Lottery Entry
+              </h3>
+              
+              <div className="space-y-4">
+                <p className="text-gray-700 font-pokemon text-center">
+                  Apply 5 credits to enter <span className="font-bold">{selectedLotteryEntry.rarity}</span> for <span className="font-bold">Pack {selectedLotteryEntry.packNumber}</span>?
+                </p>
+                
+                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 font-pokemon">Cost:</span>
+                    <span className="font-bold text-black font-pokemon">5 credits</span>
+                  </div>
+                </div>
+
+                {entryError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-red-600 text-sm font-pokemon">{entryError}</p>
+                  </div>
+                )}
+
+                {entrySuccess && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p className="text-green-600 text-sm font-pokemon">
+                      Lottery entry successful! Good luck!
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex space-x-3">
+                  <button
+                    onClick={handleCreditLotteryEntry}
+                    disabled={isProcessingEntry || userCredit < 5}
+                    className="flex-1 bg-yellow-400 text-black font-bold py-2 rounded-lg hover:bg-yellow-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon"
+                  >
+                    {isProcessingEntry ? 'Processing...' : 'Yes, Enter Lottery'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowConfirmModal(false);
+                      setEntryError(null);
+                      setEntrySuccess(false);
+                      setSelectedLotteryEntry(null);
+                    }}
+                    disabled={isProcessingEntry}
+                    className="flex-1 bg-gray-600 text-white font-bold py-2 rounded-lg hover:bg-gray-700 transition-all disabled:opacity-50 font-pokemon"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
+
+export default PokemonSection;
+
