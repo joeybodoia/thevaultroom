@@ -839,6 +839,37 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       )}
                     </div>
                   </div>
+
+
+ 
+                  {/* ACE SPEC */}
+                  <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300 transition-all shadow-lg">
+                    <div className="text-center">
+                      <div className="bg-black rounded-lg p-4 mb-4">
+                        <span className="text-xl font-bold text-white font-pokemon">ACE SPEC</span>
+                      </div>
+                      <div className="mb-4">
+                        <p className="text-gray-600 text-sm font-pokemon mb-2">Enter lottery for this rarity type</p>
+                        <p className="text-blue-600 font-semibold text-sm font-pokemon">
+                          {lotteryParticipants['ACE SPEC'] || 0} participants
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => handleLotteryEntry('ACE SPEC')}
+                        disabled={!user || loadingUser || lotterySubmitting === 'ACE SPEC'}
+                        className="w-full bg-black text-white font-bold py-3 rounded-lg hover:bg-gray-800 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : lotterySubmitting === 'ACE SPEC' ? 'Entering...' : 'Enter for 5 Credits'}
+                      </button>
+                      {!loadingUser && !user && (
+                        <div className="mt-2 text-orange-600 text-sm font-pokemon">
+                          Please sign in to enter lottery
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
 
             {lotteryActiveTab === 'crown_zenith' && (
