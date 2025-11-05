@@ -31,7 +31,27 @@ type ChaseSlot = {
   winning_bid_id: string | null;
 };
 
-const DEBUG = false; // set to true temporarily if you want console logs
+const DEBUG = false;
+
+/** ---------- small helpers ---------- */
+const isUUID = (v?: string | null) =>
+  !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
+
+const isNetworkFailedToFetch = (e: any) =>
+  e?.name === 'TypeError' && /Failed to fetch/i.test(String(e?.message));
+
+async function withNetRetry<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    if (isNetworkFailedToFetch(e)) {
+      await new Promise(r => setTimeout(r, 400));
+      return await fn();
+    }
+    throw e;
+  }
+}
+/** ----------------------------------- */
 
 const PokemonCard: React.FC<PokemonCardProps> = ({
   pokemon,
@@ -47,8 +67,8 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
 
   const [loadingTopBid, setLoadingTopBid] = React.useState(false);
   const [loadingSlot, setLoadingSlot] = React.useState(false);
-  const [slot, setSlot] = React.useState<ChaseSlot | null>(null);
   const [roundRow, setRoundRow] = React.useState<RoundRow | null>(null);
+  const [slot, setSlot] = React.useState<ChaseSlot | null>(null);
 
   const [user, setUser] = React.useState<User | null>(null);
   const [loadingUser, setLoadingUser] = React.useState(true);
@@ -57,18 +77,19 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
 
   // auth + credit
   React.useEffect(() => {
-    const bootstrap = async () => {
+    let cancelled = false;
+    (async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
+        if (cancelled) return;
         setUser(user);
         if (user?.id) await fetchUserCredit(user.id);
       } catch {
         setUser(null);
       } finally {
-        setLoadingUser(false);
+        if (!cancelled) setLoadingUser(false);
       }
-    };
-    bootstrap();
+    })();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, session) => {
       setUser(session?.user ?? null);
@@ -76,7 +97,10 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
       else setUserCredit(0);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchUserCredit = async (userId: string) => {
@@ -88,7 +112,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
         .eq('id', userId)
         .single();
       if (error) throw error;
-      setUserCredit(parseFloat(String(data.site_credit ?? 0)));
+      setUserCredit(parseFloat(String(data?.site_credit ?? 0)));
     } catch {
       setUserCredit(0);
     } finally {
@@ -96,56 +120,72 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
     }
   };
 
-  // Resolve the current round row (we need stream_id + set_name to locate the slot)
+  // Resolve the current round row (guard on UUID, cancel on unmount)
   React.useEffect(() => {
-    const run = async () => {
-      if (!currentRoundId) {
+    let cancelled = false;
+
+    (async () => {
+      // guard: only query when we actually have a plausible UUID
+      if (!isUUID(currentRoundId)) {
         setRoundRow(null);
         setSlot(null);
         setCurrentBid(0);
         return;
       }
+
       try {
-        const { data, error } = await supabase
-          .from('rounds')
-          .select('id, stream_id, set_name, locked')
-          .eq('id', currentRoundId)
-          .single();
-        if (error) throw error;
-        setRoundRow(data as RoundRow);
+        const res = await withNetRetry(() =>
+          supabase
+            .from('rounds')
+            .select('id, stream_id, set_name, locked')
+            .eq('id', currentRoundId as string)
+            .single()
+        );
+        if (cancelled) return;
+        setRoundRow(res.data as RoundRow);
       } catch (err) {
-        if (DEBUG) console.log('round fetch error', err);
-        setRoundRow(null);
+        if (DEBUG) console.debug('round fetch error', err);
+        if (!cancelled) setRoundRow(null);
       }
+    })();
+
+    return () => {
+      cancelled = true;
     };
-    run();
   }, [currentRoundId]);
 
-  // Find the chase slot for THIS card and THIS round’s stream/set (key part!)
+  // Find the chase slot for THIS card and THIS round’s stream/set
   React.useEffect(() => {
-    const run = async () => {
+    let cancelled = false;
+
+    (async () => {
       if (!roundRow) {
         setSlot(null);
         setCurrentBid(0);
         return;
       }
+
       setLoadingSlot(true);
       try {
-        const { data, error } = await supabase
-          .from('chase_slots')
-          .select('id, stream_id, set_name, all_card_id, starting_bid, min_increment, is_active, locked, winner_user_id, winning_bid_id')
-          .eq('stream_id', roundRow.stream_id)
-          .eq('set_name', roundRow.set_name)
-          .eq('all_card_id', pokemon.id)           // ✅ MUST be all_card_id (uuid from all_cards)
-          .maybeSingle();
+        const slotRes = await withNetRetry(() =>
+          supabase
+            .from('chase_slots')
+            .select('id, stream_id, set_name, all_card_id, starting_bid, min_increment, is_active, locked, winner_user_id, winning_bid_id')
+            .eq('stream_id', roundRow.stream_id)
+            .eq('set_name', roundRow.set_name)
+            .eq('all_card_id', pokemon.id)
+            .maybeSingle()
+        );
 
-        if (error && error.code !== 'PGRST116') throw error;
+        if (cancelled) return;
 
-        if (!data) {
+        const slotRow = (slotRes.data || null) as ChaseSlot | null;
+
+        if (!slotRow) {
           setSlot(null);
           setCurrentBid(0);
           if (DEBUG) {
-            console.log('No slot found for', {
+            console.debug('No slot for', {
               stream_id: roundRow.stream_id,
               set_name: roundRow.set_name,
               all_card_id: pokemon.id,
@@ -155,36 +195,48 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
           return;
         }
 
-        setSlot(data as ChaseSlot);
+        setSlot(slotRow);
 
-        // Then fetch the current top bid for this slot
+        // fetch current top bid (retry once on network error)
         setLoadingTopBid(true);
-        const { data: top, error: topErr } = await supabase
-          .from('chase_bids')
-          .select('amount')
-          .eq('slot_id', (data as ChaseSlot).id)
-          .order('amount', { ascending: false })
-          .order('created_at', { ascending: true })
-          .limit(1)
-          .maybeSingle();
-        if (topErr && topErr.code !== 'PGRST116') throw topErr;
-
-        if (top?.amount != null) {
-          setCurrentBid(Number(top.amount));
-        } else {
-          // fall back to starting_bid if no bids yet
-          setCurrentBid(Number((data as ChaseSlot).starting_bid ?? 0));
+        try {
+          const topRes = await withNetRetry(() =>
+            supabase
+              .from('chase_bids')
+              .select('amount')
+              .eq('slot_id', slotRow.id)
+              .order('amount', { ascending: false })
+              .order('created_at', { ascending: true })
+              .limit(1)
+              .maybeSingle()
+          );
+          if (cancelled) return;
+          const top = (topRes.data || null) as { amount: number } | null;
+          if (top?.amount != null) {
+            setCurrentBid(Number(top.amount));
+          } else {
+            setCurrentBid(Number(slotRow.starting_bid ?? 0));
+          }
+        } catch (e) {
+          if (DEBUG) console.debug('top bid fetch error', e);
+          if (!cancelled) setCurrentBid(Number(slotRow.starting_bid ?? 0));
+        } finally {
+          if (!cancelled) setLoadingTopBid(false);
         }
-      } catch (err) {
-        if (DEBUG) console.log('slot/top bid fetch error', err);
-        setSlot(null);
-        setCurrentBid(0);
+      } catch (e) {
+        if (DEBUG) console.debug('slot fetch error', e);
+        if (!cancelled) {
+          setSlot(null);
+          setCurrentBid(0);
+        }
       } finally {
-        setLoadingSlot(false);
-        setLoadingTopBid(false);
+        if (!cancelled) setLoadingSlot(false);
       }
+    })();
+
+    return () => {
+      cancelled = true;
     };
-    run();
   }, [roundRow, pokemon.id]);
 
   const formatMoney = (n?: number | null) =>
@@ -205,30 +257,38 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
       setBidError('Your bid must be higher than the current top bid.');
       return;
     }
+
     setIsSubmittingBid(true);
     setBidError(null);
     setBidSuccess(false);
+
     try {
-      const { data, error } = await supabase
-        .rpc('place_chase_bid_immediate_refund', {
-          p_user_id: user.id,
-          p_slot_id: slot.id,
-          p_amount: amount
-        });
+      const { error } = await supabase.rpc('place_chase_bid_immediate_refund', {
+        p_user_id: user.id,
+        p_slot_id: slot.id,
+        p_amount: amount
+      });
       if (error) throw error;
 
-      // refresh top bid
-      const { data: top, error: topErr } = await supabase
-        .from('chase_bids')
-        .select('amount')
-        .eq('slot_id', slot.id)
-        .order('amount', { ascending: false })
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (topErr && topErr.code !== 'PGRST116') throw topErr;
+      // refresh top bid after placing
+      try {
+        const topRes = await withNetRetry(() =>
+          supabase
+            .from('chase_bids')
+            .select('amount')
+            .eq('slot_id', slot.id)
+            .order('amount', { ascending: false })
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .maybeSingle()
+        );
+        const top = (topRes.data || null) as { amount: number } | null;
+        if (top?.amount != null) setCurrentBid(Number(top.amount));
+      } catch {
+        // if refresh fails, at least set to user amount
+        setCurrentBid(amount);
+      }
 
-      if (top?.amount != null) setCurrentBid(Number(top.amount));
       setBidAmount('');
       setBidSuccess(true);
       onBidSuccess?.();
@@ -382,4 +442,5 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
 };
 
 export default PokemonCard;
+
 
