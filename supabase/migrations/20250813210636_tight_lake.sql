@@ -1,12 +1,15 @@
 /*
-  # Streaming + Bidding (Chase Slots + Lottery) — Updated
+  # Streaming + Bidding (Chase Slots + Lottery) — Finalized
 
-  Changes from original:
-  - REPLACED legacy "direct_bids" / "round_high_value_cards" with "chase_slots" + "chase_bids"
-  - UPDATED "lottery_entries" to support per-pack entries (pack_number + new UNIQUE)
-  - KEPT "lottery_winners" with assigned_packs int[]
-  - ADDED "streams.singles_close_at" to support Live Singles closing window
-  - ADDED RLS + policies for new/updated tables
+  Includes:
+  - streams (with singles_close_at)
+  - rounds (unique per stream/set/round)
+  - users (is_admin, site_credit numeric(12,2) non-negative)
+  - chase_slots (denormalized display fields + sync triggers)
+  - chase_bids + leaders view
+  - lottery_entries (per-pack unique) + indexes
+  - lottery_winners (assigned_packs int[])
+  - RLS + policies
 */
 
 -- 1) Streams
@@ -14,14 +17,12 @@ CREATE TABLE IF NOT EXISTS public.streams (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   title text NOT NULL,
   scheduled_date timestamptz,
-  singles_close_at timestamptz,               -- NEW: close time for Live Singles
+  singles_close_at timestamptz,               -- close time for Live Singles
   created_at timestamptz DEFAULT now()
 );
 
--- RLS
 ALTER TABLE public.streams ENABLE ROW LEVEL SECURITY;
 
--- Public read access
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -41,17 +42,15 @@ CREATE TABLE IF NOT EXISTS public.rounds (
   stream_id uuid REFERENCES public.streams(id) ON DELETE CASCADE,
   set_name text NOT NULL,
   round_number int NOT NULL CHECK (round_number BETWEEN 1 AND 3),
-  packs_opened int NOT NULL DEFAULT 10,       -- (optional rename to packs_opened_count later)
+  packs_opened int NOT NULL DEFAULT 10,
   locked boolean NOT NULL DEFAULT false,
   created_at timestamptz DEFAULT now()
 );
 
--- Ensure each stream has at most one row per (set, round_number)
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'rounds_stream_set_round_uniq'
+    SELECT 1 FROM pg_constraint WHERE conname = 'rounds_stream_set_round_uniq'
   ) THEN
     ALTER TABLE public.rounds
       ADD CONSTRAINT rounds_stream_set_round_uniq
@@ -59,10 +58,8 @@ BEGIN
   END IF;
 END$$;
 
--- RLS
 ALTER TABLE public.rounds ENABLE ROW LEVEL SECURITY;
 
--- Public read access
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -85,13 +82,11 @@ CREATE TABLE IF NOT EXISTS public.users (
   created_at timestamptz DEFAULT now(),
   is_admin boolean NOT NULL DEFAULT false,
   avatar text,
-  site_credit numeric(12,2) DEFAULT 0 CHECK (site_credit >= 0)   -- UPDATED precision + non-negative
+  site_credit numeric(12,2) DEFAULT 0 CHECK (site_credit >= 0)   -- precision + non-negative
 );
 
--- RLS
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
--- Users can read/insert/update their own profile
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -125,7 +120,7 @@ BEGIN
   END IF;
 END$$;
 
--- 4) CHASE SLOTS (replaces round_high_value_cards + direct_bids target)
+-- 4) CHASE SLOTS (replaces legacy direct_bids targets)
 CREATE TABLE IF NOT EXISTS public.chase_slots (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   stream_id uuid NOT NULL REFERENCES public.streams(id) ON DELETE CASCADE,
@@ -137,7 +132,7 @@ CREATE TABLE IF NOT EXISTS public.chase_slots (
   locked boolean NOT NULL DEFAULT false,
   winner_user_id uuid REFERENCES public.users(id),
   winning_bid_id uuid,
-  -- NEW denormalized display fields
+  -- Denormalized display fields (populated from all_cards)
   card_name text,
   card_number text,
   rarity text,
@@ -145,14 +140,44 @@ CREATE TABLE IF NOT EXISTS public.chase_slots (
   ungraded_market_price numeric,
   date_updated timestamptz,
   created_at timestamptz NOT NULL DEFAULT now()
-  );
-CREATE INDEX IF NOT EXISTS idx_chase_slots_stream_set ON public.chase_slots (stream_id, set_name);
-CREATE INDEX IF NOT EXISTS idx_chase_slots_active ON public.chase_slots (is_active);
+);
 
--- RLS
+-- Unique: one slot per stream/set/card
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chase_slots_stream_set_card_uniq'
+  ) THEN
+    ALTER TABLE public.chase_slots
+      ADD CONSTRAINT chase_slots_stream_set_card_uniq
+      UNIQUE (stream_id, set_name, all_card_id);
+  END IF;
+END$$;
+
+-- Final index set
+CREATE INDEX IF NOT EXISTS idx_chase_slots_stream_set_active
+  ON public.chase_slots (stream_id, set_name, is_active);
+
+CREATE INDEX IF NOT EXISTS idx_chase_slots_all_card_id
+  ON public.chase_slots (all_card_id);
+
+CREATE INDEX IF NOT EXISTS idx_chase_slots_stream_set_locked
+  ON public.chase_slots (stream_id, set_name, locked);
+
+CREATE INDEX IF NOT EXISTS idx_chase_slots_stream_set_price
+  ON public.chase_slots (stream_id, set_name, ungraded_market_price DESC);
+
+CREATE INDEX IF NOT EXISTS idx_chase_slots_active_true
+  ON public.chase_slots (id)
+  WHERE is_active = true;
+
+-- Name search: trigram
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX IF NOT EXISTS idx_chase_slots_card_name_trgm
+  ON public.chase_slots USING gin (card_name gin_trgm_ops);
+
 ALTER TABLE public.chase_slots ENABLE ROW LEVEL SECURITY;
 
--- Public read; only admins insert/update
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -177,7 +202,70 @@ BEGIN
   END IF;
 END$$;
 
--- 5) CHASE BIDS (replaces direct_bids)
+-- 4a) Sync denormalized fields from all_cards (triggers)
+CREATE OR REPLACE FUNCTION public.sync_chase_slot_card_details()
+RETURNS TRIGGER AS $$
+DECLARE
+  r public.all_cards%ROWTYPE;
+BEGIN
+  IF NEW.all_card_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT * INTO r FROM public.all_cards WHERE id = NEW.all_card_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'all_cards row % not found for chase_slots', NEW.all_card_id;
+  END IF;
+
+  NEW.card_name             := r.card_name;
+  NEW.card_number           := r.card_number;
+  NEW.rarity                := r.rarity;
+  NEW.image_url             := r.image_url;
+  NEW.ungraded_market_price := r.ungraded_market_price;
+  NEW.date_updated          := r.date_updated;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trg_sync_chase_slot_card_details ON public.chase_slots;
+CREATE TRIGGER trg_sync_chase_slot_card_details
+BEFORE INSERT OR UPDATE OF all_card_id
+ON public.chase_slots
+FOR EACH ROW
+EXECUTE FUNCTION public.sync_chase_slot_card_details();
+
+CREATE OR REPLACE FUNCTION public.propagate_all_cards_to_chase_slots()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE public.chase_slots cs
+  SET
+    card_name             = NEW.card_name,
+    card_number           = NEW.card_number,
+    rarity                = NEW.rarity,
+    image_url             = NEW.image_url,
+    ungraded_market_price = NEW.ungraded_market_price,
+    date_updated          = NEW.date_updated
+  WHERE cs.all_card_id = NEW.id;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS trg_propagate_all_cards_to_chase_slots ON public.all_cards;
+CREATE TRIGGER trg_propagate_all_cards_to_chase_slots
+AFTER UPDATE OF
+  card_name,
+  card_number,
+  rarity,
+  image_url,
+  ungraded_market_price,
+  date_updated
+ON public.all_cards
+FOR EACH ROW
+EXECUTE FUNCTION public.propagate_all_cards_to_chase_slots();
+
+-- 5) CHASE BIDS
 CREATE TABLE IF NOT EXISTS public.chase_bids (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   slot_id uuid NOT NULL REFERENCES public.chase_slots(id) ON DELETE CASCADE,
@@ -189,16 +277,13 @@ CREATE TABLE IF NOT EXISTS public.chase_bids (
 CREATE INDEX IF NOT EXISTS idx_chase_bids_slot ON public.chase_bids (slot_id);
 CREATE INDEX IF NOT EXISTS idx_chase_bids_user ON public.chase_bids (user_id, created_at DESC);
 
--- Leader view (top bid per slot)
 CREATE OR REPLACE VIEW public.chase_slot_leaders AS
 SELECT slot_id, MAX(amount) AS top_bid
 FROM public.chase_bids
 GROUP BY slot_id;
 
--- RLS
 ALTER TABLE public.chase_bids ENABLE ROW LEVEL SECURITY;
 
--- Anyone can read; users can manage own bids
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -232,7 +317,7 @@ BEGIN
   END IF;
 END$$;
 
--- 6) LOTTERY ENTRIES — updated to per-pack unique
+-- 6) LOTTERY ENTRIES — per-pack unique
 CREATE TABLE IF NOT EXISTS public.lottery_entries (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
@@ -243,7 +328,6 @@ CREATE TABLE IF NOT EXISTS public.lottery_entries (
   pack_number int NOT NULL DEFAULT 1
 );
 
--- Drop old unique (user_id, round_id) if exists, then add (user_id, round_id, pack_number)
 DO $$
 BEGIN
   IF EXISTS (
@@ -266,13 +350,11 @@ BEGIN
   END IF;
 END$$;
 
--- Helpful indexes for live counts
 CREATE INDEX IF NOT EXISTS idx_lottery_round_pack ON public.lottery_entries (round_id, pack_number);
 CREATE INDEX IF NOT EXISTS idx_lottery_round_rarity ON public.lottery_entries (round_id, selected_rarity);
 CREATE INDEX IF NOT EXISTS idx_lottery_round ON public.lottery_entries (round_id);
 CREATE INDEX IF NOT EXISTS idx_lottery_user ON public.lottery_entries (user_id);
 
--- RLS
 ALTER TABLE public.lottery_entries ENABLE ROW LEVEL SECURITY;
 
 DO $$
@@ -314,12 +396,11 @@ CREATE TABLE IF NOT EXISTS public.lottery_winners (
   round_id uuid REFERENCES public.rounds(id) ON DELETE CASCADE,
   lottery_entry_id uuid REFERENCES public.lottery_entries(id) ON DELETE CASCADE,
   winner_position int CHECK (winner_position IN (1, 2)),
-  assigned_packs int[],                           -- ensure int[] (not text)
+  assigned_packs int[],
   created_at timestamptz DEFAULT now(),
   UNIQUE(round_id, winner_position)
 );
 
--- RLS
 ALTER TABLE public.lottery_winners ENABLE ROW LEVEL SECURITY;
 
 DO $$
@@ -335,9 +416,5 @@ BEGIN
   END IF;
 END$$;
 
--- 8) CLEAN UP LEGACY TABLES (optional here; safe to leave to a separate migration)
--- If these still exist from prior migrations, you can remove them now or in a dedicated cleanup:
--- DROP TABLE IF EXISTS public.direct_bids CASCADE;
--- DROP TABLE IF EXISTS public.round_high_value_cards CASCADE;
+-- Optional legacy cleanup lives in a separate migration.
 
--- (Note) "live_singles" + "live_singles_bids" are introduced in your other migration file as discussed.
