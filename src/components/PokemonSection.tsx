@@ -6,7 +6,7 @@ import PokemonCard from './PokemonCard';
 import type { User } from '@supabase/supabase-js';
 
 type SetName = 'prismatic' | 'crown_zenith' | 'destined_rivals';
-type BiddingMode = 'direct' | 'lottery';
+type BiddingMode = 'direct' | 'lottery' | 'singles';
 type LotterySetName = 'prismatic' | 'crown_zenith' | 'destined_rivals';
 
 interface Round {
@@ -17,6 +17,28 @@ interface Round {
   packs_opened: number;
   locked: boolean;
   created_at: string;
+}
+
+interface LiveSingle {
+  id: string;
+  stream_id: string | null;
+  card_name: string;
+  card_number: string | null;
+  card_condition: string | null;
+  set_name: string | null;
+  image_url: string | null;
+  starting_bid: number;
+  min_increment: number;
+  buy_now: number | null;
+  ungraded_market_price: number | null;
+  psa_10_price: number | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+interface LiveSingleLeaderRow {
+  card_id: string;
+  top_bid: number | null;
 }
 
 interface PokemonSectionProps {
@@ -58,11 +80,11 @@ function rarityBg(rarity: string) {
 
 const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [activeTab, setActiveTab] = useState<SetName>('prismatic');
-  const [biddingMode, setBiddingMode] = useState<BiddingMode>('direct');
+  const [biddingMode, setBiddingMode] = useState<BiddingMode>('direct'); // 'direct' (Chase Slots) | 'lottery' | 'singles'
   const [lotteryActiveTab, setLotteryActiveTab] = useState<LotterySetName>('prismatic');
   const [allCards, setAllCards] = useState<DirectBidCard[]>([]);
   const [filteredPokemon, setFilteredPokemon] = useState<PokemonCardType[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // page-level loading for all_cards section
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRarity, setSelectedRarity] = useState('');
@@ -93,6 +115,19 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     packNumber: number;
   } | null>(null);
 
+  /** ----------------- LIVE SINGLES STATE ----------------- */
+  const [liveSingles, setLiveSingles] = useState<LiveSingle[]>([]);
+  const [liveSinglesLoading, setLiveSinglesLoading] = useState<boolean>(false);
+  const [liveSinglesError, setLiveSinglesError] = useState<string | null>(null);
+  const [leadersMap, setLeadersMap] = useState<Record<string, number>>({});
+  const [singlesSearch, setSinglesSearch] = useState('');
+  const [singlesSort, setSinglesSort] = useState<'recent'|'price-hi'|'price-lo'>('recent');
+  const [bidInputs, setBidInputs] = useState<Record<string, string>>({});
+  const [placingBidFor, setPlacingBidFor] = useState<string | null>(null);
+  const [bidError, setBidError] = useState<string | null>(null);
+  const [bidSuccess, setBidSuccess] = useState<string | null>(null);
+  /** ------------------------------------------------------ */
+
   // Check user authentication status
   useEffect(() => {
     const checkUser = async () => {
@@ -111,7 +146,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     checkUser();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user || null);
       if (session?.user) await fetchUserCredit(session.user.id);
     });
@@ -150,6 +185,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     }
   };
 
+  // Initial pulls for Direct Bids gallery (using all_cards)
   useEffect(() => {
     fetchAllCards();
   }, []);
@@ -163,7 +199,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   }, [currentRound]);
 
   useEffect(() => {
-    // Reset filters when switching tabs
+    // Reset filters when switching set tabs
     setSearchTerm('');
     setSelectedRarity('');
   }, [activeTab]);
@@ -171,6 +207,13 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   useEffect(() => {
     filterAndSortPokemon();
   }, [activeTab, allCards, searchTerm, selectedRarity, sortBy]);
+
+  /** When switching to "Live Singles", load them */
+  useEffect(() => {
+    if (biddingMode === 'singles') {
+      void loadLiveSingles();
+    }
+  }, [biddingMode, currentStreamId]);
 
   const fetchCurrentRound = async () => {
     if (!currentStreamId) {
@@ -223,7 +266,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       if (error) throw error;
 
       const counts: Record<number, Record<string, number>> = {};
-      data?.forEach((entry) => {
+      data?.forEach((entry: any) => {
         const pack = entry.pack_number || 0;
         const rarity = entry.selected_rarity as string;
         counts[pack] ??= {};
@@ -371,9 +414,8 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       // Handle uniqueness errors gracefully
       if (
         msg.includes('lottery_entries_user_id_round_id_pack_key') ||
-        msg.includes('lottery_entries_user_id_round_id_pack_rarity_key') || // if you use the stricter variant
+        msg.includes('lottery_entries_user_round_pack_uniq') ||
         msg.includes('duplicate key value') ||
-        msg.includes('uq_lottery_user_round_pack') ||
         msg.includes('unique constraint')
       ) {
         setEntryError('You already entered this pack for this round.');
@@ -405,6 +447,118 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     const rarity = card.rarity?.split(',')[0].trim();
     return rarity;
   }).filter(Boolean))];
+
+  /** ----------------- LIVE SINGLES: DATA + ACTIONS ----------------- */
+  const loadLiveSingles = async () => {
+    try {
+      setLiveSinglesLoading(true);
+      setLiveSinglesError(null);
+
+      const query = supabase
+        .from('live_singles')
+        .select('*')
+        .eq('is_active', true);
+
+      if (currentStreamId) query.eq('stream_id', currentStreamId);
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setLiveSingles(data as LiveSingle[]);
+
+      // Leaders map
+      const { data: leaders, error: leadersErr } = await supabase
+        .from('live_singles_leaders')
+        .select('card_id, top_bid');
+
+      if (leadersErr) throw leadersErr;
+
+      const m: Record<string, number> = {};
+      (leaders as LiveSingleLeaderRow[]).forEach((row) => {
+        if (row.card_id) m[row.card_id] = row.top_bid ?? 0;
+      });
+      setLeadersMap(m);
+    } catch (err: any) {
+      console.error('loadLiveSingles error:', err);
+      setLiveSinglesError(err.message || 'Failed to load Live Singles');
+    } finally {
+      setLiveSinglesLoading(false);
+    }
+  };
+
+  const refreshLeadersAndCredit = async () => {
+    // leaders
+    const { data: leaders, error: leadersErr } = await supabase
+      .from('live_singles_leaders')
+      .select('card_id, top_bid');
+
+    if (!leadersErr && leaders) {
+      const m: Record<string, number> = {};
+      (leaders as LiveSingleLeaderRow[]).forEach((row) => {
+        if (row.card_id) m[row.card_id] = row.top_bid ?? 0;
+      });
+      setLeadersMap(m);
+    }
+    // credit
+    if (user?.id) await fetchUserCredit(user.id);
+  };
+
+  const handleBidInputChange = (cardId: string, val: string) => {
+    setBidInputs((prev) => ({ ...prev, [cardId]: val }));
+  };
+
+  const handlePlaceLiveSingleBid = async (card: LiveSingle) => {
+    if (!user) {
+      setBidError('Please sign in to place a bid.');
+      return;
+    }
+    const raw = bidInputs[card.id];
+    const amt = Number(raw);
+    if (!raw || isNaN(amt) || amt <= 0) {
+      setBidError('Enter a valid bid amount.');
+      return;
+    }
+
+    setPlacingBidFor(card.id);
+    setBidError(null);
+    setBidSuccess(null);
+
+    try {
+      const { error } = await supabase.rpc('place_live_single_bid_immediate_refund', {
+        p_user_id: user.id,
+        p_card_id: card.id,
+        p_amount: amt
+      });
+
+      if (error) {
+        const msg = String(error.message || '').toLowerCase();
+        // common friendly messages
+        if (msg.includes('minimum bid')) {
+          setBidError(`Minimum bid is $${card.starting_bid}.`);
+        } else if (msg.includes('least') && msg.includes('increment')) {
+          setBidError('Your bid must be at least the current top bid plus the minimum increment.');
+        } else if (msg.includes('insufficient credits')) {
+          setBidError('Insufficient credits for this bid.');
+        } else if (msg.includes('closed')) {
+          setBidError('Bidding is closed for this live single.');
+        } else {
+          setBidError(error.message);
+        }
+        return;
+      }
+
+      // success
+      setBidSuccess('Bid placed! If you were outbid later, your credits will be refunded automatically.');
+      setBidInputs((prev) => ({ ...prev, [card.id]: '' }));
+      await refreshLeadersAndCredit();
+      setTimeout(() => setBidSuccess(null), 2500);
+    } catch (e: any) {
+      setBidError(e.message || 'Failed to place bid.');
+    } finally {
+      setPlacingBidFor(null);
+    }
+  };
+  /** ------------------------------------------------------ */
 
   /** ----------------- RENDERER FOR A SET (even spacing) ----------------- */
   function renderSetPacks(setKey: SetKey, title: string) {
@@ -514,7 +668,173 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   }
   /** ------------------------------------------------------------------ */
 
-  if (loading) {
+  /** ----------------- LIVE SINGLES RENDER ----------------- */
+  function renderLiveSingles() {
+    // client-side filter/sort
+    let rows = [...liveSingles];
+    if (singlesSearch) {
+      const q = singlesSearch.toLowerCase();
+      rows = rows.filter(r =>
+        (r.card_name || '').toLowerCase().includes(q) ||
+        (r.set_name || '').toLowerCase().includes(q) ||
+        (r.card_number || '').toLowerCase().includes(q) ||
+        (r.card_condition || '').toLowerCase().includes(q)
+      );
+    }
+    if (singlesSort === 'price-hi') {
+      rows.sort((a, b) => (b.ungraded_market_price || 0) - (a.ungraded_market_price || 0));
+    } else if (singlesSort === 'price-lo') {
+      rows.sort((a, b) => (a.ungraded_market_price || 0) - (b.ungraded_market_price || 0));
+    } else {
+      rows.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+
+    return (
+      <div className="space-y-6">
+        <h3 className="text-2xl font-bold text-black font-pokemon text-center mb-2">
+          Live Singles
+        </h3>
+        <p className="text-center text-gray-600 font-pokemon mb-6">
+          Bid on individual cards I currently own. Bidding stays open until the end of Round 3.
+        </p>
+
+        {/* Filters */}
+        <div className="bg-gray-50 rounded-xl p-6 mb-2 border border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by name, set, #, or condition..."
+                value={singlesSearch}
+                onChange={(e) => setSinglesSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:border-red-600 focus:outline-none font-pokemon"
+              />
+            </div>
+            <div />
+            <div className="relative">
+              <ArrowUpDown className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <select
+                value={singlesSort}
+                onChange={(e) => setSinglesSort(e.target.value as any)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:border-red-600 focus:outline-none font-pokemon appearance-none bg-white"
+              >
+                <option value="recent">Newest</option>
+                <option value="price-hi">Price: High to Low</option>
+                <option value="price-lo">Price: Low to High</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Errors */}
+        {liveSinglesError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+              <span className="text-red-800 font-pokemon">{liveSinglesError}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Grid */}
+        {liveSinglesLoading ? (
+          <div className="flex items-center justify-center py-10">
+            <Loader className="h-6 w-6 animate-spin text-red-600" />
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="flex items-center justify-center space-x-2 mb-4 text-gray-600">
+              <Sparkles className="h-8 w-8" />
+              <span className="text-xl font-pokemon">No Live Singles yet</span>
+            </div>
+            <p className="text-gray-600 font-pokemon">Check back soon for more!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {rows.map((card) => {
+              const topBid = leadersMap[card.id] ?? 0;
+              const isPlacing = placingBidFor === card.id;
+
+              return (
+                <div key={card.id} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="aspect-[4/3] w-full overflow-hidden rounded-lg mb-3 bg-gray-50 flex items-center justify-center">
+                    {card.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={card.image_url} alt={card.card_name} className="object-contain w-full h-full" />
+                    ) : (
+                      <div className="text-gray-400 font-pokemon">No image</div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <h4 className="font-semibold text-black font-pokemon">{card.card_name}</h4>
+                    <div className="text-sm text-gray-600 font-pokemon">
+                      {(card.set_name || 'Unknown Set')} {card.card_number ? `• #${card.card_number}` : ''}
+                    </div>
+                    {card.card_condition && (
+                      <div className="text-xs text-gray-500 font-pokemon">Condition: {card.card_condition}</div>
+                    )}
+                    <div className="text-sm text-gray-700 font-pokemon mt-1">
+                      Market: {card.ungraded_market_price != null ? `$${card.ungraded_market_price.toFixed(2)}` : '—'}
+                      {card.psa_10_price != null ? ` • PSA 10: $${card.psa_10_price.toFixed(2)}` : ''}
+                    </div>
+
+                    <div className="mt-2 rounded-lg bg-gray-50 p-2 flex items-center justify-between">
+                      <span className="text-xs text-gray-600 font-pokemon">Top Bid</span>
+                      <span className="text-sm font-bold text-black font-pokemon">
+                        {topBid > 0 ? `$${topBid.toFixed(2)}` : '—'}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-5 gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        placeholder={`≥ ${Math.max(topBid + card.min_increment, card.starting_bid).toFixed(2)}`}
+                        value={bidInputs[card.id] ?? ''}
+                        onChange={(e) => handleBidInputChange(card.id, e.target.value)}
+                        className="col-span-3 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-600 font-pokemon"
+                      />
+                      <button
+                        onClick={() => handlePlaceLiveSingleBid(card)}
+                        disabled={!user || isPlacing}
+                        className="col-span-2 bg-red-600 text-white font-bold py-2 rounded-lg hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon"
+                      >
+                        {isPlacing ? 'Bidding...' : user ? 'Place Bid' : 'Login'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Bid messages */}
+        {bidError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
+              <span className="text-red-800 font-pokemon">{bidError}</span>
+            </div>
+          </div>
+        )}
+        {bidSuccess && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <Sparkles className="h-5 w-5 text-green-600 mr-2" />
+              <span className="text-green-800 font-pokemon">{bidSuccess}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+  /** ------------------------------------------------------ */
+
+  if (loading && biddingMode !== 'singles') {
     return (
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
@@ -529,7 +849,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     );
   }
 
-  if (error) {
+  if (error && biddingMode !== 'singles') {
     return (
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
@@ -551,7 +871,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     );
   }
 
-  if (allCards.length === 0) {
+  if (allCards.length === 0 && biddingMode !== 'singles') {
     return (
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-7xl mx-auto">
@@ -597,27 +917,28 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
           </h2>
           <div className="text-lg text-gray-600 max-w-4xl mx-auto mb-8 font-pokemon">
             <p className="mb-4">
-              Three exciting rounds: Round 1 (10 Prismatic Evolutions packs), Round 2 (10 Destined Rivals packs), Round 3 (10 Crown Zenith packs). Each round offers two entry options.
+              Three exciting rounds: Round 1 (10 Prismatic Evolutions packs), Round 2 (10 Destined Rivals packs), Round 3 (10 Crown Zenith packs). Each round offers three entry options.
             </p>
             <div className="bg-gray-50 rounded-xl p-6 mb-4">
-              <h4 className="font-bold text-black mb-3 font-pokemon">Option 1: Direct Card Bidding</h4>
+              <h4 className="font-bold text-black mb-3 font-pokemon">Option 1: Chase Slots</h4>
               <ul className="text-left space-y-2 mb-4">
-                <li>• Use credits to bid on high-value cards (e.g., Umbreon EX) from each set</li>
-                <li>• Highest bidder wins all pulled copies of their card</li>
-                <li>• If bid card is not pulled, winning bidder receives nothing for that round</li>
-                <li>• Credits on non-winning direct bids are returned when outbid</li>
+                <li>• Use credits to bid on high-value cards from each set</li>
+                <li>• Highest bidder wins the slot; if the card is pulled in the round, they keep it</li>
+                <li>• Credits are immediately refunded when you are outbid</li>
               </ul>
               
               <h4 className="font-bold text-black mb-3 font-pokemon">Option 2: Lottery + Rarity Selection</h4>
               <ul className="text-left space-y-2 mb-4">
-                <li>• Enter using credits and choose a rarity type from the set</li>
-                <li>• If your rarity type is pulled, you're entered into the prize pool</li>
-                <li>• 2 random winners per round. Each winner receives cards from 5 of the opened packs (minus direct bid wins)</li>
+                <li>• Enter packs 1–10 by selecting a rarity; if that rarity hits, you enter the prize pool</li>
+                <li>• 2 winners per round, assigned packs (minus any Chase Slot wins)</li>
+              </ul>
+
+              <h4 className="font-bold text-black mb-3 font-pokemon">Option 3: Live Singles</h4>
+              <ul className="text-left space-y-2 mb-0">
+                <li>• Bid on individual cards I currently own</li>
+                <li>• Open until end of Round 3; highest bidder wins the card</li>
               </ul>
             </div>
-            <p className="text-red-600 font-semibold">
-              ⚠️ Choose your strategy: Go for specific high-value cards or try the lottery for complete packs!
-            </p>
           </div>
         </div>
 
@@ -633,7 +954,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                Direct Bids
+                Chase Slots
               </button>
               <button
                 onClick={() => setBiddingMode('lottery')}
@@ -644,6 +965,16 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                 }`}
               >
                 Lottery
+              </button>
+              <button
+                onClick={() => setBiddingMode('singles')}
+                className={`py-2 px-1 border-b-2 font-medium text-lg font-pokemon transition-colors ${
+                  biddingMode === 'singles'
+                    ? 'border-red-600 text-red-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Live Singles
               </button>
             </nav>
           </div>
@@ -755,7 +1086,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               </div>
             </div>
 
-            {/* Cards */}
+            {/* Cards (Chase Slots gallery uses all_cards list here) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredPokemon.map((poke, index) => (
                 <PokemonCard
@@ -778,7 +1109,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               </div>
             )}
           </>
-        ) : (
+        ) : biddingMode === 'lottery' ? (
           /* Lottery Tab Content */
           <div>
             {/* Lottery Set Tabs */}
@@ -825,9 +1156,12 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               </div>
             )}
           </div>
+        ) : (
+          // Live Singles
+          renderLiveSingles()
         )}
 
-        {/* Confirmation Modal */}
+        {/* Confirmation Modal (Lottery) */}
         {showConfirmModal && selectedLotteryEntry && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
             <div 
@@ -895,4 +1229,5 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 };
 
 export default PokemonSection;
+
 
