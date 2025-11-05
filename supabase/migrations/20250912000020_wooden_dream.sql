@@ -11,10 +11,7 @@
     7) Grants for authenticated role
 */
 
-/* ============================================================
-   1) Users: site_credit precision/check + index
-   ============================================================ */
-
+-- 1) Users: site_credit precision/check + index
 DO $$
 BEGIN
   IF EXISTS (
@@ -35,10 +32,7 @@ END$$;
 
 CREATE INDEX IF NOT EXISTS idx_users_credit ON public.users (site_credit);
 
-/* ============================================================
-   2) New-user trigger: credit on signup (first 100 users)
-   ============================================================ */
-
+-- 2) New-user trigger: credit on signup (first 100 users)
 CREATE OR REPLACE FUNCTION public.handle_new_user_with_credits()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -72,11 +66,7 @@ CREATE TRIGGER on_auth_user_created
 AFTER INSERT ON auth.users
 FOR EACH ROW EXECUTE FUNCTION public.handle_new_user_with_credits();
 
-/* ============================================================
-   3) RPC: enter_lottery_with_debit (atomic)
-   - Debits credits and inserts lottery entry in one transaction
-   ============================================================ */
-
+-- 3) RPC: enter_lottery_with_debit (atomic)
 CREATE OR REPLACE FUNCTION public.enter_lottery_with_debit(
   p_user_id uuid,
   p_round_id uuid,
@@ -107,10 +97,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-/* ============================================================
-   4) Live Singles (+ bids) and leader view
-   ============================================================ */
-
+-- 4) Live Singles (+ bids) and leader view
 CREATE TABLE IF NOT EXISTS public.live_singles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   stream_id uuid REFERENCES public.streams(id) ON DELETE CASCADE,
@@ -142,11 +129,9 @@ SELECT card_id, MAX(amount) AS top_bid
 FROM public.live_singles_bids
 GROUP BY card_id;
 
--- Enable RLS
 ALTER TABLE public.live_singles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.live_singles_bids ENABLE ROW LEVEL SECURITY;
 
--- Policies: live_singles (public read, admins manage)
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -171,7 +156,6 @@ BEGIN
   END IF;
 END$$;
 
--- Policies: live_singles_bids (public read; users manage own)
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -205,12 +189,7 @@ BEGIN
   END IF;
 END$$;
 
-/* ============================================================
-   5) RPC: Chase Slots immediate-refund bidding
-   - Locks slot, refunds previous leader, debits new leader, inserts bid
-   ============================================================ */
-
--- Replace older version if present
+-- 5) RPC: Chase Slots immediate-refund bidding
 DROP FUNCTION IF EXISTS public.place_chase_bid_with_hold(uuid, uuid, numeric);
 
 CREATE OR REPLACE FUNCTION public.place_chase_bid_immediate_refund(
@@ -224,7 +203,6 @@ DECLARE
   v_min_allowed numeric;
   v_bid_id uuid;
 BEGIN
-  -- Serialize bidding: lock the slot row
   SELECT * INTO v_slot
   FROM public.chase_slots
   WHERE id = p_slot_id
@@ -238,7 +216,6 @@ BEGIN
     RAISE EXCEPTION 'Bidding is closed for this chase slot';
   END IF;
 
-  -- Current leader (highest amount; earliest wins tie)
   SELECT b.id, b.user_id, b.amount
   INTO v_prev
   FROM public.chase_bids b
@@ -246,7 +223,6 @@ BEGIN
   ORDER BY b.amount DESC, b.created_at ASC
   LIMIT 1;
 
-  -- Min allowed
   IF v_prev IS NULL THEN
     IF p_amount < v_slot.starting_bid THEN
       RAISE EXCEPTION 'Minimum bid is $%', v_slot.starting_bid;
@@ -259,29 +235,24 @@ BEGIN
     END IF;
   END IF;
 
-  -- Debit new bidder (lock their row)
   PERFORM 1 FROM public.users WHERE id = p_user_id AND site_credit >= p_amount FOR UPDATE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Insufficient credits for this bid';
   END IF;
 
-  -- Refund previous leader first (if any)
   IF v_prev IS NOT NULL THEN
     PERFORM 1 FROM public.users WHERE id = v_prev.user_id FOR UPDATE;
     UPDATE public.users SET site_credit = site_credit + v_prev.amount
     WHERE id = v_prev.user_id;
   END IF;
 
-  -- Debit new leader
   UPDATE public.users SET site_credit = site_credit - p_amount
   WHERE id = p_user_id;
 
-  -- Insert bid
   INSERT INTO public.chase_bids (slot_id, user_id, amount)
   VALUES (p_slot_id, p_user_id, p_amount)
   RETURNING id INTO v_bid_id;
 
-  -- Store current winner pointers
   UPDATE public.chase_slots
     SET winner_user_id = p_user_id,
         winning_bid_id = v_bid_id
@@ -291,11 +262,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-/* ============================================================
-   6) RPC: Live Singles immediate-refund bidding
-   ============================================================ */
-
--- Replace older version if present
+-- 6) RPC: Live Singles immediate-refund bidding
 DROP FUNCTION IF EXISTS public.place_live_single_bid_with_hold(uuid, uuid, numeric);
 
 CREATE OR REPLACE FUNCTION public.place_live_single_bid_immediate_refund(
@@ -309,7 +276,6 @@ DECLARE
   v_min_allowed numeric;
   v_bid_id uuid;
 BEGIN
-  -- Serialize bidding: lock the single row
   SELECT * INTO v_card
   FROM public.live_singles
   WHERE id = p_card_id
@@ -323,7 +289,6 @@ BEGIN
     RAISE EXCEPTION 'Bidding is closed for this live single';
   END IF;
 
-  -- Current leader
   SELECT b.id, b.user_id, b.amount
   INTO v_prev
   FROM public.live_singles_bids b
@@ -331,7 +296,6 @@ BEGIN
   ORDER BY b.amount DESC, b.created_at ASC
   LIMIT 1;
 
-  -- Min allowed
   IF v_prev IS NULL THEN
     IF p_amount < v_card.starting_bid THEN
       RAISE EXCEPTION 'Minimum bid is $%', v_card.starting_bid;
@@ -344,40 +308,32 @@ BEGIN
     END IF;
   END IF;
 
-  -- Debit new bidder
   PERFORM 1 FROM public.users WHERE id = p_user_id AND site_credit >= p_amount FOR UPDATE;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Insufficient credits for this bid';
   END IF;
 
-  -- Refund previous leader
   IF v_prev IS NOT NULL THEN
     PERFORM 1 FROM public.users WHERE id = v_prev.user_id FOR UPDATE;
     UPDATE public.users SET site_credit = site_credit + v_prev.amount
     WHERE id = v_prev.user_id;
   END IF;
 
-  -- Debit new leader
   UPDATE public.users SET site_credit = site_credit - p_amount
   WHERE id = p_user_id;
 
-  -- Insert bid
   INSERT INTO public.live_singles_bids (card_id, user_id, amount)
   VALUES (p_card_id, p_user_id, p_amount)
   RETURNING id INTO v_bid_id;
-
-  -- (Optional) If you later add winner pointers to live_singles, update them here
 
   RETURN v_bid_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-/* ============================================================
-   7) Grants for authenticated role
-   ============================================================ */
-
+-- 7) Grants for authenticated role
 GRANT USAGE ON SCHEMA public TO authenticated;
 
 GRANT EXECUTE ON FUNCTION public.enter_lottery_with_debit(uuid, uuid, text, int, numeric) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.place_chase_bid_immediate_refund(uuid, uuid, numeric) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.place_live_single_bid_immediate_refund(uuid, uuid, numeric) TO authenticated;
+
