@@ -64,6 +64,13 @@ const RARITIES = {
 
 type SetKey = keyof typeof RARITIES;
 
+/** Map UI tabs -> DB set_name used for rounds/chase_slots */
+const SET_DB_NAME: Record<SetName, string> = {
+  prismatic: 'SV: Prismatic Evolutions',
+  crown_zenith: 'Crown Zenith: Galarian Gallery',
+  destined_rivals: 'SV10: Destined Rivals',
+};
+
 function rarityBg(rarity: string) {
   if (rarity.startsWith('SIR')) return 'bg-pink-600 hover:bg-pink-700';
   if (rarity.includes('Masterball')) return 'bg-purple-600 hover:bg-purple-700';
@@ -126,7 +133,15 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [placingBidFor, setPlacingBidFor] = useState<string | null>(null);
   const [bidError, setBidError] = useState<string | null>(null);
   const [bidSuccess, setBidSuccess] = useState<string | null>(null);
-  /** ------------------------------------------------------ */
+
+  /** ----------------- CHASE SLOTS META (for counts & filtering) -------- */
+  const [chaseCounts, setChaseCounts] = useState<Record<SetName, number>>({
+    prismatic: 0,
+    crown_zenith: 0,
+    destined_rivals: 0
+  });
+  const [chaseCardIdsForActiveTab, setChaseCardIdsForActiveTab] = useState<Set<string>>(new Set());
+  /** -------------------------------------------------------------------- */
 
   // Check user authentication status
   useEffect(() => {
@@ -175,7 +190,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+    if (error) throw error;
       setUserCredit(parseFloat(data.site_credit || '0'));
     } catch (error) {
       console.error('Error fetching user credit:', error);
@@ -206,7 +221,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
   useEffect(() => {
     filterAndSortPokemon();
-  }, [activeTab, allCards, searchTerm, selectedRarity, sortBy]);
+  }, [activeTab, allCards, searchTerm, selectedRarity, sortBy, chaseCardIdsForActiveTab]);
 
   /** When switching to "Live Singles", load them */
   useEffect(() => {
@@ -214,6 +229,58 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       void loadLiveSingles();
     }
   }, [biddingMode, currentStreamId]);
+
+  /** Fetch chase_slots counts for all tabs + the list of all_card_id for the active tab */
+  useEffect(() => {
+    if (biddingMode !== 'direct') return;
+
+    const run = async () => {
+      try {
+        // --- counts for all three sets (for the badge) ---
+        const countFor = async (setKey: SetName) => {
+          let q = supabase
+            .from('chase_slots')
+            .select('id', { count: 'exact', head: true })
+            .eq('is_active', true)
+            .eq('set_name', SET_DB_NAME[setKey])
+            .gte('ungraded_market_price', 40); // match your chase slot selection rule
+
+          if (currentStreamId) q = q.eq('stream_id', currentStreamId);
+
+          const { count, error } = await q;
+          if (error) throw error;
+          return count || 0;
+        };
+
+        const [c1, c2, c3] = await Promise.all([
+          countFor('prismatic'),
+          countFor('crown_zenith'),
+          countFor('destined_rivals'),
+        ]);
+        setChaseCounts({ prismatic: c1, crown_zenith: c2, destined_rivals: c3 });
+
+        // --- ids for active tab (so the grid matches the badge) ---
+        let idsQuery = supabase
+          .from('chase_slots')
+          .select('all_card_id')
+          .eq('is_active', true)
+          .eq('set_name', SET_DB_NAME[activeTab])
+          .gte('ungraded_market_price', 40);
+
+        if (currentStreamId) idsQuery = idsQuery.eq('stream_id', currentStreamId);
+
+        const { data: idRows, error: idsErr } = await idsQuery;
+        if (idsErr) throw idsErr;
+        const idSet = new Set<string>((idRows || []).map(r => String(r.all_card_id)));
+        setChaseCardIdsForActiveTab(idSet);
+      } catch (e) {
+        // If anything fails, keep graceful fallbacks: zero counts and empty set
+        setChaseCardIdsForActiveTab(new Set());
+      }
+    };
+
+    run();
+  }, [biddingMode, activeTab, currentStreamId]);
 
   const fetchCurrentRound = async () => {
     if (!currentStreamId) {
@@ -223,16 +290,8 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
     setRoundLoading(true);
     try {
-      let setName = '';
       const tabToCheck = biddingMode === 'lottery' ? lotteryActiveTab : activeTab;
-
-      if (tabToCheck === 'prismatic') {
-        setName = 'SV: Prismatic Evolutions';
-      } else if (tabToCheck === 'crown_zenith') {
-        setName = 'Crown Zenith: Galarian Gallery';
-      } else if (tabToCheck === 'destined_rivals') {
-        setName = 'SV10: Destined Rivals';
-      }
+      const setName = SET_DB_NAME[tabToCheck as SetName];
 
       const { data, error } = await supabase
         .from('rounds')
@@ -301,20 +360,27 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   };
 
   const filterAndSortPokemon = () => {
+    // Start with the set’s cards from all_cards
     let currentCards: DirectBidCard[] = [];
     if (activeTab === 'prismatic') {
-      currentCards = allCards.filter(card => card.set_name === 'SV: Prismatic Evolutions');
+      currentCards = allCards.filter(card => card.set_name === SET_DB_NAME.prismatic);
     } else if (activeTab === 'crown_zenith') {
       currentCards = allCards.filter(card =>
-        card.set_name === 'Crown Zenith: Galarian Gallery' ||
-        card.set_name === 'Crown Zenith'
+        card.set_name === SET_DB_NAME.crown_zenith || card.set_name === 'Crown Zenith'
       );
     } else if (activeTab === 'destined_rivals') {
-      currentCards = allCards.filter(card => card.set_name === 'SV10: Destined Rivals');
+      currentCards = allCards.filter(card => card.set_name === SET_DB_NAME.destined_rivals);
     }
 
-    currentCards = currentCards.filter(card => (card.ungraded_market_price || 0) > 50);
+    // Only cards that actually have a Chase Slot for this stream/set
+    if (chaseCardIdsForActiveTab.size > 0) {
+      currentCards = currentCards.filter(c => chaseCardIdsForActiveTab.has(String(c.id)));
+    }
 
+    // Match your selection rule (≥ 40)
+    currentCards = currentCards.filter(card => (card.ungraded_market_price || 0) >= 40);
+
+    // Search / rarity filter
     let filtered = currentCards;
 
     if (searchTerm) {
@@ -330,6 +396,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       });
     }
 
+    // Sort
     if (sortBy === 'price-high') {
       filtered.sort((a, b) => (b.ungraded_market_price || 0) - (a.ungraded_market_price || 0));
     } else if (sortBy === 'price-low') {
@@ -430,14 +497,14 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   // Get unique sets and rarities for filter options
   const getCurrentPokemon = () => {
     if (activeTab === 'prismatic') {
-      return allCards.filter(card => card.set_name === 'SV: Prismatic Evolutions');
+      return allCards.filter(card => card.set_name === SET_DB_NAME.prismatic);
     } else if (activeTab === 'crown_zenith') {
       return allCards.filter(card =>
-        card.set_name === 'Crown Zenith: Galarian Gallery' ||
+        card.set_name === SET_DB_NAME.crown_zenith ||
         card.set_name === 'Crown Zenith'
       );
     } else if (activeTab === 'destined_rivals') {
-      return allCards.filter(card => card.set_name === 'SV10: Destined Rivals');
+      return allCards.filter(card => card.set_name === SET_DB_NAME.destined_rivals);
     }
     return [];
   };
@@ -887,25 +954,11 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     );
   }
 
+  // Tab badges: use chase slot counts (not total cards)
   const tabs = [
-    { 
-      id: 'prismatic' as SetName, 
-      name: 'Prismatic Evolutions', 
-      count: allCards.filter(card => card.set_name === 'SV: Prismatic Evolutions').length 
-    },
-    { 
-      id: 'crown_zenith' as SetName, 
-      name: 'Crown Zenith', 
-      count: allCards.filter(card => 
-        card.set_name === 'Crown Zenith: Galarian Gallery' || 
-        card.set_name === 'Crown Zenith'
-      ).length 
-    },
-    { 
-      id: 'destined_rivals' as SetName, 
-      name: 'Destined Rivals', 
-      count: allCards.filter(card => card.set_name === 'SV10: Destined Rivals').length 
-    }
+    { id: 'prismatic' as SetName,      name: 'Prismatic Evolutions', count: chaseCounts.prismatic },
+    { id: 'crown_zenith' as SetName,   name: 'Crown Zenith',         count: chaseCounts.crown_zenith },
+    { id: 'destined_rivals' as SetName, name: 'Destined Rivals',     count: chaseCounts.destined_rivals },
   ];
 
   return (
@@ -1086,7 +1139,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               </div>
             </div>
 
-            {/* Cards (Chase Slots gallery uses all_cards list here) */}
+            {/* Cards (Chase Slots gallery uses all_cards list here, filtered by chase_slots) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredPokemon.map((poke, index) => (
                 <PokemonCard
