@@ -979,20 +979,22 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                 <li>• Highest bidder wins the slot; if the card is pulled in the round, they keep it</li>
                 <li>• Credits are immediately refunded when you are outbid</li>
               </ul>
-            
+              
               <h4 className="font-bold text-black mb-3 font-pokemon">Option 2: Lottery + Rarity Selection</h4>
               <ul className="text-left space-y-2 mb-4">
-                <li>• Use credits to enter a lottery for Packs 1–10 in a given round by selecting a rarity for a specific pack</li>
-                <li>• If that rarity hits in that pack, you’re entered into that pack’s prize pool</li>
-                <li>• One winner is drawn per pack — winner keeps the cards from that specific pack barring any Chase Slot cards won (up to 10 possible winners per round)</li>
+    <li>• Use credits to enter a lottery for Packs 1–10 for a given round by selecting a rarity for a specific pack</li>
+    <li>• If that rarity hits in that pack, you’re entered into that pack’s prize pool</li>
+    <li>• One winner is drawn per pack — winner keeps all the cards from that specific pack (barring any cards won through Chase Slot bidding). 10 possible winners per round</li>
               </ul>
-            
+
               <h4 className="font-bold text-black mb-3 font-pokemon">Option 3: Live Singles</h4>
               <ul className="text-left space-y-2 mb-0">
-                <li>• Use credits to bid on individual cards from my collection</li>
+                <li>• Use credits to bid on individual cards in my collection</li>
                 <li>• Open until end of Round 3; highest bidder wins the card</li>
               </ul>
             </div>
+          </div>
+        </div>
 
         {/* Bidding Mode Tabs */}
         <div className="mb-8">
