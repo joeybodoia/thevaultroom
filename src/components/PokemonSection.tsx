@@ -1147,7 +1147,8 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                   key={poke.id}
                   pokemon={poke}
                   isPopular={index === 0}
-                  currentRoundId={currentRound?.id || null}
+                  roundStreamId={currentRound?.stream_id ?? null}
+                  roundSetName={currentRound?.set_name ?? null}
                   onBidSuccess={() => console.log('Bid submitted for card:', poke.card_name)}
                 />
               ))}
