@@ -108,10 +108,14 @@ CREATE TABLE IF NOT EXISTS public.live_singles (
   min_increment numeric(12,2) NOT NULL DEFAULT 1,
   buy_now numeric(12,2),
   is_active boolean NOT NULL DEFAULT true,
-  created_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz NOT NULL DEFAULT now(),
+  ungraded_market_price numeric(12,2) CHECK (ungraded_market_price IS NULL OR ungraded_market_price >= 0),
+  psa_10_price         numeric(12,2) CHECK (psa_10_price IS NULL OR psa_10_price >= 0)
 );
 
 CREATE INDEX IF NOT EXISTS idx_live_singles_stream ON public.live_singles (stream_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_live_singles_stream_active_price
+  ON public.live_singles (stream_id, is_active, ungraded_market_price DESC);
 
 CREATE TABLE IF NOT EXISTS public.live_singles_bids (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
