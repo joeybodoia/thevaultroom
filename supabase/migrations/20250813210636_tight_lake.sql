@@ -134,12 +134,18 @@ CREATE TABLE IF NOT EXISTS public.chase_slots (
   starting_bid numeric(12,2) NOT NULL DEFAULT 1,
   min_increment numeric(12,2) NOT NULL DEFAULT 1,
   is_active boolean NOT NULL DEFAULT true,
-  locked boolean NOT NULL DEFAULT false,      -- set to true when Round 1 begins for that set
+  locked boolean NOT NULL DEFAULT false,
   winner_user_id uuid REFERENCES public.users(id),
   winning_bid_id uuid,
+  -- NEW denormalized display fields
+  card_name text,
+  card_number text,
+  rarity text,
+  image_url text,
+  ungraded_market_price numeric,
+  date_updated timestamptz,
   created_at timestamptz NOT NULL DEFAULT now()
-);
-
+  );
 CREATE INDEX IF NOT EXISTS idx_chase_slots_stream_set ON public.chase_slots (stream_id, set_name);
 CREATE INDEX IF NOT EXISTS idx_chase_slots_active ON public.chase_slots (is_active);
 
