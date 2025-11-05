@@ -102,6 +102,8 @@ CREATE TABLE IF NOT EXISTS public.live_singles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   stream_id uuid REFERENCES public.streams(id) ON DELETE CASCADE,
   card_name text NOT NULL,
+  card_number text,                                  -- NEW
+  card_condition text,                               -- NEW
   set_name text,
   image_url text,
   starting_bid numeric(12,2) NOT NULL DEFAULT 1,
