@@ -5,18 +5,12 @@ import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
 interface PokemonCardProps {
-  pokemon: PokemonCardType;            // from all_cards
+  pokemon: PokemonCardType;                 // from all_cards
   isPopular?: boolean;
-  currentRoundId?: string | null;      // rounds.id of the active set
+  roundStreamId?: string | null;            // pass from parent.currentRound?.stream_id
+  roundSetName?: string | null;             // pass from parent.currentRound?.set_name
   onBidSuccess?: () => void;
 }
-
-type RoundRow = {
-  id: string;
-  stream_id: string;
-  set_name: string;
-  locked: boolean;
-};
 
 type ChaseSlot = {
   id: string;
@@ -34,9 +28,6 @@ type ChaseSlot = {
 const DEBUG = false;
 
 /** ---------- small helpers ---------- */
-const isUUID = (v?: string | null) =>
-  !!v && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
-
 const isNetworkFailedToFetch = (e: any) =>
   e?.name === 'TypeError' && /Failed to fetch/i.test(String(e?.message));
 
@@ -56,7 +47,8 @@ async function withNetRetry<T>(fn: () => Promise<T>): Promise<T> {
 const PokemonCard: React.FC<PokemonCardProps> = ({
   pokemon,
   isPopular = false,
-  currentRoundId,
+  roundStreamId,
+  roundSetName,
   onBidSuccess
 }) => {
   const [bidAmount, setBidAmount] = React.useState('');
@@ -67,7 +59,6 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
 
   const [loadingTopBid, setLoadingTopBid] = React.useState(false);
   const [loadingSlot, setLoadingSlot] = React.useState(false);
-  const [roundRow, setRoundRow] = React.useState<RoundRow | null>(null);
   const [slot, setSlot] = React.useState<ChaseSlot | null>(null);
 
   const [user, setUser] = React.useState<User | null>(null);
@@ -120,46 +111,13 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
     }
   };
 
-  // Resolve the current round row (guard on UUID, cancel on unmount)
+  // Find the chase slot for THIS card using the round context passed in from parent
   React.useEffect(() => {
     let cancelled = false;
 
     (async () => {
-      // guard: only query when we actually have a plausible UUID
-      if (!isUUID(currentRoundId)) {
-        setRoundRow(null);
-        setSlot(null);
-        setCurrentBid(0);
-        return;
-      }
-
-      try {
-        const res = await withNetRetry(() =>
-          supabase
-            .from('rounds')
-            .select('id, stream_id, set_name, locked')
-            .eq('id', currentRoundId as string)
-            .single()
-        );
-        if (cancelled) return;
-        setRoundRow(res.data as RoundRow);
-      } catch (err) {
-        if (DEBUG) console.debug('round fetch error', err);
-        if (!cancelled) setRoundRow(null);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [currentRoundId]);
-
-  // Find the chase slot for THIS card and THIS round’s stream/set
-  React.useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      if (!roundRow) {
+      // if round info isn't ready, reset and bail
+      if (!roundStreamId || !roundSetName) {
         setSlot(null);
         setCurrentBid(0);
         return;
@@ -171,8 +129,8 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
           supabase
             .from('chase_slots')
             .select('id, stream_id, set_name, all_card_id, starting_bid, min_increment, is_active, locked, winner_user_id, winning_bid_id')
-            .eq('stream_id', roundRow.stream_id)
-            .eq('set_name', roundRow.set_name)
+            .eq('stream_id', roundStreamId)
+            .eq('set_name', roundSetName)
             .eq('all_card_id', pokemon.id)
             .maybeSingle()
         );
@@ -186,8 +144,8 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
           setCurrentBid(0);
           if (DEBUG) {
             console.debug('No slot for', {
-              stream_id: roundRow.stream_id,
-              set_name: roundRow.set_name,
+              stream_id: roundStreamId,
+              set_name: roundSetName,
               all_card_id: pokemon.id,
               card_name: pokemon.card_name
             });
@@ -197,7 +155,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
 
         setSlot(slotRow);
 
-        // fetch current top bid (retry once on network error)
+        // fetch current top bid
         setLoadingTopBid(true);
         try {
           const topRes = await withNetRetry(() =>
@@ -237,7 +195,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [roundRow, pokemon.id]);
+  }, [roundStreamId, roundSetName, pokemon.id]);
 
   const formatMoney = (n?: number | null) =>
     n == null ? 'N/A' : `$${Number(n).toFixed(2)}`;
@@ -303,7 +261,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
   const formatRarity = (rarity: string | null) =>
     rarity ? rarity.split(',')[0].trim() : 'Unknown Rarity';
 
-  const showNotListedBanner = Boolean(roundRow) && slot === null;
+  const showNotListedBanner = Boolean(roundStreamId && roundSetName) && slot === null;
 
   return (
     <div className={`relative bg-white rounded-xl p-3 sm:p-4 lg:p-6 border border-gray-200 hover:border-gray-300 transition-all hover:transform hover:scale-105 shadow-lg ${isPopular ? 'ring-2 ring-red-600' : ''}`}>
@@ -430,9 +388,9 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
 
       {DEBUG && (
         <pre className="mt-3 text-[10px] text-gray-500 whitespace-pre-wrap">
-          {JSON.stringify({ roundRow, slotId: slot?.id, lookups: {
-            stream_id: roundRow?.stream_id,
-            set_name: roundRow?.set_name,
+          {JSON.stringify({ roundStreamId, roundSetName, slotId: slot?.id, lookups: {
+            stream_id: roundStreamId,
+            set_name: roundSetName,
             all_card_id: pokemon.id
           } }, null, 2)}
         </pre>
