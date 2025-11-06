@@ -10,27 +10,31 @@ const HowItWorks: React.FC = () => {
             How It Works
           </h2>
           <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto font-pokemon px-2">
-            Pay a fixed entry fee to join our exclusive live Pokemon card opening events. All participants receive equal site credits to use as they see fit!
+            Pay a fixed entry fee to join our exclusive live Pokémon card opening events. Every participant receives the same amount of site credits (no monetary value) to use during the stream.
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center mb-8 sm:mb-12 lg:mb-16">
           <div className="order-2 lg:order-1">
             <div className="space-y-6 lg:space-y-8">
+              {/* 1 */}
               <div className="flex items-start space-x-4">
                 <div className="bg-red-600 text-white rounded-full p-3 flex-shrink-0">
                   <Users className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg sm:text-xl font-bold text-black mb-2 font-pokemon">1. Pay Entry Fee & Receive Credits</h3>
+                  <h3 className="text-lg sm:text-xl font-bold text-black mb-2 font-pokemon">
+                    1. Pay Entry Fee & Receive Credits
+                  </h3>
                   <p className="text-sm sm:text-base text-gray-600 font-pokemon">
-                    Pay a fixed entry fee to join the stream event. All participants receive the same amount of site credits (no monetary value) to use however they choose.
+                    Pay a fixed entry fee to join the stream event. All participants receive the same amount of site credits (no monetary value).
                     <br />
-                    <strong>Use credits for:</strong> Direct card bidding, lottery entries, giveaways, and other interactive stream activities.
+                    <strong>Use credits for:</strong> ‘Chase Slot’ bidding, lottery entries, and Live Singles bidding (individual cards from my collection).
                   </p>
                 </div>
               </div>
 
+              {/* 2 */}
               <div className="flex items-start space-x-4">
                 <div className="bg-black text-white rounded-full p-3 flex-shrink-0">
                   <Play className="h-6 w-6" />
@@ -47,18 +51,26 @@ const HowItWorks: React.FC = () => {
                 </div>
               </div>
 
+              {/* 3 */}
               <div className="flex items-start space-x-4">
                 <div className="bg-yellow-400 text-black rounded-full p-3 flex-shrink-0">
                   <Trophy className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg sm:text-xl font-bold text-black mb-2 font-pokemon">3. Win Your Prizes</h3>
+                  <h3 className="text-lg sm:text-xl font-bold text-black mb-2 font-pokemon">
+                    3. Win Your Prizes
+                  </h3>
                   <p className="text-sm sm:text-base text-gray-600 font-pokemon">
-                    Highest credit bidders win all copies of their card if pulled. Lottery winners each win all cards from the packs opened that round, minus any direct bid wins. Lottery winner #1 receives all cards from first 5 packs and lottery winner #2 receives all cards from last 5 packs.
+                    <strong>Chase Slots:</strong> Highest credit bidder for a slot wins all copies of that card if it’s pulled. Chase Slot wins are prioritized over lottery wins when they overlap in the same pack.
+                    <br />
+                    <strong>Lottery:</strong> Use credits to enter a lottery for packs 1–10 by selecting a rarity. If that rarity hits in a pack, you’re entered into the prize pool for that specific pack. One winner per pack (10 packs → up to 10 winners), each keeps the cards from their winning pack minus any Chase Slot wins from the same pack.
+                    <br />
+                    <strong>Live Singles:</strong> Highest credit bidder wins the specific individual card listed from my collection.
                   </p>
                 </div>
               </div>
 
+              {/* 4 */}
               <div className="flex items-start space-x-4">
                 <div className="bg-red-600 text-white rounded-full p-3 flex-shrink-0">
                   <Gift className="h-6 w-6" />
@@ -66,13 +78,14 @@ const HowItWorks: React.FC = () => {
                 <div>
                   <h3 className="text-lg sm:text-xl font-bold text-black mb-2 font-pokemon">4. Receive Your Cards</h3>
                   <p className="text-sm sm:text-base text-gray-600 font-pokemon">
-                    We ship all winning cards directly to you. Direct bid winners get specific cards, lottery winners get all remaining cards!
+                    All winning cards are carefully shipped directly to you.
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
+          {/* Right-side visual */}
           <div className="order-1 lg:order-2">
             <div className="relative bg-gray-100 rounded-2xl overflow-hidden shadow-lg">
               <div className="aspect-video bg-gradient-to-br from-red-600 to-black flex items-center justify-center p-4">
@@ -93,9 +106,12 @@ const HowItWorks: React.FC = () => {
           </div>
         </div>
 
+        {/* Why bid */}
         <div className="bg-gray-50 rounded-2xl p-4 sm:p-6 lg:p-8 border border-gray-200">
           <div className="text-center mb-6 lg:mb-8">
-            <h3 className="text-xl sm:text-2xl font-bold text-black mb-4 font-pokemon">Why Bid with The Vault Room?</h3>
+            <h3 className="text-xl sm:text-2xl font-bold text-black mb-4 font-pokemon">
+              Why Bid with The Vault Room?
+            </h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
             <div className="text-center">
@@ -103,21 +119,27 @@ const HowItWorks: React.FC = () => {
                 <Play className="h-8 w-8" />
               </div>
               <h4 className="text-base sm:text-lg font-bold text-black mb-2 font-pokemon">Live Transparency</h4>
-              <p className="text-sm sm:text-base text-gray-600 font-pokemon">Watch every pack opening live with complete transparency - no hidden tricks!</p>
+              <p className="text-sm sm:text-base text-gray-600 font-pokemon">
+                Watch every pack opening live with complete transparency—no hidden tricks.
+              </p>
             </div>
             <div className="text-center">
               <div className="bg-yellow-400 text-black rounded-full p-3 sm:p-4 w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 flex items-center justify-center">
                 <Trophy className="h-8 w-8" />
               </div>
               <h4 className="text-base sm:text-lg font-bold text-black mb-2 font-pokemon">Strategic Bidding</h4>
-              <p className="text-sm sm:text-base text-gray-600 font-pokemon">Use your credits strategically on the Pokemon you want most - highest credit bidder takes all copies!</p>
+              <p className="text-sm sm:text-base text-gray-600 font-pokemon">
+                Allocate your credits across Chase Slots, Lottery, and Live Singles to match your strategy.
+              </p>
             </div>
             <div className="text-center">
               <div className="bg-gray-600 text-white rounded-full p-3 sm:p-4 w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 flex items-center justify-center">
                 <Users className="h-8 w-8" />
               </div>
               <h4 className="text-base sm:text-lg font-bold text-black mb-2 font-pokemon">Competitive Fun</h4>
-              <p className="text-sm sm:text-base text-gray-600 font-pokemon">Compete with other participants using your credits for the Pokemon cards you want most!</p>
+              <p className="text-sm sm:text-base text-gray-600 font-pokemon">
+                Compete with other participants using equal credits—the excitement stays fair and fun.
+              </p>
             </div>
           </div>
         </div>
