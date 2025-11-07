@@ -188,6 +188,7 @@ const AdminPortal: React.FC = () => {
       }
     };
     init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /** Search results for pulled-cards tool */
@@ -197,9 +198,10 @@ const AdminPortal: React.FC = () => {
       return;
     }
 
-    let filtered = allCards.filter((card) =>
-      (card.card_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (card.set_name || '').toLowerCase().includes(searchTerm.toLowerCase())
+    let filtered = allCards.filter(
+      (card) =>
+        (card.card_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (card.set_name || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     if (selectedSetFilter) {
@@ -283,7 +285,7 @@ const AdminPortal: React.FC = () => {
         .eq('set_name', round.set_name)
         .order('starting_bid', { ascending: false });
       if (error) throw error;
-      setChaseSlots((prev) => ({ ...prev, [round.id]: data || [] }));
+      setChaseSlots((prev) => ({ ...prev, [round.id]: (data || []) as ChaseSlot[] }));
     } catch (err) {
       console.error('Failed to fetch chase slots:', err);
     }
@@ -293,13 +295,17 @@ const AdminPortal: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('lottery_entries')
-        .select(`
+        .select(
+          `
           *,
-          users ( username )
-        `)
+          users (
+            username
+          )
+        `
+        )
         .eq('round_id', roundId);
       if (error) throw error;
-      setLotteryEntries((prev) => ({ ...prev, [roundId]: data || [] }));
+      setLotteryEntries((prev) => ({ ...prev, [roundId]: (data || []) as LotteryEntry[] }));
     } catch (err) {
       console.error('Failed to fetch lottery entries:', err);
     }
@@ -321,10 +327,10 @@ const AdminPortal: React.FC = () => {
         [streamId]: (data || []) as LiveSingle[],
       }));
 
-      // leaders
       const { data: leaders, error: leadersErr } = await supabase
         .from('live_singles_leaders')
         .select('card_id, top_bid');
+
       if (!leadersErr && leaders) {
         const map: Record<string, number> = {};
         (leaders as LiveSingleLeader[]).forEach((row) => {
@@ -559,7 +565,11 @@ const AdminPortal: React.FC = () => {
   const renderChaseSlots = (round: Round) => {
     const slots = chaseSlots[round.id] || [];
     if (!slots.length) {
-      return <p className="text-gray-500 text-sm font-pokemon">No Chase Slots configured for this round&apos;s set/stream.</p>;
+      return (
+        <p className="text-gray-500 text-sm font-pokemon">
+          No Chase Slots configured for this round&apos;s set/stream.
+        </p>
+      );
     }
 
     // Map all_cards by id for display
@@ -571,7 +581,9 @@ const AdminPortal: React.FC = () => {
     return (
       <div className="space-y-3">
         <p className="text-gray-600 text-xs font-pokemon">
-          Showing Chase Slots for stream <span className="font-semibold">{round.stream_id}</span> and set <span className="font-semibold">{round.set_name}</span>.
+          Showing Chase Slots for stream{' '}
+          <span className="font-semibold">{round.stream_id}</span> and set{' '}
+          <span className="font-semibold">{round.set_name}</span>.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {slots.map((slot) => {
@@ -595,11 +607,20 @@ const AdminPortal: React.FC = () => {
                   {card?.set_name} {card?.card_number ? `• #${card.card_number}` : ''}
                 </p>
                 <p className="text-gray-600 text-xs font-pokemon">
-                  Market: {card?.ungraded_market_price != null ? `$${card.ungraded_market_price.toFixed(2)}` : '—'}
+                  Market:{' '}
+                  {card?.ungraded_market_price != null
+                    ? `$${card.ungraded_market_price.toFixed(2)}`
+                    : '—'}
                 </p>
                 <p className="text-gray-700 text-xs font-pokemon">
-                  Starting Bid: {slot.starting_bid != null ? `$${slot.starting_bid.toFixed(2)}` : '—'} • Min Inc:{' '}
-                  {slot.min_increment != null ? `$${slot.min_increment.toFixed(2)}` : '—'}
+                  Starting Bid:{' '}
+                  {slot.starting_bid != null
+                    ? `$${slot.starting_bid.toFixed(2)}`
+                    : '—'}{' '}
+                  • Min Inc:{' '}
+                  {slot.min_increment != null
+                    ? `$${slot.min_increment.toFixed(2)}`
+                    : '—'}
                 </p>
                 <p className="text-gray-500 text-[10px] font-pokemon">
                   Active: {slot.is_active ? 'Yes' : 'No'}
@@ -615,7 +636,11 @@ const AdminPortal: React.FC = () => {
   const renderLotteryEntries = (round: Round) => {
     const entries = lotteryEntries[round.id] || [];
     if (!entries.length) {
-      return <p className="text-gray-500 text-sm font-pokemon">No lottery entries yet for this round.</p>;
+      return (
+        <p className="text-gray-500 text-sm font-pokemon">
+          No lottery entries yet for this round.
+        </p>
+      );
     }
 
     // Build counts per pack/rarity
@@ -631,7 +656,8 @@ const AdminPortal: React.FC = () => {
     return (
       <div className="space-y-3">
         <p className="text-gray-600 text-xs font-pokemon">
-          Total Entries: <span className="font-semibold">{entries.length}</span>
+          Total Entries:{' '}
+          <span className="font-semibold">{entries.length}</span>
         </p>
         <div className="space-y-2">
           {PACKS.map((pack) => {
@@ -647,10 +673,13 @@ const AdminPortal: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Ticket className="h-3 w-3 text-blue-500" />
-                    <span className="font-pokemon text-xs font-semibold">Pack {pack}</span>
+                    <span className="font-pokemon text-xs font-semibold">
+                      Pack {pack}
+                    </span>
                   </div>
                   <span className="text-[10px] text-gray-600 font-pokemon">
-                    {totalForPack} entr{totalForPack === 1 ? 'y' : 'ies'}
+                    {totalForPack} entr
+                    {totalForPack === 1 ? 'y' : 'ies'}
                   </span>
                 </div>
                 <div className="mt-1 flex flex-wrap gap-1">
@@ -678,7 +707,11 @@ const AdminPortal: React.FC = () => {
   const renderPulledCardsSummary = (round: Round) => {
     const cards = pulledCards[round.id] || [];
     if (!cards.length) {
-      return <p className="text-gray-500 text-sm font-pokemon">No cards pulled yet for this round.</p>;
+      return (
+        <p className="text-gray-500 text-sm font-pokemon">
+          No cards pulled yet for this round.
+        </p>
+      );
     }
 
     return (
@@ -706,13 +739,16 @@ const AdminPortal: React.FC = () => {
                 {card.card_name}
               </h5>
               <p className="text-gray-600 text-xs font-pokemon">
-                {card.set_name} {card.card_number ? `• #${card.card_number}` : ''}
+                {card.set_name}{' '}
+                {card.card_number ? `• #${card.card_number}` : ''}
               </p>
               <p className="text-gray-500 text-[10px] font-pokemon">
                 {card.rarity}
               </p>
               <p className="text-blue-700 font-semibold text-xs font-pokemon">
-                {card.ungraded_market_price != null ? `$${card.ungraded_market_price}` : '—'}
+                {card.ungraded_market_price != null
+                  ? `$${card.ungraded_market_price}`
+                  : '—'}
               </p>
               <p className="text-gray-400 text-[9px] font-pokemon">
                 Logged {new Date(card.date_updated).toLocaleDateString()}
@@ -745,7 +781,8 @@ const AdminPortal: React.FC = () => {
     return (
       <div className="space-y-2">
         <p className="text-gray-600 text-xs font-pokemon">
-          Showing Live Singles (active) for this stream. Bidding managed by <code>place_live_single_bid_immediate_refund</code>.
+          Showing Live Singles (active) for this stream. Bidding is managed by
+          the <code>place_live_single_bid_immediate_refund</code> function.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {singles.map((card) => {
@@ -766,10 +803,14 @@ const AdminPortal: React.FC = () => {
                   )}
                 </div>
                 <p className="text-gray-600 text-xs font-pokemon">
-                  {card.set_name || 'Unknown Set'} {card.card_number ? `• #${card.card_number}` : ''}
+                  {card.set_name || 'Unknown Set'}{' '}
+                  {card.card_number ? `• #${card.card_number}` : ''}
                 </p>
                 <p className="text-gray-700 text-xs font-pokemon">
-                  Market: {card.ungraded_market_price != null ? `$${card.ungraded_market_price.toFixed(2)}` : '—'}{' '}
+                  Market:{' '}
+                  {card.ungraded_market_price != null
+                    ? `$${card.ungraded_market_price.toFixed(2)}`
+                    : '—'}{' '}
                   {card.psa_10_price != null && (
                     <span className="text-gray-500">
                       • PSA 10: ${card.psa_10_price.toFixed(2)}
@@ -777,10 +818,12 @@ const AdminPortal: React.FC = () => {
                   )}
                 </p>
                 <p className="text-gray-700 text-xs font-pokemon">
-                  Start: ${card.starting_bid.toFixed(2)} • Min Inc: ${card.min_increment.toFixed(2)}
+                  Start: ${card.starting_bid.toFixed(2)} • Min Inc: $
+                  {card.min_increment.toFixed(2)}
                 </p>
                 <p className="text-red-600 text-xs font-pokemon">
-                  Top Bid: {topBid > 0 ? `$${topBid.toFixed(2)}` : '—'}
+                  Top Bid:{' '}
+                  {topBid > 0 ? `$${topBid.toFixed(2)}` : '—'}
                 </p>
               </div>
             );
@@ -794,11 +837,16 @@ const AdminPortal: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div
+        id="admin"
+        className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8"
+      >
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
             <Loader className="h-8 w-8 animate-spin text-yellow-600 mx-auto mb-4" />
-            <span className="text-xl font-pokemon text-black">Loading Admin Portal...</span>
+            <span className="text-xl font-pokemon text-black">
+              Loading Admin Portal...
+            </span>
           </div>
         </div>
       </div>
@@ -808,16 +856,22 @@ const AdminPortal: React.FC = () => {
   /** ========= MAIN RENDER ========= */
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div
+      id="admin"
+      className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8"
+    >
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-3 mb-2">
             <Shield className="h-8 w-8 text-yellow-600" />
-            <h1 className="text-3xl font-bold text-black font-pokemon">Admin Portal</h1>
+            <h1 className="text-3xl font-bold text-black font-pokemon">
+              Admin Portal
+            </h1>
           </div>
           <p className="text-gray-600 font-pokemon">
-            Manage streams, rounds, Chase Slots, lottery entries, Live Singles, and pulled cards for your events.
+            Manage streams, rounds, Chase Slots, lottery entries, Live Singles,
+            and pulled cards for your events.
           </p>
         </div>
 
@@ -828,19 +882,25 @@ const AdminPortal: React.FC = () => {
               <AlertCircle className="h-5 w-5" />
               <span className="font-semibold font-pokemon">Error</span>
             </div>
-            <p className="text-red-600 text-sm mt-1 font-pokemon">{error}</p>
+            <p className="text-red-600 text-sm mt-1 font-pokemon">
+              {error}
+            </p>
           </div>
         )}
 
         {/* STREAM MANAGEMENT */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-8">
           <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-black font-pokemon">Stream Management</h2>
+            <h2 className="text-2xl font-bold text-black font-pokemon">
+              Stream Management
+            </h2>
           </div>
           <div className="p-6 space-y-4">
             {streams.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-gray-500 font-pokemon mb-4">No streams created yet.</p>
+                <p className="text-gray-500 font-pokemon mb-4">
+                  No streams created yet.
+                </p>
                 <button
                   onClick={() => setShowCreateStreamForm(true)}
                   className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all font-pokemon inline-flex items-center space-x-2"
@@ -858,7 +918,9 @@ const AdminPortal: React.FC = () => {
                     </label>
                     <select
                       value={selectedStreamId}
-                      onChange={(e) => setSelectedStreamId(e.target.value)}
+                      onChange={(e) =>
+                        setSelectedStreamId(e.target.value)
+                      }
                       className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none font-pokemon"
                     >
                       <option value="">Select a stream</option>
@@ -866,7 +928,9 @@ const AdminPortal: React.FC = () => {
                         <option key={s.id} value={s.id}>
                           {s.title}
                           {s.scheduled_date
-                            ? ` - ${new Date(s.scheduled_date).toLocaleString()}`
+                            ? ` - ${new Date(
+                                s.scheduled_date
+                              ).toLocaleString()}`
                             : ''}
                         </option>
                       ))}
@@ -886,11 +950,15 @@ const AdminPortal: React.FC = () => {
                     <h3 className="text-lg font-bold text-black font-pokemon mb-4">
                       Create New Stream
                     </h3>
-                    <form onSubmit={handleCreateStream} className="space-y-4">
+                    <form
+                      onSubmit={handleCreateStream}
+                      className="space-y-4"
+                    >
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2 font-pokemon">
-                            Stream Title <span className="text-red-500">*</span>
+                            Stream Title{' '}
+                            <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -945,7 +1013,10 @@ const AdminPortal: React.FC = () => {
                           type="button"
                           onClick={() => {
                             setShowCreateStreamForm(false);
-                            setStreamFormData({ title: '', scheduled_date: '' });
+                            setStreamFormData({
+                              title: '',
+                              scheduled_date: '',
+                            });
                           }}
                           className="bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-gray-700 transition-all font-pokemon inline-flex items-center space-x-2"
                         >
@@ -965,7 +1036,9 @@ const AdminPortal: React.FC = () => {
         <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-8">
           <div className="p-6 border-b border-gray-200 flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-black font-pokemon">Round Management</h2>
+              <h2 className="text-2xl font-bold text-black font-pokemon">
+                Round Management
+              </h2>
               {!selectedStreamId && (
                 <p className="text-gray-500 text-sm mt-1 font-pokemon">
                   Select a stream above to create rounds.
@@ -992,17 +1065,26 @@ const AdminPortal: React.FC = () => {
                 <h3 className="text-lg font-bold text-black font-pokemon mb-4">
                   {editingRound ? 'Edit Round' : 'Create New Round'}
                 </h3>
-                <form onSubmit={editingRound ? handleEditRound : handleCreateRound} className="space-y-4">
+                <form
+                  onSubmit={
+                    editingRound ? handleEditRound : handleCreateRound
+                  }
+                  className="space-y-4"
+                >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2 font-pokemon">
-                        Set Name <span className="text-red-500">*</span>
+                        Set Name{' '}
+                        <span className="text-red-500">*</span>
                       </label>
                       <select
                         required
                         value={formData.set_name}
                         onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, set_name: e.target.value }))
+                          setFormData((prev) => ({
+                            ...prev,
+                            set_name: e.target.value,
+                          }))
                         }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-yellow-600 focus:outline-none font-pokemon"
                       >
@@ -1016,7 +1098,8 @@ const AdminPortal: React.FC = () => {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2 font-pokemon">
-                        Round Number <span className="text-red-500">*</span>
+                        Round Number{' '}
+                        <span className="text-red-500">*</span>
                       </label>
                       <select
                         required
@@ -1024,7 +1107,10 @@ const AdminPortal: React.FC = () => {
                         onChange={(e) =>
                           setFormData((prev) => ({
                             ...prev,
-                            round_number: parseInt(e.target.value, 10),
+                            round_number: parseInt(
+                              e.target.value,
+                              10
+                            ),
                           }))
                         }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-yellow-600 focus:outline-none font-pokemon"
@@ -1036,7 +1122,8 @@ const AdminPortal: React.FC = () => {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2 font-pokemon">
-                        Packs to Open <span className="text-red-500">*</span>
+                        Packs to Open{' '}
+                        <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="number"
@@ -1047,7 +1134,10 @@ const AdminPortal: React.FC = () => {
                         onChange={(e) =>
                           setFormData((prev) => ({
                             ...prev,
-                            packs_opened: parseInt(e.target.value, 10),
+                            packs_opened: parseInt(
+                              e.target.value,
+                              10
+                            ),
                           }))
                         }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-yellow-600 focus:outline-none font-pokemon"
@@ -1061,12 +1151,15 @@ const AdminPortal: React.FC = () => {
                           onChange={(e) =>
                             setFormData((prev) => ({
                               ...prev,
-                              locked: e.target.checked,
+                              locked:
+                                e.target.checked,
                             }))
                           }
                           className="rounded border-gray-300 text-yellow-600 focus:ring-yellow-600"
                         />
-                        <span className="text-sm text-gray-700">Lock round immediately</span>
+                        <span className="text-sm text-gray-700">
+                          Lock round immediately
+                        </span>
                       </label>
                     </div>
                   </div>
@@ -1079,12 +1172,20 @@ const AdminPortal: React.FC = () => {
                       {saving ? (
                         <>
                           <Loader className="h-4 w-4 animate-spin" />
-                          <span>{editingRound ? 'Updating...' : 'Creating...'}</span>
+                          <span>
+                            {editingRound
+                              ? 'Updating...'
+                              : 'Creating...'}
+                          </span>
                         </>
                       ) : (
                         <>
                           <Save className="h-4 w-4" />
-                          <span>{editingRound ? 'Update Round' : 'Create Round'}</span>
+                          <span>
+                            {editingRound
+                              ? 'Update Round'
+                              : 'Create Round'}
+                          </span>
                         </>
                       )}
                     </button>
@@ -1105,18 +1206,28 @@ const AdminPortal: React.FC = () => {
             <div className="space-y-4">
               {rounds.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-500 font-pokemon">No rounds created yet.</p>
+                  <p className="text-gray-500 font-pokemon">
+                    No rounds created yet.
+                  </p>
                 </div>
               ) : (
                 rounds
-                  .filter((r) => !selectedStreamId || r.stream_id === selectedStreamId)
+                  .filter(
+                    (r) =>
+                      !selectedStreamId ||
+                      r.stream_id === selectedStreamId
+                  )
                   .map((round) => (
-                    <div key={round.id} className="border border-gray-200 rounded-lg p-4">
+                    <div
+                      key={round.id}
+                      className="border border-gray-200 rounded-lg p-4"
+                    >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-3">
                             <h3 className="text-lg font-bold text-black font-pokemon">
-                              Round {round.round_number} - {round.set_name}
+                              Round {round.round_number} -{' '}
+                              {round.set_name}
                             </h3>
                             <div
                               className={`px-2 py-1 rounded-full text-xs font-semibold font-pokemon ${
@@ -1125,24 +1236,34 @@ const AdminPortal: React.FC = () => {
                                   : 'bg-green-100 text-green-800'
                               }`}
                             >
-                              {round.locked ? 'LOCKED' : 'UNLOCKED'}
+                              {round.locked
+                                ? 'LOCKED'
+                                : 'UNLOCKED'}
                             </div>
                           </div>
                           <p className="text-gray-600 text-xs font-pokemon mt-1">
-                            Stream: {round.stream_id || '—'} • {round.packs_opened} packs • Created{' '}
-                            {new Date(round.created_at).toLocaleDateString()}
+                            Stream:{' '}
+                            {round.stream_id || '—'} •{' '}
+                            {round.packs_opened} packs • Created{' '}
+                            {new Date(
+                              round.created_at
+                            ).toLocaleDateString()}
                           </p>
                         </div>
                         <div className="flex items-center space-x-2">
                           <button
-                            onClick={() => toggleExpandRound(round.id)}
+                            onClick={() =>
+                              toggleExpandRound(round.id)
+                            }
                             className="bg-blue-600 text-white px-3 py-1 rounded font-pokemon text-sm hover:bg-blue-700 transition-all inline-flex items-center space-x-1"
                           >
                             <Eye className="h-3 w-3" />
                             <span>View</span>
                           </button>
                           <button
-                            onClick={() => startTrackingCards(round.id)}
+                            onClick={() =>
+                              startTrackingCards(round.id)
+                            }
                             className="bg-green-600 text-white px-3 py-1 rounded font-pokemon text-sm hover:bg-green-700 transition-all inline-flex items-center space-x-1"
                           >
                             <Plus className="h-3 w-3" />
@@ -1156,7 +1277,9 @@ const AdminPortal: React.FC = () => {
                             <span>Edit</span>
                           </button>
                           <button
-                            onClick={() => toggleRoundLock(round)}
+                            onClick={() =>
+                              toggleRoundLock(round)
+                            }
                             className={`px-3 py-1 rounded font-pokemon text-sm transition-all inline-flex items-center space-x-1 ${
                               round.locked
                                 ? 'bg-green-600 text-white hover:bg-green-700'
@@ -1229,7 +1352,8 @@ const AdminPortal: React.FC = () => {
                         <div className="mt-4 pt-4 border-t border-gray-200">
                           <div className="flex items-center justify-between mb-3">
                             <h4 className="font-semibold text-black font-pokemon">
-                              Track Pulled Cards (Round {round.round_number})
+                              Track Pulled Cards (Round{' '}
+                              {round.round_number})
                             </h4>
                             <button
                               onClick={stopTrackingCards}
@@ -1246,7 +1370,9 @@ const AdminPortal: React.FC = () => {
                               type="text"
                               placeholder="Search cards by name or set..."
                               value={searchTerm}
-                              onChange={(e) => setSearchTerm(e.target.value)}
+                              onChange={(e) =>
+                                setSearchTerm(e.target.value)
+                              }
                               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-600 focus:outline-none font-pokemon"
                             />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1256,12 +1382,21 @@ const AdminPortal: React.FC = () => {
                                 </label>
                                 <select
                                   value={selectedSetFilter}
-                                  onChange={(e) => setSelectedSetFilter(e.target.value)}
+                                  onChange={(e) =>
+                                    setSelectedSetFilter(
+                                      e.target.value
+                                    )
+                                  }
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-600 focus:outline-none font-pokemon"
                                 >
-                                  <option value="">All Sets</option>
+                                  <option value="">
+                                    All Sets
+                                  </option>
                                   {uniqueSets.map((set) => (
-                                    <option key={set} value={set}>
+                                    <option
+                                      key={set}
+                                      value={set}
+                                    >
                                       {set}
                                     </option>
                                   ))}
@@ -1273,15 +1408,26 @@ const AdminPortal: React.FC = () => {
                                 </label>
                                 <select
                                   value={selectedRarityFilter}
-                                  onChange={(e) => setSelectedRarityFilter(e.target.value)}
+                                  onChange={(e) =>
+                                    setSelectedRarityFilter(
+                                      e.target.value
+                                    )
+                                  }
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-600 focus:outline-none font-pokemon"
                                 >
-                                  <option value="">All Rarities</option>
-                                  {uniqueRarities.map((rarity) => (
-                                    <option key={rarity} value={rarity}>
-                                      {rarity}
-                                    </option>
-                                  ))}
+                                  <option value="">
+                                    All Rarities
+                                  </option>
+                                  {uniqueRarities.map(
+                                    (rarity) => (
+                                      <option
+                                        key={rarity}
+                                        value={rarity}
+                                      >
+                                        {rarity}
+                                      </option>
+                                    )
+                                  )}
                                 </select>
                               </div>
                             </div>
@@ -1304,13 +1450,22 @@ const AdminPortal: React.FC = () => {
                                         {card.card_name}
                                       </h6>
                                       <p className="text-gray-600 text-xs font-pokemon">
-                                        {card.set_name} • {card.rarity} • $
-                                        {card.ungraded_market_price || '—'}
+                                        {card.set_name} •{' '}
+                                        {card.rarity} • $
+                                        {card.ungraded_market_price ||
+                                          '—'}
                                       </p>
                                     </div>
                                     <button
-                                      onClick={() => handleAddPulledCard(card, round.id)}
-                                      disabled={addingCard}
+                                      onClick={() =>
+                                        handleAddPulledCard(
+                                          card,
+                                          round.id
+                                        )
+                                      }
+                                      disabled={
+                                        addingCard
+                                      }
                                       className="bg-green-600 text-white px-3 py-1 rounded font-pokemon text-xs hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center space-x-1"
                                     >
                                       {addingCard ? (
@@ -1318,7 +1473,9 @@ const AdminPortal: React.FC = () => {
                                       ) : (
                                         <Plus className="h-3 w-3" />
                                       )}
-                                      <span>Add</span>
+                                      <span>
+                                        Add
+                                      </span>
                                     </button>
                                   </div>
                                 ))}
@@ -1329,33 +1486,60 @@ const AdminPortal: React.FC = () => {
                           {/* Already pulled for this round */}
                           <div>
                             <h5 className="font-semibold text-black font-pokemon mb-2">
-                              Pulled Cards ({pulledCards[round.id]?.length || 0})
+                              Pulled Cards (
+                              {pulledCards[round.id]
+                                ?.length || 0}
+                              )
                             </h5>
-                            {pulledCards[round.id] && pulledCards[round.id].length > 0 ? (
+                            {pulledCards[round.id] &&
+                            pulledCards[round.id]
+                              .length > 0 ? (
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {pulledCards[round.id].map((card) => (
-                                  <div
-                                    key={card.id}
-                                    className="bg-green-50 rounded-lg p-3 border border-green-200"
-                                  >
-                                    <h6 className="font-semibold text-black text-sm font-pokemon">
-                                      {card.card_name}
-                                    </h6>
-                                    <p className="text-gray-600 text-xs font-pokemon">
-                                      {card.set_name} • {card.rarity}
-                                    </p>
-                                    <p className="text-green-700 font-semibold text-xs font-pokemon">
-                                      ${card.ungraded_market_price || '—'}
-                                    </p>
-                                    <p className="text-gray-500 text-[10px] font-pokemon">
-                                      Added {new Date(card.date_updated).toLocaleDateString()}
-                                    </p>
-                                  </div>
-                                ))}
+                                {pulledCards[
+                                  round.id
+                                ].map(
+                                  (
+                                    card
+                                  ) => (
+                                    <div
+                                      key={
+                                        card.id
+                                      }
+                                      className="bg-green-50 rounded-lg p-3 border border-green-200"
+                                    >
+                                      <h6 className="font-semibold text-black text-sm font-pokemon">
+                                        {
+                                          card.card_name
+                                        }
+                                      </h6>
+                                      <p className="text-gray-600 text-xs font-pokemon">
+                                        {
+                                          card.set_name
+                                        }{' '}
+                                        •{' '}
+                                        {
+                                          card.rarity
+                                        }
+                                      </p>
+                                      <p className="text-green-700 font-semibold text-xs font-pokemon">
+                                        $
+                                        {card.ungraded_market_price ||
+                                          '—'}
+                                      </p>
+                                      <p className="text-gray-500 text-[10px] font-pokemon">
+                                        Added{' '}
+                                        {new Date(
+                                          card.date_updated
+                                        ).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  )
+                                )}
                               </div>
                             ) : (
                               <p className="text-gray-500 text-sm font-pokemon">
-                                No cards pulled yet for this round.
+                                No cards pulled yet
+                                for this round.
                               </p>
                             )}
                           </div>
@@ -1380,3 +1564,4 @@ const CreditCardIcon: React.FC = () => (
 );
 
 export default AdminPortal;
+
