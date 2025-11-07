@@ -128,7 +128,11 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [liveSinglesError, setLiveSinglesError] = useState<string | null>(null);
   const [leadersMap, setLeadersMap] = useState<Record<string, number>>({});
   const [singlesSearch, setSinglesSearch] = useState('');
-  const [singlesSort, setSinglesSort] = useState<'recent'|'price-hi'|'price-lo'>('recent');
+  const [singlesSort, setSinglesSort] = useState<
+    'psa10-desc' | 'psa10-asc' | 'ungraded-desc' | 'ungraded-asc'
+  >('psa10-desc');
+  const [singlesSetFilter, setSinglesSetFilter] = useState<string>('all');
+  const [singlesConditionFilter, setSinglesConditionFilter] = useState<string>('all');
   const [bidInputs, setBidInputs] = useState<Record<string, string>>({});
   const [placingBidFor, setPlacingBidFor] = useState<string | null>(null);
   const [bidError, setBidError] = useState<string | null>(null);
@@ -138,7 +142,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [chaseCounts, setChaseCounts] = useState<Record<SetName, number>>({
     prismatic: 0,
     crown_zenith: 0,
-    destined_rivals: 0
+    destined_rivals: 0,
   });
   const [chaseCardIdsForActiveTab, setChaseCardIdsForActiveTab] = useState<Set<string>>(new Set());
   /** -------------------------------------------------------------------- */
@@ -190,7 +194,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         .eq('id', userId)
         .single();
 
-    if (error) throw error;
+      if (error) throw error;
       setUserCredit(parseFloat(data.site_credit || '0'));
     } catch (error) {
       console.error('Error fetching user credit:', error);
@@ -230,20 +234,19 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     }
   }, [biddingMode, currentStreamId]);
 
-  /** Fetch chase_slots counts for all tabs + the list of all_card_id for the active tab */
+  /** Fetch chase_slots counts + ids for active tab */
   useEffect(() => {
     if (biddingMode !== 'direct') return;
 
     const run = async () => {
       try {
-        // --- counts for all three sets (for the badge) ---
         const countFor = async (setKey: SetName) => {
           let q = supabase
             .from('chase_slots')
             .select('id', { count: 'exact', head: true })
             .eq('is_active', true)
             .eq('set_name', SET_DB_NAME[setKey])
-            .gte('ungraded_market_price', 40); // match your chase slot selection rule
+            .gte('ungraded_market_price', 40);
 
           if (currentStreamId) q = q.eq('stream_id', currentStreamId);
 
@@ -259,7 +262,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         ]);
         setChaseCounts({ prismatic: c1, crown_zenith: c2, destined_rivals: c3 });
 
-        // --- ids for active tab (so the grid matches the badge) ---
         let idsQuery = supabase
           .from('chase_slots')
           .select('all_card_id')
@@ -271,10 +273,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
         const { data: idRows, error: idsErr } = await idsQuery;
         if (idsErr) throw idsErr;
-        const idSet = new Set<string>((idRows || []).map(r => String(r.all_card_id)));
+        const idSet = new Set<string>((idRows || []).map((r: any) => String(r.all_card_id)));
         setChaseCardIdsForActiveTab(idSet);
-      } catch (e) {
-        // If anything fails, keep graceful fallbacks: zero counts and empty set
+      } catch {
         setChaseCardIdsForActiveTab(new Set());
       }
     };
@@ -360,7 +361,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   };
 
   const filterAndSortPokemon = () => {
-    // Start with the set’s cards from all_cards
     let currentCards: DirectBidCard[] = [];
     if (activeTab === 'prismatic') {
       currentCards = allCards.filter(card => card.set_name === SET_DB_NAME.prismatic);
@@ -372,15 +372,12 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       currentCards = allCards.filter(card => card.set_name === SET_DB_NAME.destined_rivals);
     }
 
-    // Only cards that actually have a Chase Slot for this stream/set
     if (chaseCardIdsForActiveTab.size > 0) {
       currentCards = currentCards.filter(c => chaseCardIdsForActiveTab.has(String(c.id)));
     }
 
-    // Match your selection rule (≥ 40)
     currentCards = currentCards.filter(card => (card.ungraded_market_price || 0) >= 40);
 
-    // Search / rarity filter
     let filtered = currentCards;
 
     if (searchTerm) {
@@ -396,7 +393,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       });
     }
 
-    // Sort
     if (sortBy === 'price-high') {
       filtered.sort((a, b) => (b.ungraded_market_price || 0) - (a.ungraded_market_price || 0));
     } else if (sortBy === 'price-low') {
@@ -425,7 +421,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     setShowConfirmModal(true);
   };
 
-  /** insert with pack_number, then refresh counts (with friendlier duplicate message) */
+  /** insert with pack_number, then refresh counts */
   const handleCreditLotteryEntry = async () => {
     if (!user?.id || !currentRound?.id || !selectedLotteryEntry?.rarity || !selectedLotteryEntry?.packNumber) {
       setError('Missing required information for lottery entry');
@@ -439,7 +435,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     try {
       const newCreditBalance = userCredit - 5;
 
-      // Deduct credits
       const { error: creditError } = await supabase
         .from('users')
         .update({ site_credit: newCreditBalance })
@@ -447,7 +442,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
       if (creditError) throw new Error('Failed to deduct credits: ' + creditError.message);
 
-      // Insert entry WITH pack number
       const { error: lotteryInsertError } = await supabase
         .from('lottery_entries')
         .insert([{
@@ -460,7 +454,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         }]);
 
       if (lotteryInsertError) {
-        // rollback
         await supabase.from('users').update({ site_credit: userCredit }).eq('id', user.id);
         throw new Error('Failed to create lottery entry: ' + lotteryInsertError.message);
       }
@@ -469,16 +462,13 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       setShowConfirmModal(false);
       setSelectedRarity('');
 
-      // Refresh counts
       await fetchLotteryParticipants();
 
       setEntrySuccess('Successfully entered the lottery! 5 credits deducted.');
       setTimeout(() => setEntrySuccess(''), 3000);
     } catch (err: any) {
       console.error('Lottery entry error:', err);
-
       const msg = String(err?.message || '').toLowerCase();
-      // Handle uniqueness errors gracefully
       if (
         msg.includes('lottery_entries_user_id_round_id_pack_key') ||
         msg.includes('lottery_entries_user_round_pack_uniq') ||
@@ -494,7 +484,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     }
   };
 
-  // Get unique sets and rarities for filter options
+  // For Chase Slots rarity filter options
   const getCurrentPokemon = () => {
     if (activeTab === 'prismatic') {
       return allCards.filter(card => card.set_name === SET_DB_NAME.prismatic);
@@ -510,10 +500,11 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   };
 
   const currentPokemon = getCurrentPokemon();
-  const uniqueRarities = [...new Set(currentPokemon.map(card => {
-    const rarity = card.rarity?.split(',')[0].trim();
-    return rarity;
-  }).filter(Boolean))];
+  const uniqueRarities = [...new Set(
+    currentPokemon
+      .map(card => card.rarity?.split(',')[0].trim())
+      .filter(Boolean)
+  )];
 
   /** ----------------- LIVE SINGLES: DATA + ACTIONS ----------------- */
   const loadLiveSingles = async () => {
@@ -521,19 +512,22 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       setLiveSinglesLoading(true);
       setLiveSinglesError(null);
 
-      const query = supabase
+      let query = supabase
         .from('live_singles')
         .select('*')
         .eq('is_active', true);
 
-      if (currentStreamId) query.eq('stream_id', currentStreamId);
+      if (currentStreamId) {
+        query = query.eq('stream_id', currentStreamId);
+      }
 
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await query
+        .order('psa_10_price', { ascending: false })
+        .order('ungraded_market_price', { ascending: false });
 
       if (error) throw error;
       setLiveSingles(data as LiveSingle[]);
 
-      // Leaders map
       const { data: leaders, error: leadersErr } = await supabase
         .from('live_singles_leaders')
         .select('card_id, top_bid');
@@ -554,7 +548,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   };
 
   const refreshLeadersAndCredit = async () => {
-    // leaders
     const { data: leaders, error: leadersErr } = await supabase
       .from('live_singles_leaders')
       .select('card_id, top_bid');
@@ -566,7 +559,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       });
       setLeadersMap(m);
     }
-    // credit
+
     if (user?.id) await fetchUserCredit(user.id);
   };
 
@@ -594,12 +587,11 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       const { error } = await supabase.rpc('place_live_single_bid_immediate_refund', {
         p_user_id: user.id,
         p_card_id: card.id,
-        p_amount: amt
+        p_amount: amt,
       });
 
       if (error) {
         const msg = String(error.message || '').toLowerCase();
-        // common friendly messages
         if (msg.includes('minimum bid')) {
           setBidError(`Minimum bid is $${card.starting_bid}.`);
         } else if (msg.includes('least') && msg.includes('increment')) {
@@ -614,8 +606,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         return;
       }
 
-      // success
-      setBidSuccess('Bid placed! If you were outbid later, your credits will be refunded automatically.');
+      setBidSuccess('Bid placed! If you are outbid later, your credits will be refunded automatically.');
       setBidInputs((prev) => ({ ...prev, [card.id]: '' }));
       await refreshLeadersAndCredit();
       setTimeout(() => setBidSuccess(null), 2500);
@@ -669,7 +660,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                 {currentRound?.locked && <span className="text-sm">LOCKED</span>}
               </div>
 
-              {/* Auto-fit grid: evenly spaced regardless of 3 or 4 cards */}
               <div
                 className="
                   grid
@@ -707,7 +697,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                           </p>
                         </div>
 
-                        {/* Push button to bottom for equal heights */}
                         <div className="mt-auto">
                           <button
                             onClick={() => handleLotteryEntry(packNum, rarity)}
@@ -737,23 +726,69 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
   /** ----------------- LIVE SINGLES RENDER ----------------- */
   function renderLiveSingles() {
-    // client-side filter/sort
+    // Options for filters (based on loaded singles)
+    const setOptions = Array.from(
+      new Set(
+        liveSingles
+          .map((r) => r.set_name)
+          .filter((v): v is string => Boolean(v))
+      )
+    ).sort((a, b) => a.localeCompare(b));
+
+    const conditionOptions = Array.from(
+      new Set(
+        liveSingles
+          .map((r) => r.card_condition)
+          .filter((v): v is string => Boolean(v))
+      )
+    ).sort((a, b) => a.localeCompare(b));
+
     let rows = [...liveSingles];
+
+    // Text search
     if (singlesSearch) {
       const q = singlesSearch.toLowerCase();
-      rows = rows.filter(r =>
+      rows = rows.filter((r) =>
         (r.card_name || '').toLowerCase().includes(q) ||
         (r.set_name || '').toLowerCase().includes(q) ||
         (r.card_number || '').toLowerCase().includes(q) ||
         (r.card_condition || '').toLowerCase().includes(q)
       );
     }
-    if (singlesSort === 'price-hi') {
-      rows.sort((a, b) => (b.ungraded_market_price || 0) - (a.ungraded_market_price || 0));
-    } else if (singlesSort === 'price-lo') {
-      rows.sort((a, b) => (a.ungraded_market_price || 0) - (b.ungraded_market_price || 0));
-    } else {
-      rows.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    // Set filter
+    if (singlesSetFilter !== 'all') {
+      rows = rows.filter((r) => (r.set_name || '') === singlesSetFilter);
+    }
+
+    // Condition filter
+    if (singlesConditionFilter !== 'all') {
+      rows = rows.filter((r) => (r.card_condition || '') === singlesConditionFilter);
+    }
+
+    // Sorting
+    if (singlesSort === 'psa10-desc') {
+      rows.sort((a, b) => {
+        const aP = a.psa_10_price || 0;
+        const bP = b.psa_10_price || 0;
+        if (bP !== aP) return bP - aP;
+        return (b.ungraded_market_price || 0) - (a.ungraded_market_price || 0);
+      });
+    } else if (singlesSort === 'psa10-asc') {
+      rows.sort((a, b) => {
+        const aP = a.psa_10_price || 0;
+        const bP = b.psa_10_price || 0;
+        if (aP !== bP) return aP - bP;
+        return (a.ungraded_market_price || 0) - (b.ungraded_market_price || 0);
+      });
+    } else if (singlesSort === 'ungraded-desc') {
+      rows.sort(
+        (a, b) => (b.ungraded_market_price || 0) - (a.ungraded_market_price || 0)
+      );
+    } else if (singlesSort === 'ungraded-asc') {
+      rows.sort(
+        (a, b) => (a.ungraded_market_price || 0) - (b.ungraded_market_price || 0)
+      );
     }
 
     return (
@@ -762,12 +797,13 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
           Live Singles
         </h3>
         <p className="text-center text-gray-600 font-pokemon mb-6">
-          Bid on individual cards I currently own. Bidding stays open until the end of Round 3.
+          Use your credits to bid on individual cards from my collection. Bidding stays open until the end of Round 3.
         </p>
 
-        {/* Filters */}
+        {/* Filters + Sort */}
         <div className="bg-gray-50 rounded-xl p-6 mb-2 border border-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
@@ -778,17 +814,61 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:border-red-600 focus:outline-none font-pokemon"
               />
             </div>
-            <div />
+
+            {/* Set Filter */}
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <select
+                value={singlesSetFilter}
+                onChange={(e) => setSinglesSetFilter(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:border-red-600 focus:outline-none font-pokemon appearance-none bg-white"
+              >
+                <option value="all">All Sets</option>
+                {setOptions.map((set) => (
+                  <option key={set} value={set}>
+                    {set}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Condition Filter */}
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <select
+                value={singlesConditionFilter}
+                onChange={(e) => setSinglesConditionFilter(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:border-red-600 focus:outline-none font-pokemon appearance-none bg-white"
+              >
+                <option value="all">All Conditions</option>
+                {conditionOptions.map((cond) => (
+                  <option key={cond} value={cond}>
+                    {cond}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sort */}
             <div className="relative">
               <ArrowUpDown className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <select
                 value={singlesSort}
-                onChange={(e) => setSinglesSort(e.target.value as any)}
+                onChange={(e) =>
+                  setSinglesSort(
+                    e.target.value as
+                      | 'psa10-desc'
+                      | 'psa10-asc'
+                      | 'ungraded-desc'
+                      | 'ungraded-asc'
+                  )
+                }
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:border-red-600 focus:outline-none font-pokemon appearance-none bg-white"
               >
-                <option value="recent">Newest</option>
-                <option value="price-hi">Price: High to Low</option>
-                <option value="price-lo">Price: Low to High</option>
+                <option value="psa10-desc">PSA 10: High to Low</option>
+                <option value="psa10-asc">PSA 10: Low to High</option>
+                <option value="ungraded-desc">Ungraded: High to Low</option>
+                <option value="ungraded-asc">Ungraded: Low to High</option>
               </select>
             </div>
           </div>
@@ -824,27 +904,44 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               const isPlacing = placingBidFor === card.id;
 
               return (
-                <div key={card.id} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div
+                  key={card.id}
+                  className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                >
                   <div className="aspect-[4/3] w-full overflow-hidden rounded-lg mb-3 bg-gray-50 flex items-center justify-center">
                     {card.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={card.image_url} alt={card.card_name} className="object-contain w-full h-full" />
+                      <img
+                        src={card.image_url}
+                        alt={card.card_name}
+                        className="object-contain w-full h-full"
+                      />
                     ) : (
                       <div className="text-gray-400 font-pokemon">No image</div>
                     )}
                   </div>
 
                   <div className="space-y-1">
-                    <h4 className="font-semibold text-black font-pokemon">{card.card_name}</h4>
+                    <h4 className="font-semibold text-black font-pokemon">
+                      {card.card_name}
+                    </h4>
                     <div className="text-sm text-gray-600 font-pokemon">
-                      {(card.set_name || 'Unknown Set')} {card.card_number ? `• #${card.card_number}` : ''}
+                      {(card.set_name || 'Unknown Set')}{' '}
+                      {card.card_number ? `• #${card.card_number}` : ''}
                     </div>
                     {card.card_condition && (
-                      <div className="text-xs text-gray-500 font-pokemon">Condition: {card.card_condition}</div>
+                      <div className="text-xs text-gray-500 font-pokemon">
+                        Condition: {card.card_condition}
+                      </div>
                     )}
                     <div className="text-sm text-gray-700 font-pokemon mt-1">
-                      Market: {card.ungraded_market_price != null ? `$${card.ungraded_market_price.toFixed(2)}` : '—'}
-                      {card.psa_10_price != null ? ` • PSA 10: $${card.psa_10_price.toFixed(2)}` : ''}
+                      Market:{' '}
+                      {card.ungraded_market_price != null
+                        ? `$${card.ungraded_market_price.toFixed(2)}`
+                        : '—'}
+                      {card.psa_10_price != null
+                        ? ` • PSA 10: $${card.psa_10_price.toFixed(2)}`
+                        : ''}
                     </div>
 
                     <div className="mt-2 rounded-lg bg-gray-50 p-2 flex items-center justify-between">
@@ -859,9 +956,14 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         type="number"
                         min={0}
                         step="0.01"
-                        placeholder={`≥ ${Math.max(topBid + card.min_increment, card.starting_bid).toFixed(2)}`}
+                        placeholder={`≥ ${Math.max(
+                          topBid + card.min_increment,
+                          card.starting_bid
+                        ).toFixed(2)}`}
                         value={bidInputs[card.id] ?? ''}
-                        onChange={(e) => handleBidInputChange(card.id, e.target.value)}
+                        onChange={(e) =>
+                          handleBidInputChange(card.id, e.target.value)
+                        }
                         className="col-span-3 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-600 font-pokemon"
                       />
                       <button
@@ -908,7 +1010,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
           <div className="text-center">
             <div className="flex items-center justify-center space-x-2 mb-4">
               <Loader className="h-8 w-8 animate-spin text-red-600" />
-              <span className="text-xl font-pokemon text-black">Loading Pokemon Cards...</span>
+              <span className="text-xl font-pokemon text-black">
+                Loading Pokemon Cards...
+              </span>
             </div>
           </div>
         </div>
@@ -923,10 +1027,12 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
           <div className="text-center">
             <div className="flex items-center justify-center space-x-2 mb-4 text-red-600">
               <AlertCircle className="h-8 w-8" />
-              <span className="text-xl font-pokemon">Error loading Pokemon cards</span>
+              <span className="text-xl font-pokemon">
+                Error loading Pokemon cards
+              </span>
             </div>
             <p className="text-gray-600 font-pokemon">{error}</p>
-            <button 
+            <button
               onClick={fetchAllCards}
               className="mt-4 bg-red-600 text-white px-6 py-2 rounded-lg font-pokemon hover:bg-red-700 transition-all"
             >
@@ -945,20 +1051,36 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
           <div className="text-center">
             <div className="flex items-center justify-center space-x-2 mb-4 text-gray-600">
               <Sparkles className="h-8 w-8" />
-              <span className="text-xl font-pokemon">No Pokemon cards available</span>
+              <span className="text-xl font-pokemon">
+                No Pokemon cards available
+              </span>
             </div>
-            <p className="text-gray-600 font-pokemon">Check back soon for new Pokemon cards!</p>
+            <p className="text-gray-600 font-pokemon">
+              Check back soon for new Pokemon cards!
+            </p>
           </div>
         </div>
       </section>
     );
   }
 
-  // Tab badges: use chase slot counts (not total cards)
+  // Tab badges use chase slot counts
   const tabs = [
-    { id: 'prismatic' as SetName,      name: 'Prismatic Evolutions', count: chaseCounts.prismatic },
-    { id: 'crown_zenith' as SetName,   name: 'Crown Zenith',         count: chaseCounts.crown_zenith },
-    { id: 'destined_rivals' as SetName, name: 'Destined Rivals',     count: chaseCounts.destined_rivals },
+    {
+      id: 'prismatic' as SetName,
+      name: 'Prismatic Evolutions',
+      count: chaseCounts.prismatic,
+    },
+    {
+      id: 'crown_zenith' as SetName,
+      name: 'Crown Zenith',
+      count: chaseCounts.crown_zenith,
+    },
+    {
+      id: 'destined_rivals' as SetName,
+      name: 'Destined Rivals',
+      count: chaseCounts.destined_rivals,
+    },
   ];
 
   return (
@@ -970,27 +1092,55 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
           </h2>
           <div className="text-lg text-gray-600 max-w-4xl mx-auto mb-8 font-pokemon">
             <p className="mb-4">
-              Three exciting rounds: Round 1 (10 Prismatic Evolutions packs), Round 2 (10 Destined Rivals packs), Round 3 (10 Crown Zenith packs). Each round offers three entry options.
+              Three exciting rounds: Round 1 (10 Prismatic Evolutions packs),
+              Round 2 (10 Destined Rivals packs), Round 3 (10 Crown Zenith
+              packs). Each round offers three entry options.
             </p>
             <div className="bg-gray-50 rounded-xl p-6 mb-4">
-              <h4 className="font-bold text-black mb-3 font-pokemon">Option 1: Chase Slots</h4>
+              <h4 className="font-bold text-black mb-3 font-pokemon">
+                Option 1: Chase Slots
+              </h4>
               <ul className="text-left space-y-2 mb-4">
                 <li>• Use credits to bid on high-value cards from each set</li>
-                <li>• Highest bidder wins the slot; if the card is pulled in the round, they keep it</li>
-                <li>• Credits are immediately refunded when you are outbid</li>
-              </ul>
-              
-              <h4 className="font-bold text-black mb-3 font-pokemon">Option 2: Lottery + Rarity Selection</h4>
-              <ul className="text-left space-y-2 mb-4">
-    <li>• Use credits to enter a lottery for Packs 1–10 for a given round by selecting a rarity for a specific pack</li>
-    <li>• If that rarity hits in that pack, you’re entered into that pack’s prize pool</li>
-    <li>• One winner is drawn per pack — winner keeps all the cards from that specific pack (barring any cards won through Chase Slot bidding). 10 possible winners per round</li>
+                <li>
+                  • Highest bidder wins the slot; if the card is pulled in the
+                  round, they keep it
+                </li>
+                <li>
+                  • Credits are immediately refunded when you are outbid
+                </li>
               </ul>
 
-              <h4 className="font-bold text-black mb-3 font-pokemon">Option 3: Live Singles</h4>
+              <h4 className="font-bold text-black mb-3 font-pokemon">
+                Option 2: Lottery + Rarity Selection
+              </h4>
+              <ul className="text-left space-y-2 mb-4">
+                <li>
+                  • Use credits to enter a lottery for Packs 1–10 in a given
+                  round by selecting a rarity for a specific pack
+                </li>
+                <li>
+                  • If that rarity hits in that pack, you’re entered into that
+                  pack’s prize pool
+                </li>
+                <li>
+                  • One winner is drawn per pack — winner keeps all cards from
+                  that specific pack (minus any cards won via Chase Slots).
+                  That’s up to 10 winners per round.
+                </li>
+              </ul>
+
+              <h4 className="font-bold text-black mb-3 font-pokemon">
+                Option 3: Live Singles
+              </h4>
               <ul className="text-left space-y-2 mb-0">
-                <li>• Use credits to bid on individual cards in my collection</li>
-                <li>• Open until end of Round 3; highest bidder wins the card</li>
+                <li>
+                  • Use credits to bid on individual cards from my collection
+                </li>
+                <li>
+                  • Open until the end of Round 3; highest bidder for each card
+                  wins that card
+                </li>
               </ul>
             </div>
           </div>
@@ -1064,7 +1214,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               </div>
             </div>
 
-            {/* Search, Filter, Sort */}
+            {/* Search, Filter, Sort for Chase Slots */}
             <div className="bg-gray-50 rounded-xl p-6 mb-8 border border-gray-200">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="relative">
@@ -1086,8 +1236,10 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:border-red-600 focus:outline-none font-pokemon appearance-none bg-white"
                   >
                     <option value="">All Rarities</option>
-                    {uniqueRarities.map(rarity => (
-                      <option key={rarity} value={rarity}>{rarity}</option>
+                    {uniqueRarities.map((rarity) => (
+                      <option key={rarity} value={rarity}>
+                        {rarity}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -1116,13 +1268,15 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
             <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
               <div className="text-center">
                 <h4 className="font-semibold text-blue-800 font-pokemon mb-2">
-                  Current Round for {tabs.find(t => t.id === activeTab)?.name}
+                  Current Round for {tabs.find((t) => t.id === activeTab)?.name}
                 </h4>
 
                 {roundLoading ? (
                   <div className="flex items-center justify-center space-x-2">
                     <Loader className="h-4 w-4 animate-spin text-blue-600" />
-                    <span className="text-blue-600 font-pokemon">Loading round...</span>
+                    <span className="text-blue-600 font-pokemon">
+                      Loading round...
+                    </span>
                   </div>
                 ) : currentRound ? (
                   <div className="space-y-1">
@@ -1130,7 +1284,8 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       Round ID: {currentRound.id}
                     </p>
                     <p className="text-blue-600 text-sm font-pokemon">
-                      Round {currentRound.round_number} • {currentRound.packs_opened} packs •
+                      Round {currentRound.round_number} •{' '}
+                      {currentRound.packs_opened} packs •
                       {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
                     </p>
                   </div>
@@ -1140,7 +1295,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               </div>
             </div>
 
-            {/* Cards (Chase Slots gallery uses all_cards list here, filtered by chase_slots) */}
+            {/* Cards (Chase Slots) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredPokemon.map((poke, index) => (
                 <PokemonCard
@@ -1149,7 +1304,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                   isPopular={index === 0}
                   roundStreamId={currentRound?.stream_id ?? null}
                   roundSetName={currentRound?.set_name ?? null}
-                  onBidSuccess={() => console.log('Bid submitted for card:', poke.card_name)}
+                  onBidSuccess={() =>
+                    console.log('Bid submitted for card:', poke.card_name)
+                  }
                 />
               ))}
             </div>
@@ -1160,12 +1317,13 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                   <Sparkles className="h-8 w-8" />
                   <span className="text-xl font-pokemon">No Pokemon Found</span>
                 </div>
-                <p className="text-gray-600 font-pokemon">Try adjusting your search or filters</p>
+                <p className="text-gray-600 font-pokemon">
+                  Try adjusting your search or filters
+                </p>
               </div>
             )}
           </>
         ) : biddingMode === 'lottery' ? (
-          /* Lottery Tab Content */
           <div>
             {/* Lottery Set Tabs */}
             <div className="mb-8">
@@ -1188,16 +1346,21 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               </div>
             </div>
 
-            {lotteryActiveTab === 'prismatic' && renderSetPacks('prismatic', 'Prismatic Evolutions')}
-            {lotteryActiveTab === 'crown_zenith' && renderSetPacks('crown_zenith', 'Crown Zenith')}
-            {lotteryActiveTab === 'destined_rivals' && renderSetPacks('destined_rivals', 'Destined Rivals')}
+            {lotteryActiveTab === 'prismatic' &&
+              renderSetPacks('prismatic', 'Prismatic Evolutions')}
+            {lotteryActiveTab === 'crown_zenith' &&
+              renderSetPacks('crown_zenith', 'Crown Zenith')}
+            {lotteryActiveTab === 'destined_rivals' &&
+              renderSetPacks('destined_rivals', 'Destined Rivals')}
 
             {/* Error and Success Messages */}
             {lotteryError && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
                 <div className="flex items-center">
                   <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
-                  <span className="text-red-800 font-pokemon">{lotteryError}</span>
+                  <span className="text-red-800 font-pokemon">
+                    {lotteryError}
+                  </span>
                 </div>
               </div>
             )}
@@ -1206,7 +1369,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                 <div className="flex items-center">
                   <Sparkles className="h-5 w-5 text-green-600 mr-2" />
-                  <span className="text-green-800 font-pokemon">{lotterySuccess}</span>
+                  <span className="text-green-800 font-pokemon">
+                    {lotterySuccess}
+                  </span>
                 </div>
               </div>
             )}
@@ -1218,30 +1383,45 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
         {/* Confirmation Modal (Lottery) */}
         {showConfirmModal && selectedLotteryEntry && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
-            <div 
+          <div
+            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
+            style={{ zIndex: 9999 }}
+          >
+            <div
               id="lottery-confirm-modal"
               className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
             >
               <h3 className="text-xl font-bold text-black font-pokemon mb-4 text-center">
                 Confirm Lottery Entry
               </h3>
-              
+
               <div className="space-y-4">
                 <p className="text-gray-700 font-pokemon text-center">
-                  Apply 5 credits to enter <span className="font-bold">{selectedLotteryEntry.rarity}</span> for <span className="font-bold">Pack {selectedLotteryEntry.packNumber}</span>?
+                  Apply 5 credits to enter{' '}
+                  <span className="font-bold">
+                    {selectedLotteryEntry.rarity}
+                  </span>{' '}
+                  for{' '}
+                  <span className="font-bold">
+                    Pack {selectedLotteryEntry.packNumber}
+                  </span>
+                  ?
                 </p>
-                
+
                 <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                   <div className="flex justify-between">
                     <span className="text-gray-600 font-pokemon">Cost:</span>
-                    <span className="font-bold text-black font-pokemon">5 credits</span>
+                    <span className="font-bold text-black font-pokemon">
+                      5 credits
+                    </span>
                   </div>
                 </div>
 
                 {entryError && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <p className="text-red-600 text-sm font-pokemon">{entryError}</p>
+                    <p className="text-red-600 text-sm font-pokemon">
+                      {entryError}
+                    </p>
                   </div>
                 )}
 
@@ -1259,7 +1439,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                     disabled={isProcessingEntry || userCredit < 5}
                     className="flex-1 bg-yellow-400 text-black font-bold py-2 rounded-lg hover:bg-yellow-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon"
                   >
-                    {isProcessingEntry ? 'Processing...' : 'Yes, Enter Lottery'}
+                    {isProcessingEntry
+                      ? 'Processing...'
+                      : 'Yes, Enter Lottery'}
                   </button>
                   <button
                     onClick={() => {
@@ -1284,5 +1466,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 };
 
 export default PokemonSection;
+
 
 
