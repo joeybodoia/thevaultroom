@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Shield, Coins } from 'lucide-react';
-import WalletButton from './WalletButton';
 import AuthModal from './AuthModal';
 import ProfileModal from './ProfileModal';
 import { useAuth } from '../auth/AuthContext';
@@ -23,7 +22,7 @@ const Header: React.FC = () => {
   // Start "Loading..." only when a user is present
   const [loadingCredits, setLoadingCredits] = useState<boolean>(!!user);
 
-  // Single fetch for avatar, admin, and credits
+  /** Fetch avatar + admin flag + credits for a user */
   const fetchUserRow = useCallback(
     async (userId: string) => {
       setLoadingCredits(true);
@@ -51,7 +50,7 @@ const Header: React.FC = () => {
     []
   );
 
-  // Refetch whenever the authenticated user changes
+  /** Refetch when auth user changes */
   useEffect(() => {
     if (!user?.id) {
       setAvatarUrl(null);
@@ -63,7 +62,7 @@ const Header: React.FC = () => {
     fetchUserRow(user.id);
   }, [user?.id, fetchUserRow]);
 
-  // Auth listener (helps if your context updates slightly later or you want belt & suspenders)
+  /** Auth listener as backup */
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       const authedUser = session?.user;
@@ -73,20 +72,19 @@ const Header: React.FC = () => {
         setSiteCredits(0);
         setLoadingCredits(false);
       } else {
-        // Either rely on the [user?.id] effect, or fetch directly here:
         fetchUserRow(authedUser.id);
       }
     });
 
     return () => {
-      // @ts-expect-error - older supabase-js typing differs
+      // compatibility with different supabase-js versions
+      // @ts-expect-error
       sub?.subscription?.unsubscribe?.();
-      // v2 style:
       sub?.unsubscribe?.();
     };
   }, [fetchUserRow]);
 
-  // Realtime updates to credits for the current user
+  /** Realtime updates to current user's row */
   useEffect(() => {
     if (!user?.id) return;
 
@@ -96,17 +94,15 @@ const Header: React.FC = () => {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` },
         (payload) => {
-          const nextCredits = (payload.new as any)?.site_credit;
-          if (nextCredits !== undefined) {
-            setSiteCredits(Number(nextCredits));
+          const next = payload.new as any;
+          if (next?.site_credit !== undefined) {
+            setSiteCredits(Number(next.site_credit));
           }
-          const nextAvatar = (payload.new as any)?.avatar;
-          if (nextAvatar !== undefined) {
-            setAvatarUrl(nextAvatar ?? null);
+          if (next?.avatar !== undefined) {
+            setAvatarUrl(next.avatar ?? null);
           }
-          const nextAdmin = (payload.new as any)?.is_admin;
-          if (nextAdmin !== undefined) {
-            setIsAdmin(!!nextAdmin);
+          if (next?.is_admin !== undefined) {
+            setIsAdmin(!!next.is_admin);
           }
         }
       )
@@ -117,22 +113,43 @@ const Header: React.FC = () => {
     };
   }, [user?.id]);
 
+  /** UI handlers */
   const openAuthModal = (mode: 'signin' | 'signup') => {
     setAuthModal({ isOpen: true, mode });
     setMobileMenuOpen(false);
   };
   const closeAuthModal = () => setAuthModal({ isOpen: false, mode: 'signin' });
+
   const openProfileModal = () => setProfileModal(true);
   const closeProfileModal = () => setProfileModal(false);
+
   const handleAvatarUpdate = (newAvatarUrl: string | null) => setAvatarUrl(newAvatarUrl);
 
   const handleLogoClick = () => {
     if (isLoggedIn) openProfileModal();
   };
 
+  /** Smooth scroll helper for internal sections */
+  const scrollToSection = (id: string) => {
+    setMobileMenuOpen(false);
+    const el = document.getElementById(id);
+    if (!el) {
+      // fallback: normal hash navigation if section not yet in DOM
+      window.location.hash = id;
+      return;
+    }
+    const headerOffset = 72; // approx header height
+    const rect = el.getBoundingClientRect();
+    const offsetTop = rect.top + window.scrollY - headerOffset;
+
+    window.scrollTo({
+      top: offsetTop,
+      behavior: 'smooth',
+    });
+  };
+
   const creditsLabel = useMemo(() => {
     if (loadingCredits) return 'Loading...';
-    // guard against NaN just in case
     const amount = Number.isFinite(siteCredits) ? siteCredits : 0;
     return `$${amount.toFixed(2)} credits`;
   }, [loadingCredits, siteCredits]);
@@ -142,29 +159,43 @@ const Header: React.FC = () => {
       <header className="bg-black border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
+            {/* Logo */}
             <div
               className={`flex items-center space-x-2 ${
                 isLoggedIn ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''
               }`}
               onClick={handleLogoClick}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="https://i.imgur.com/5ke3mJw.png"
                 alt="Dread's Vault Logo"
                 className="h-8 sm:h-12 w-auto"
               />
-              <span className="text-lg sm:text-xl font-bold text-white font-pokemon">Dread&apos;s Vault</span>
+              <span className="text-lg sm:text-xl font-bold text-white font-pokemon">
+                Dread&apos;s Vault
+              </span>
             </div>
 
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center space-x-8">
-              <a href="#how-it-works" className="text-white/80 hover:text-white transition-colors font-pokemon">
+              <button
+                onClick={() => scrollToSection('how-it-works')}
+                className="text-white/80 hover:text-white transition-colors font-pokemon"
+              >
                 How It Works
-              </a>
-              <a href="#bidding" className="text-white/80 hover:text-white transition-colors font-pokemon">
+              </button>
+              <button
+                onClick={() => scrollToSection('bidding')}
+                className="text-white/80 hover:text-white transition-colors font-pokemon"
+              >
                 Bidding
-              </a>
-              <a href="#" className="text-white/80 hover:text-white transition-colors font-pokemon">
+              </button>
+              <a
+                href="#"
+                className="text-white/40 cursor-not-allowed font-pokemon"
+                onClick={(e) => e.preventDefault()}
+              >
                 Past Streams
               </a>
               {isLoggedIn && isAdmin && (
@@ -196,8 +227,6 @@ const Header: React.FC = () => {
                 </button>
               )}
 
-              <WalletButton />
-
               {isLoggedIn ? (
                 <button
                   onClick={openProfileModal}
@@ -205,7 +234,12 @@ const Header: React.FC = () => {
                   title="User Profile"
                 >
                   {avatarUrl ? (
-                    <img src={avatarUrl} alt="User avatar" className="w-full h-full object-cover rounded-full" />
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={avatarUrl}
+                      alt="User avatar"
+                      className="w-full h-full object-cover rounded-full"
+                    />
                   ) : (
                     <span className="text-white font-bold font-pokemon text-lg">
                       {user?.email?.charAt(0).toUpperCase() || 'U'}
@@ -230,29 +264,53 @@ const Header: React.FC = () => {
               )}
             </div>
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Right Side */}
             <div className="md:hidden flex items-center space-x-2">
-              {isLoggedIn ? (
+              {isLoggedIn && (
                 <button
                   onClick={openProfileModal}
                   className="w-8 h-8 bg-gradient-to-br from-red-600 to-yellow-400 rounded-full flex items-center justify-center hover:scale-110 transition-transform border-2 border-white/20"
                   title="User Profile"
                 >
                   {avatarUrl ? (
-                    <img src={avatarUrl} alt="User avatar" className="w-full h-full object-cover rounded-full" />
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={avatarUrl}
+                      alt="User avatar"
+                      className="w-full h-full object-cover rounded-full"
+                    />
                   ) : (
                     <span className="text-white font-bold font-pokemon text-sm">
                       {user?.email?.charAt(0).toUpperCase() || 'U'}
                     </span>
                   )}
                 </button>
-              ) : null}
-              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-white p-2">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              )}
+
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="text-white p-2"
+              >
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
                   {mobileMenuOpen ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
                   )}
                 </svg>
               </button>
@@ -263,55 +321,66 @@ const Header: React.FC = () => {
           {mobileMenuOpen && (
             <div className="md:hidden bg-gray-900 border-t border-gray-700">
               <div className="px-4 py-3 space-y-3">
-                <a href="#how-it-works" className="block text-white/80 hover:text-white transition-colors font-pokemon">
+                <button
+                  onClick={() => scrollToSection('how-it-works')}
+                  className="block w-full text-left text-white/80 hover:text-white transition-colors font-pokemon"
+                >
                   How It Works
-                </a>
-                <a href="#bidding" className="block text-white/80 hover:text-white transition-colors font-pokemon">
+                </button>
+                <button
+                  onClick={() => scrollToSection('bidding')}
+                  className="block w-full text-left text-white/80 hover:text-white transition-colors font-pokemon"
+                >
                   Bidding
-                </a>
-                <a href="#" className="block text-white/80 hover:text-white transition-colors font-pokemon">
+                </button>
+                <button
+                  onClick={(e) => e.preventDefault()}
+                  className="block w-full text-left text-white/40 cursor-not-allowed font-pokemon"
+                >
                   Past Streams
-                </a>
+                </button>
+
                 {isLoggedIn && isAdmin && (
                   <a
                     href="#admin"
+                    onClick={() => setMobileMenuOpen(false)}
                     className="block text-yellow-400 hover:text-yellow-300 transition-colors font-pokemon flex items-center space-x-1"
                   >
                     <Shield className="h-4 w-4" />
                     <span>Admin Portal</span>
                   </a>
                 )}
+
                 {isLoggedIn && (
                   <div className="flex items-center space-x-1 text-white/80 pt-2 border-t border-gray-700">
                     <Coins className="h-4 w-4" />
                     <span className="text-sm font-pokemon">{creditsLabel}</span>
                   </div>
                 )}
+
                 {!isLoggedIn && (
                   <div className="flex space-x-2 pt-2">
                     <button
-                      onClick={() => {
-                        openAuthModal('signup');
-                        setMobileMenuOpen(false);
-                      }}
+                      onClick={() => openAuthModal('signup')}
                       className="flex-1 bg-yellow-400 text-black px-4 py-2 rounded-lg font-semibold hover:bg-yellow-500 transition-all font-pokemon text-center"
                     >
                       Sign Up
                     </button>
                     <button
-                      onClick={() => {
-                        openAuthModal('signin');
-                        setMobileMenuOpen(false);
-                      }}
+                      onClick={() => openAuthModal('signin')}
                       className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-all font-pokemon text-center"
                     >
                       Sign In
                     </button>
                   </div>
                 )}
+
                 {isLoggedIn && (
                   <button
-                    onClick={signOut}
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      signOut();
+                    }}
                     className="w-full bg-gray-600 text-white px-3 py-2 rounded text-sm font-pokemon hover:bg-gray-700 transition-all"
                   >
                     Force Logout
@@ -323,7 +392,11 @@ const Header: React.FC = () => {
         </div>
       </header>
 
-      <AuthModal isOpen={authModal.isOpen} onClose={closeAuthModal} mode={authModal.mode} />
+      <AuthModal
+        isOpen={authModal.isOpen}
+        onClose={closeAuthModal}
+        mode={authModal.mode}
+      />
 
       <ProfileModal
         isOpen={profileModal && !!user}
@@ -337,3 +410,4 @@ const Header: React.FC = () => {
 };
 
 export default Header;
+
