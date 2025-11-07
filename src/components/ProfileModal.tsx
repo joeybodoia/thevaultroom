@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { X, Upload, User, Loader, CheckCircle, AlertCircle, LogOut, Trash2 } from 'lucide-react';
+import React, { useState /*, useRef */ } from 'react';
+import { X, /* Upload, User, */ Loader, /* CheckCircle, */ AlertCircle, LogOut, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -11,182 +11,149 @@ interface ProfileModalProps {
   onAvatarUpdate: (newAvatarUrl: string | null) => void;
 }
 
-const ProfileModal: React.FC<ProfileModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  user, 
+const ProfileModal: React.FC<ProfileModalProps> = ({
+  isOpen,
+  onClose,
+  user,
   currentAvatarUrl,
-  onAvatarUpdate 
+  onAvatarUpdate,
 }) => {
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  // Upload-related state (commented out while avatar upload is disabled)
+  // const [isUploading, setIsUploading] = useState(false);
+  // const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isRemovingAvatar, setIsRemovingAvatar] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // const [debugInfo, setDebugInfo] = useState<string | null>(null);
+  // const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  // const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = () => {
-    fileInputRef.current?.click();
-  };
+  /* ========= Avatar upload handlers (disabled for now) ========= */
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setError(null);
-      setUploadStatus('idle');
-    }
-  };
+  // const handleFileSelect = () => {
+  //   fileInputRef.current?.click();
+  // };
 
-  const handleFileUpload = async () => {
-    const file = selectedFile;
-    if (!file) return;
+  // const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = event.target.files?.[0];
+  //   if (file) {
+  //     setSelectedFile(file);
+  //     setError(null);
+  //     setUploadStatus('idle');
+  //   }
+  // };
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file');
-      setUploadStatus('error');
-      return;
-    }
+  // const handleFileUpload = async () => {
+  //   const file = selectedFile;
+  //   if (!file) return;
+  //
+  //   if (!file.type.startsWith('image/')) {
+  //     setError('Please select an image file');
+  //     setUploadStatus('error');
+  //     return;
+  //   }
+  //
+  //   if (file.size > 5 * 1024 * 1024) {
+  //     setError('File size must be less than 5MB');
+  //     setUploadStatus('error');
+  //     return;
+  //   }
+  //
+  //   setIsUploading(true);
+  //   setError(null);
+  //   setUploadStatus('idle');
+  //   setDebugInfo(null);
+  //
+  //   try {
+  //     const userId = user.id;
+  //
+  //     const uploadTimeoutPromise = new Promise((_, reject) => {
+  //       setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000);
+  //     });
+  //
+  //     const uploadPromise = supabase.storage
+  //       .from('avatars')
+  //       .upload(file.name, file, {
+  //         cacheControl: '3600',
+  //         upsert: true,
+  //       });
+  //
+  //     const { data, error } = (await Promise.race([
+  //       uploadPromise,
+  //       uploadTimeoutPromise,
+  //     ])) as any;
+  //
+  //     if (error) throw error;
+  //
+  //     const avatarUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/public/avatars/${file.name}`;
+  //
+  //     const { error: updateError } = await supabase
+  //       .from('users')
+  //       .update({ avatar: avatarUrl })
+  //       .eq('id', userId);
+  //
+  //     if (updateError) throw updateError;
+  //
+  //     onAvatarUpdate(avatarUrl);
+  //     setUploadStatus('success');
+  //     setSelectedFile(null);
+  //
+  //     setTimeout(() => {
+  //       onClose();
+  //     }, 1500);
+  //   } catch (err: any) {
+  //     setError(err.message || 'Failed to upload avatar');
+  //     setUploadStatus('error');
+  //   } finally {
+  //     setIsUploading(false);
+  //   }
+  // };
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('File size must be less than 5MB');
-      setUploadStatus('error');
-      return;
-    }
-
-    setIsUploading(true);
-    setError(null);
-    setUploadStatus('idle');
-    setDebugInfo(null);
-
-    try {
-      const userId = user.id;
-
-      setDebugInfo(`Starting upload - File: ${file.name} | Size: ${file.size} bytes | Type: ${file.type}`);
-      
-      setDebugInfo(prev => (prev || '') + '\n\nStarting file upload...');
-      console.log('About to call Supabase upload');
-      
-      // Try the upload with timeout
-      const uploadTimeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Upload timeout after 30 seconds')), 30000);
-      });
-      
-      const uploadPromise = supabase.storage
-        .from('avatars')
-        .upload(file.name, file, {
-          cacheControl: '3600',
-          upsert: true
-        });
-      
-      const { data, error } = await Promise.race([uploadPromise, uploadTimeoutPromise]) as any;
-
-      console.log('Supabase upload completed');
-      console.log('Upload data:', data);
-      console.log('Upload error:', error);
-      
-      setDebugInfo(prev => (prev || '') + `\n\nUpload response - Data: ${JSON.stringify(data, null, 2)} | Error: ${error ? JSON.stringify(error, null, 2) : 'null'}`);
-      
-      if (error) {
-        setDebugInfo(prev => (prev || '') + `\n\nUpload failed with error: ${error.message} | Error code: ${error.statusCode || 'unknown'} | Error details: ${JSON.stringify(error, null, 2)}`);
-        console.error('Upload Error Details:', error);
-        throw error;
-      }
-
-      console.log('Upload Success!');
-      setDebugInfo(prev => (prev || '') + `\n\nUpload successful! Data: ${JSON.stringify(data, null, 2)}`);
-
-      // Generate public URL
-      const avatarUrl = `https://bzqnxgohxamuqgyrjwls.supabase.co/storage/v1/object/public/avatars/${file.name}`;
-      setDebugInfo(prev => (prev || '') + `\n\nGenerated avatar URL: ${avatarUrl}`);
-
-      // Update user avatar URL in database
-      setDebugInfo(prev => prev + `\n\nUpdating database with avatar URL: ${avatarUrl} for user ID: ${userId}`);
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ avatar: avatarUrl })
-        .eq('id', userId);
-
-      if (updateError) {
-        setDebugInfo(prev => prev + `\n\nDatabase update error: ${updateError.message} | Error details: ${JSON.stringify(updateError, null, 2)}`);
-        throw updateError;
-      }
-
-      setDebugInfo(prev => prev + `\n\nDatabase updated successfully with URL: ${avatarUrl}`);
-      // Update parent component with new avatar URL
-      onAvatarUpdate(avatarUrl);
-
-      setUploadStatus('success');
-      setSelectedFile(null);
-      setTimeout(() => {
-        onClose();
-      }, 1500);
-
-    } catch (err: any) {
-      setDebugInfo(prev => prev + `\n\nError occurred: ${err.message} | Full error: ${JSON.stringify(err)}`);
-      setError(err.message || 'Failed to upload avatar');
-      setUploadStatus('error');
-    } finally {
-      setIsUploading(false);
-    }
-  };
+  /* ========= Sign out ========= */
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
     setError(null);
-    
+
     try {
-      console.log('Starting sign out process...');
-      
-      // Force clear local session first
+      // Clear client-side session
       localStorage.removeItem('sb-bzqnxgohxamuqgyrjwls-auth-token');
       sessionStorage.clear();
-      
-      // Try to sign out from Supabase (but don't wait for it)
-      supabase.auth.signOut().catch(err => {
-        console.log('Server signout failed (expected):', err.message);
+
+      // Attempt server-side sign-out (best-effort)
+      supabase.auth.signOut().catch((err) => {
+        console.log('Server signout failed (non-fatal):', err.message);
       });
-      
-      console.log('Local sign out completed, closing modal...');
+
       onClose();
     } catch (err: any) {
       console.error('Sign out error:', err);
-      // Force close modal even if there's an error
       onClose();
     } finally {
-      console.log('Setting isSigningOut to false');
       setIsSigningOut(false);
     }
   };
 
+  /* ========= Remove avatar (still allowed) ========= */
+
   const handleRemoveAvatar = async () => {
     setIsRemovingAvatar(true);
     setError(null);
-    
+
     try {
       const userId = user.id;
-      
-      // Remove avatar from database
+
       const { error: updateError } = await supabase
         .from('users')
-        .update({ avatar_url: null })
+        // Note: if your column is `avatar` instead of `avatar_url`, update this accordingly
+        .update({ avatar: null })
         .eq('id', userId);
 
-      if (updateError) {
-        throw updateError;
-      }
+      if (updateError) throw updateError;
 
-      // Update parent component
       onAvatarUpdate(null);
-      setUploadStatus('success');
-      
     } catch (err: any) {
       setError(err.message || 'Failed to remove avatar');
-      setUploadStatus('error');
     } finally {
       setIsRemovingAvatar(false);
     }
@@ -199,10 +166,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       <div className="bg-white rounded-2xl p-6 max-w-md w-full">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-2xl font-bold text-black font-pokemon">Profile Settings</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="h-6 w-6" />
           </button>
         </div>
@@ -213,11 +177,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
             <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden border-4 border-gray-200 relative group">
               {currentAvatarUrl ? (
                 <>
-                  <img 
-                    src={currentAvatarUrl} 
-                    alt="Current avatar" 
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={currentAvatarUrl}
+                    alt="Current avatar"
                     className="w-full h-full object-cover"
                   />
+                  {/* Remove avatar overlay */}
                   <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <button
                       onClick={handleRemoveAvatar}
@@ -244,11 +210,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
             <p className="text-gray-600 font-pokemon">{user.email}</p>
           </div>
 
-          {/* Upload Section */}
+          {/* Avatar upload UI disabled for now */}
+          {/*
           <div className="space-y-4">
             <h4 className="font-semibold text-black font-pokemon">Change Avatar</h4>
-            
-            <div 
+
+            <div
               onClick={handleFileSelect}
               className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-red-600 hover:bg-red-50 transition-all"
             >
@@ -265,7 +232,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
               className="hidden"
             />
 
-            {/* Show selected file and upload button */}
             {selectedFile && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-center justify-between">
@@ -298,7 +264,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
             )}
           </div>
 
-          {/* Status Messages */}
           {debugInfo && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-center space-x-2 text-blue-800">
@@ -320,18 +285,18 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
               </p>
             </div>
           )}
+          */}
 
+          {/* Error messages (used by remove avatar / signout failures) */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <div className="flex items-center space-x-2 text-red-800">
                 <AlertCircle className="h-5 w-5" />
-                <span className="font-semibold font-pokemon">Upload Failed</span>
+                <span className="font-semibold font-pokemon">Something went wrong</span>
               </div>
               <p className="text-red-600 text-sm mt-1 font-pokemon">{error}</p>
             </div>
           )}
-
-          {/* Upload Button */}
 
           {/* Sign Out Button */}
           <button
