@@ -134,7 +134,6 @@ const Header: React.FC = () => {
     setMobileMenuOpen(false);
     const el = document.getElementById(id);
     if (!el) {
-      // fallback: normal hash navigation if section not yet in DOM
       window.location.hash = id;
       return;
     }
@@ -191,13 +190,14 @@ const Header: React.FC = () => {
               >
                 Bidding
               </button>
-              <a
-                href="#"
-                className="text-white/40 cursor-not-allowed font-pokemon"
+              {/* Future feature:
+              <button
                 onClick={(e) => e.preventDefault()}
+                className="text-white/40 cursor-not-allowed font-pokemon"
               >
                 Past Streams
-              </a>
+              </button>
+              */}
               {isLoggedIn && isAdmin && (
                 <a
                   href="#admin"
@@ -333,13 +333,14 @@ const Header: React.FC = () => {
                 >
                   Bidding
                 </button>
+                {/* Future feature:
                 <button
                   onClick={(e) => e.preventDefault()}
                   className="block w-full text-left text-white/40 cursor-not-allowed font-pokemon"
                 >
                   Past Streams
                 </button>
-
+                */}
                 {isLoggedIn && isAdmin && (
                   <a
                     href="#admin"
@@ -410,4 +411,5 @@ const Header: React.FC = () => {
 };
 
 export default Header;
+
 
