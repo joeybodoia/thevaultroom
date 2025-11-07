@@ -55,11 +55,7 @@ const RARITIES = {
     'Ultra Rare (Non Galarian Gallery)',
     'Ultra Rare (Galarian Gallery)',
   ],
-  destined_rivals: [
-    'SIR / Hyper Rare',
-    'IR',
-    'Ultra Rare / Double Rare',
-  ],
+  destined_rivals: ['SIR / Hyper Rare', 'IR', 'Ultra Rare / Double Rare'],
 } as const;
 
 type SetKey = keyof typeof RARITIES;
@@ -105,7 +101,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [loadingCredit, setLoadingCredit] = useState(false);
 
   /** participants are nested [packNumber][rarity] */
-  const [lotteryParticipantsByPack, setLotteryParticipantsByPack] = useState<Record<number, Record<string, number>>>({});
+  const [lotteryParticipantsByPack, setLotteryParticipantsByPack] = useState<
+    Record<number, Record<string, number>>
+  >({});
 
   const [user, setUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
@@ -144,14 +142,18 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     crown_zenith: 0,
     destined_rivals: 0,
   });
-  const [chaseCardIdsForActiveTab, setChaseCardIdsForActiveTab] = useState<Set<string>>(new Set());
+  const [chaseCardIdsForActiveTab, setChaseCardIdsForActiveTab] = useState<Set<string>>(
+    new Set()
+  );
   /** -------------------------------------------------------------------- */
 
   // Check user authentication status
   useEffect(() => {
     const checkUser = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         setUser(user);
         if (user?.id) await fetchUserCredit(user.id);
       } catch (error) {
@@ -165,7 +167,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     checkUser();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user || null);
       if (session?.user) await fetchUserCredit(session.user.id);
     });
@@ -363,40 +367,51 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const filterAndSortPokemon = () => {
     let currentCards: DirectBidCard[] = [];
     if (activeTab === 'prismatic') {
-      currentCards = allCards.filter(card => card.set_name === SET_DB_NAME.prismatic);
+      currentCards = allCards.filter((card) => card.set_name === SET_DB_NAME.prismatic);
     } else if (activeTab === 'crown_zenith') {
-      currentCards = allCards.filter(card =>
-        card.set_name === SET_DB_NAME.crown_zenith || card.set_name === 'Crown Zenith'
+      currentCards = allCards.filter(
+        (card) =>
+          card.set_name === SET_DB_NAME.crown_zenith || card.set_name === 'Crown Zenith'
       );
     } else if (activeTab === 'destined_rivals') {
-      currentCards = allCards.filter(card => card.set_name === SET_DB_NAME.destined_rivals);
+      currentCards = allCards.filter(
+        (card) => card.set_name === SET_DB_NAME.destined_rivals
+      );
     }
 
     if (chaseCardIdsForActiveTab.size > 0) {
-      currentCards = currentCards.filter(c => chaseCardIdsForActiveTab.has(String(c.id)));
+      currentCards = currentCards.filter((c) =>
+        chaseCardIdsForActiveTab.has(String(c.id))
+      );
     }
 
-    currentCards = currentCards.filter(card => (card.ungraded_market_price || 0) >= 40);
+    currentCards = currentCards.filter(
+      (card) => (card.ungraded_market_price || 0) >= 40
+    );
 
     let filtered = currentCards;
 
     if (searchTerm) {
-      filtered = filtered.filter(card =>
+      filtered = filtered.filter((card) =>
         card.card_name?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     if (selectedRarity) {
-      filtered = filtered.filter(card => {
+      filtered = filtered.filter((card) => {
         const rarity = card.rarity?.split(',')[0].trim();
         return rarity === selectedRarity;
       });
     }
 
     if (sortBy === 'price-high') {
-      filtered.sort((a, b) => (b.ungraded_market_price || 0) - (a.ungraded_market_price || 0));
+      filtered.sort(
+        (a, b) => (b.ungraded_market_price || 0) - (a.ungraded_market_price || 0)
+      );
     } else if (sortBy === 'price-low') {
-      filtered.sort((a, b) => (a.ungraded_market_price || 0) - (b.ungraded_market_price || 0));
+      filtered.sort(
+        (a, b) => (a.ungraded_market_price || 0) - (b.ungraded_market_price || 0)
+      );
     }
 
     setFilteredPokemon(filtered);
@@ -416,14 +431,19 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       roundId: currentRound.id,
       rarity,
       setName: currentRound.set_name,
-      packNumber
+      packNumber,
     });
     setShowConfirmModal(true);
   };
 
   /** insert with pack_number, then refresh counts */
   const handleCreditLotteryEntry = async () => {
-    if (!user?.id || !currentRound?.id || !selectedLotteryEntry?.rarity || !selectedLotteryEntry?.packNumber) {
+    if (
+      !user?.id ||
+      !currentRound?.id ||
+      !selectedLotteryEntry?.rarity ||
+      !selectedLotteryEntry?.packNumber
+    ) {
       setError('Missing required information for lottery entry');
       return;
     }
@@ -440,22 +460,30 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         .update({ site_credit: newCreditBalance })
         .eq('id', user.id);
 
-      if (creditError) throw new Error('Failed to deduct credits: ' + creditError.message);
+      if (creditError)
+        throw new Error('Failed to deduct credits: ' + creditError.message);
 
       const { error: lotteryInsertError } = await supabase
         .from('lottery_entries')
-        .insert([{
-          user_id: user.id,
-          round_id: currentRound.id,
-          pack_number: selectedLotteryEntry.packNumber,
-          selected_rarity: selectedLotteryEntry.rarity,
-          created_at: new Date().toISOString(),
-          credits_used: 5
-        }]);
+        .insert([
+          {
+            user_id: user.id,
+            round_id: currentRound.id,
+            pack_number: selectedLotteryEntry.packNumber,
+            selected_rarity: selectedLotteryEntry.rarity,
+            created_at: new Date().toISOString(),
+            credits_used: 5,
+          },
+        ]);
 
       if (lotteryInsertError) {
-        await supabase.from('users').update({ site_credit: userCredit }).eq('id', user.id);
-        throw new Error('Failed to create lottery entry: ' + lotteryInsertError.message);
+        await supabase
+          .from('users')
+          .update({ site_credit: userCredit })
+          .eq('id', user.id);
+        throw new Error(
+          'Failed to create lottery entry: ' + lotteryInsertError.message
+        );
       }
 
       setUserCredit(newCreditBalance);
@@ -487,24 +515,29 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   // For Chase Slots rarity filter options
   const getCurrentPokemon = () => {
     if (activeTab === 'prismatic') {
-      return allCards.filter(card => card.set_name === SET_DB_NAME.prismatic);
+      return allCards.filter((card) => card.set_name === SET_DB_NAME.prismatic);
     } else if (activeTab === 'crown_zenith') {
-      return allCards.filter(card =>
-        card.set_name === SET_DB_NAME.crown_zenith ||
-        card.set_name === 'Crown Zenith'
+      return allCards.filter(
+        (card) =>
+          card.set_name === SET_DB_NAME.crown_zenith ||
+          card.set_name === 'Crown Zenith'
       );
     } else if (activeTab === 'destined_rivals') {
-      return allCards.filter(card => card.set_name === SET_DB_NAME.destined_rivals);
+      return allCards.filter(
+        (card) => card.set_name === SET_DB_NAME.destined_rivals
+      );
     }
     return [];
   };
 
   const currentPokemon = getCurrentPokemon();
-  const uniqueRarities = [...new Set(
-    currentPokemon
-      .map(card => card.rarity?.split(',')[0].trim())
-      .filter(Boolean)
-  )];
+  const uniqueRarities = [
+    ...new Set(
+      currentPokemon
+        .map((card) => card.rarity?.split(',')[0].trim())
+        .filter(Boolean)
+    ),
+  ];
 
   /** ----------------- LIVE SINGLES: DATA + ACTIONS ----------------- */
   const loadLiveSingles = async () => {
@@ -584,18 +617,23 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     setBidSuccess(null);
 
     try {
-      const { error } = await supabase.rpc('place_live_single_bid_immediate_refund', {
-        p_user_id: user.id,
-        p_card_id: card.id,
-        p_amount: amt,
-      });
+      const { error } = await supabase.rpc(
+        'place_live_single_bid_immediate_refund',
+        {
+          p_user_id: user.id,
+          p_card_id: card.id,
+          p_amount: amt,
+        }
+      );
 
       if (error) {
         const msg = String(error.message || '').toLowerCase();
         if (msg.includes('minimum bid')) {
           setBidError(`Minimum bid is $${card.starting_bid}.`);
         } else if (msg.includes('least') && msg.includes('increment')) {
-          setBidError('Your bid must be at least the current top bid plus the minimum increment.');
+          setBidError(
+            'Your bid must be at least the current top bid plus the minimum increment.'
+          );
         } else if (msg.includes('insufficient credits')) {
           setBidError('Insufficient credits for this bid.');
         } else if (msg.includes('closed')) {
@@ -606,7 +644,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         return;
       }
 
-      setBidSuccess('Bid placed! If you are outbid later, your credits will be refunded automatically.');
+      setBidSuccess(
+        'Bid placed! If you are outbid later, your credits will be refunded automatically.'
+      );
       setBidInputs((prev) => ({ ...prev, [card.id]: '' }));
       await refreshLeadersAndCredit();
       setTimeout(() => setBidSuccess(null), 2500);
@@ -639,7 +679,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               </div>
             ) : currentRound ? (
               <div className="space-y-1">
-                <p className="text-blue-700 font-bold font-pokemon">Round ID: {currentRound.id}</p>
+                <p className="text-blue-700 font-bold font-pokemon">
+                  Round ID: {currentRound.id}
+                </p>
                 <p className="text-blue-600 text-sm font-pokemon">
                   Round {currentRound.round_number} • {currentRound.packs_opened} packs •
                   {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
@@ -670,8 +712,10 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                 "
               >
                 {RARITIES[setKey].map((rarity) => {
-                  const count = lotteryParticipantsByPack?.[packNum]?.[rarity] || 0;
-                  const disabled = !user || loadingUser || !!currentRound?.locked;
+                  const count =
+                    lotteryParticipantsByPack?.[packNum]?.[rarity] || 0;
+                  const disabled =
+                    !user || loadingUser || !!currentRound?.locked;
                   const bg = rarityBg(rarity);
 
                   return (
@@ -685,7 +729,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                     >
                       <div className="text-center flex-1 flex flex-col">
                         <div className={`${bg.split(' ')[0]} rounded-lg p-4 mb-4`}>
-                          <span className="text-lg font-bold text-white font-pokemon">{rarity}</span>
+                          <span className="text-lg font-bold text-white font-pokemon">
+                            {rarity}
+                          </span>
                         </div>
 
                         <div className="mb-4">
@@ -703,7 +749,11 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                             disabled={disabled}
                             className={`w-full ${bg} text-white font-bold py-3 rounded-lg transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed`}
                           >
-                            {loadingUser ? 'Loading...' : !user ? 'Login to Enter' : 'Enter for 5 Credits'}
+                            {loadingUser
+                              ? 'Loading...'
+                              : !user
+                              ? 'Login to Enter'
+                              : 'Enter for 5 Credits'}
                           </button>
                           {!loadingUser && !user && (
                             <div className="mt-2 text-orange-600 text-sm font-pokemon">
@@ -763,7 +813,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
     // Condition filter
     if (singlesConditionFilter !== 'all') {
-      rows = rows.filter((r) => (r.card_condition || '') === singlesConditionFilter);
+      rows = rows.filter(
+        (r) => (r.card_condition || '') === singlesConditionFilter
+      );
     }
 
     // Sorting
@@ -772,22 +824,32 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         const aP = a.psa_10_price || 0;
         const bP = b.psa_10_price || 0;
         if (bP !== aP) return bP - aP;
-        return (b.ungraded_market_price || 0) - (a.ungraded_market_price || 0);
+        return (
+          (b.ungraded_market_price || 0) -
+          (a.ungraded_market_price || 0)
+        );
       });
     } else if (singlesSort === 'psa10-asc') {
       rows.sort((a, b) => {
         const aP = a.psa_10_price || 0;
         const bP = b.psa_10_price || 0;
         if (aP !== bP) return aP - bP;
-        return (a.ungraded_market_price || 0) - (b.ungraded_market_price || 0);
+        return (
+          (a.ungraded_market_price || 0) -
+          (b.ungraded_market_price || 0)
+        );
       });
     } else if (singlesSort === 'ungraded-desc') {
       rows.sort(
-        (a, b) => (b.ungraded_market_price || 0) - (a.ungraded_market_price || 0)
+        (a, b) =>
+          (b.ungraded_market_price || 0) -
+          (a.ungraded_market_price || 0)
       );
     } else if (singlesSort === 'ungraded-asc') {
       rows.sort(
-        (a, b) => (a.ungraded_market_price || 0) - (b.ungraded_market_price || 0)
+        (a, b) =>
+          (a.ungraded_market_price || 0) -
+          (b.ungraded_market_price || 0)
       );
     }
 
@@ -797,7 +859,8 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
           Live Singles
         </h3>
         <p className="text-center text-gray-600 font-pokemon mb-6">
-          Use your credits to bid on individual cards from my collection. Bidding stays open until the end of Round 3.
+          Use your credits to bid on individual cards from my collection. Bidding
+          stays open until the end of Round 3.
         </p>
 
         {/* Filters + Sort */}
@@ -879,7 +942,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <div className="flex items-center">
               <AlertCircle className="h-5 w-5 text-red-600 mr-2" />
-              <span className="text-red-800 font-pokemon">{liveSinglesError}</span>
+              <span className="text-red-800 font-pokemon">
+                {liveSinglesError}
+              </span>
             </div>
           </div>
         )}
@@ -895,7 +960,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               <Sparkles className="h-8 w-8" />
               <span className="text-xl font-pokemon">No Live Singles yet</span>
             </div>
-            <p className="text-gray-600 font-pokemon">Check back soon for more!</p>
+            <p className="text-gray-600 font-pokemon">
+              Check back soon for more!
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -917,7 +984,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         className="object-contain w-full h-full"
                       />
                     ) : (
-                      <div className="text-gray-400 font-pokemon">No image</div>
+                      <div className="text-gray-400 font-pokemon">
+                        No image
+                      </div>
                     )}
                   </div>
 
@@ -945,7 +1014,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                     </div>
 
                     <div className="mt-2 rounded-lg bg-gray-50 p-2 flex items-center justify-between">
-                      <span className="text-xs text-gray-600 font-pokemon">Top Bid</span>
+                      <span className="text-xs text-gray-600 font-pokemon">
+                        Top Bid
+                      </span>
                       <span className="text-sm font-bold text-black font-pokemon">
                         {topBid > 0 ? `$${topBid.toFixed(2)}` : '—'}
                       </span>
@@ -994,7 +1065,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="flex items-center">
               <Sparkles className="h-5 w-5 text-green-600 mr-2" />
-              <span className="text-green-800 font-pokemon">{bidSuccess}</span>
+              <span className="text-green-800 font-pokemon">
+                {bidSuccess}
+              </span>
             </div>
           </div>
         )}
@@ -1084,7 +1157,10 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   ];
 
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+    <section
+      id="bidding"
+      className="py-20 px-4 sm:px-6 lg:px-8 bg-white"
+    >
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-black mb-6 font-pokemon">
@@ -1259,7 +1335,8 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
               <div className="mt-4 text-center">
                 <span className="text-gray-600 font-pokemon">
-                  Showing {filteredPokemon.length} of {currentPokemon.length} Pokemon
+                  Showing {filteredPokemon.length} of {currentPokemon.length}{' '}
+                  Pokemon
                 </span>
               </div>
             </div>
@@ -1315,7 +1392,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               <div className="text-center py-12">
                 <div className="flex items-center justify-center space-x-2 mb-4 text-gray-600">
                   <Sparkles className="h-8 w-8" />
-                  <span className="text-xl font-pokemon">No Pokemon Found</span>
+                  <span className="text-xl font-pokemon">
+                    No Pokemon Found
+                  </span>
                 </div>
                 <p className="text-gray-600 font-pokemon">
                   Try adjusting your search or filters
@@ -1410,7 +1489,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
                 <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-600 font-pokemon">Cost:</span>
+                    <span className="text-gray-600 font-pokemon">
+                      Cost:
+                    </span>
                     <span className="font-bold text-black font-pokemon">
                       5 credits
                     </span>
@@ -1466,6 +1547,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 };
 
 export default PokemonSection;
+
 
 
 
