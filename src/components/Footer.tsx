@@ -15,9 +15,16 @@ const Footer: React.FC = () => {
               />
               <span className="text-lg sm:text-xl font-bold text-white font-pokemon">Dread's Vault</span>
             </div>
-            <p className="text-white/60 text-xs sm:text-sm mb-3 sm:mb-4 font-pokemon">
-              The premier destination for live Pokémon card opening experiences. Pay once, play with credits, win real cards!
+
+            {/* Updated Disclaimer */}
+            <p className="text-white/60 text-xs sm:text-sm mb-3 sm:mb-4 font-pokemon whitespace-pre-line">
+              Disclaimer:
+              {' '}Dread’s Vault streams are entertainment events only.
+              {' '}Participation requires a fixed entry fee and provides equal access to all random features.
+              {' '}Credits have no cash value, cannot be purchased or exchanged, and do not affect odds of winning.
+              {' '}This platform does not offer gambling, betting, or sweepstakes of any kind.
             </p>
+
             <div className="flex space-x-4">
               <a href="#" className="text-white/60 hover:text-white transition-colors">
                 <MessageCircle className="h-5 w-5" />
