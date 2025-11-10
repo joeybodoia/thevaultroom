@@ -2,21 +2,35 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Mail, MessageCircle, Shield, X } from 'lucide-react';
 
-const TermsOfServiceModal: React.FC<{
+interface TermsOfServiceModalProps {
   isOpen: boolean;
   onClose: () => void;
-}> = ({ isOpen, onClose }) => {
-  // Don't render on server / when closed
-  if (!isOpen || typeof document === 'undefined') return null;
+}
 
-  // Lock background scroll while modal is open
+const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({ isOpen, onClose }) => {
+  const [mounted, setMounted] = useState(false);
+
+  // Mark as mounted so we know `document` exists (avoids SSR mismatch issues)
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Lock/unlock body scroll while modal is open
+  useEffect(() => {
+    if (!isOpen || typeof document === 'undefined') return;
+
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, []);
+  }, [isOpen]);
+
+  // If not ready or not open, render nothing (hooks above still ran safely)
+  if (!isOpen || !mounted || typeof document === 'undefined') {
+    return null;
+  }
 
   return createPortal(
     <div
