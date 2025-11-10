@@ -16,10 +16,10 @@ const Footer: React.FC = () => {
               <span className="text-lg sm:text-xl font-bold text-white font-pokemon">Dread's Vault</span>
             </div>
 
-            {/* Updated Disclaimer */}
+            {/* Updated Disclaimer with red header */}
             <p className="text-white/60 text-xs sm:text-sm mb-3 sm:mb-4 font-pokemon whitespace-pre-line">
-              Disclaimer:
-              {' '}Dread’s Vault streams are entertainment events only.
+              <span className="text-red-500 sm:text-red-400 font-semibold">Disclaimer:</span>{' '}
+              Dread’s Vault streams are entertainment events only.
               {' '}Participation requires a fixed entry fee and provides equal access to all random features.
               {' '}Credits have no cash value, cannot be purchased or exchanged, and do not affect odds of winning.
               {' '}This platform does not offer gambling, betting, or sweepstakes of any kind.
@@ -82,3 +82,4 @@ const Footer: React.FC = () => {
 };
 
 export default Footer;
+
