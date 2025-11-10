@@ -16,7 +16,7 @@ const Footer: React.FC = () => {
               <span className="text-lg sm:text-xl font-bold text-white font-pokemon">Dread's Vault</span>
             </div>
 
-            {/* Updated Disclaimer with red header */}
+            {/* Updated Disclaimer */}
             <p className="text-white/60 text-xs sm:text-sm mb-3 sm:mb-4 font-pokemon whitespace-pre-line">
               <span className="text-red-500 sm:text-red-400 font-semibold">Disclaimer:</span>{' '}
               Dread’s Vault streams are entertainment events only.
@@ -35,13 +35,36 @@ const Footer: React.FC = () => {
             </div>
           </div>
 
+          {/* ✅ Updated Quick Links */}
           <div>
-            <h3 className="text-white font-semibold mb-3 sm:mb-4 font-pokemon text-sm sm:text-base">Quick Links</h3>
+            <h3 className="text-white font-semibold mb-3 sm:mb-4 font-pokemon text-sm sm:text-base">
+              Quick Links
+            </h3>
             <ul className="space-y-1 sm:space-y-2">
-              <li><a href="#" className="text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon">How It Works</a></li>
-              <li><a href="#" className="text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon">Live Streams</a></li>
-              <li><a href="#" className="text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon">Past Results</a></li>
-              <li><a href="#" className="text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon">FAQ</a></li>
+              <li>
+                <a 
+                  href="/how-it-works" 
+                  className="text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon"
+                >
+                  How It Works
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="/bidding" 
+                  className="text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon"
+                >
+                  Bidding
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="#" 
+                  className="text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon"
+                >
+                  FAQ
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -82,4 +105,3 @@ const Footer: React.FC = () => {
 };
 
 export default Footer;
-
