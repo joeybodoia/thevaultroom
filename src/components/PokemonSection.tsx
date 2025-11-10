@@ -1168,9 +1168,15 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
           </h2>
           <div className="text-lg text-gray-600 max-w-4xl mx-auto mb-8 font-pokemon">
             <p className="mb-4">
-              Three exciting rounds: Round 1 (10 Prismatic Evolutions packs),
-              Round 2 (10 Destined Rivals packs), Round 3 (10 Crown Zenith
-              packs). Each round offers three entry options.
+              Three exciting rounds:
+              <br />
+              Round 1 (10 Prismatic Evolutions packs)
+              <br />
+              Round 2 (10 Destined Rivals packs)
+              <br />
+              Round 3 (10 Crown Zenith packs)
+              <br />
+              Each round offers three entry options.
             </p>
             <div className="bg-gray-50 rounded-xl p-6 mb-4">
               <h4 className="font-bold text-black mb-3 font-pokemon">
