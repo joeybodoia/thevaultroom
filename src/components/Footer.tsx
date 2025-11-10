@@ -307,12 +307,6 @@ const Footer: React.FC = () => {
                     Product Experience
                   </a>
                 </li>
-                <li>
-                  <div className="flex items-center space-x-1 text-red-600 text-xs sm:text-sm font-pokemon">
-                    <Shield className="h-4 w-4" />
-                    <span>Guaranteed Items</span>
-                  </div>
-                </li>
               </ul>
             </div>
           </div>
@@ -320,8 +314,7 @@ const Footer: React.FC = () => {
           {/* Bottom Bar */}
           <div className="border-t border-white/10 mt-6 sm:mt-8 pt-6 sm:pt-8 text-center">
             <p className="text-white/60 text-xs sm:text-sm font-pokemon">
-              © 2025 Dread&apos;s Vault. All rights reserved. • Licensed product experience platform with
-              guaranteed tangible rewards.
+              © 2025 Dread&apos;s Vault. All rights reserved.
             </p>
           </div>
         </div>
