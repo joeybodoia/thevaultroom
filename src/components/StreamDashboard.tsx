@@ -10,6 +10,7 @@ import {
   Ticket,
   Trophy,
   Users,
+  Crown,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
@@ -42,30 +43,31 @@ interface LotteryEntry {
   round_id: string | null;
 }
 
-interface ChaseSlot {
+interface ChaseSlotRow {
   id: string;
-  stream_id: string;
-  is_active: boolean;
-}
-
-interface ChaseBid {
-  slot_id: string;
-  user_id: string;
-  amount: number;
-  created_at: string;
+  card_name: string | null;
+  set_name: string | null;
+  rarity: string | null;
+  starting_bid: number;
+  top_bid: number | null;
+  you_are_leading: boolean;
 }
 
 interface LiveSingleRow {
   id: string;
-  stream_id: string | null;
-  is_active: boolean;
+  card_name: string;
+  set_name: string | null;
+  buy_now: number | null;
+  top_bid: number | null;
+  you_are_leading: boolean;
 }
 
-interface LiveSingleBid {
-  card_id: string;
-  user_id: string;
-  amount: number;
-  created_at: string;
+interface LotteryRoundRow {
+  round_id: string;
+  label: string;
+  locked: boolean;
+  total_entries: number;
+  your_entries: number;
 }
 
 interface PulledCard {
@@ -156,12 +158,15 @@ const StreamDashboard: React.FC = () => {
 
   const [chaseSlotsActive, setChaseSlotsActive] = useState<number>(0);
   const [userChaseLeading, setUserChaseLeading] = useState<number>(0);
+  const [chaseSlotRows, setChaseSlotRows] = useState<ChaseSlotRow[]>([]);
 
   const [lotteryEntriesOpenTotal, setLotteryEntriesOpenTotal] = useState<number>(0);
   const [userLotteryEntriesOpen, setUserLotteryEntriesOpen] = useState<number>(0);
+  const [lotteryRoundRows, setLotteryRoundRows] = useState<LotteryRoundRow[]>([]);
 
   const [liveSinglesActive, setLiveSinglesActive] = useState<number>(0);
   const [userSinglesLeading, setUserSinglesLeading] = useState<number>(0);
+  const [liveSingleRows, setLiveSingleRows] = useState<LiveSingleRow[]>([]);
 
   const [lastBigHit, setLastBigHit] = useState<PulledCard | null>(null);
 
@@ -286,7 +291,7 @@ const StreamDashboard: React.FC = () => {
     fetchStream();
   }, []);
 
-  /** -------- Overview metrics once we know the stream -------- */
+  /** -------- Overview + table data once we know the stream -------- */
 
   useEffect(() => {
     if (!stream?.id) {
@@ -301,7 +306,7 @@ const StreamDashboard: React.FC = () => {
         const streamId = stream.id;
         const currentUserId = user?.id || null;
 
-        /** 1) Rounds: packs opened, planned, current round info */
+        /** 1) Rounds + pack progress */
         const { data: roundsData, error: roundsErr } = await supabase
           .from('rounds')
           .select('*')
@@ -321,7 +326,7 @@ const StreamDashboard: React.FC = () => {
           const planned =
             r.total_packs_planned != null
               ? r.total_packs_planned
-              : r.packs_opened || 0; // fallback if not filled
+              : r.packs_opened || 0;
           return sum + planned;
         }, 0);
         setPacksPlanned(totalPlannedRaw > 0 ? totalPlannedRaw : null);
@@ -344,60 +349,98 @@ const StreamDashboard: React.FC = () => {
 
         setCurrentRoundNumber(currentRound ? currentRound.round_number : null);
 
-        /** 2) Chase slots summary */
-        const { count: chaseActiveCount, error: chaseCountErr } = await supabase
+        /** 2) Chase Slots: active slots + top bids + user-leading flags */
+
+        const { data: chaseSlotsData, error: chaseSlotsErr } = await supabase
           .from('chase_slots')
-          .select('id', { count: 'exact', head: true })
+          .select(
+            'id, stream_id, card_name, set_name, rarity, starting_bid, min_increment, is_active'
+          )
           .eq('stream_id', streamId)
           .eq('is_active', true);
 
-        if (chaseCountErr) throw chaseCountErr;
-        setChaseSlotsActive(chaseActiveCount || 0);
+        if (chaseSlotsErr) throw chaseSlotsErr;
 
+        const chaseSlots = (chaseSlotsData || []) as any[];
+        setChaseSlotsActive(chaseSlots.length || 0);
+
+        let chaseSlotRowsLocal: ChaseSlotRow[] = [];
         let userChaseLeadCount = 0;
-        if (currentUserId && (chaseActiveCount || 0) > 0) {
-          const { data: activeSlots, error: slotsErr } = await supabase
-            .from('chase_slots')
-            .select('id')
-            .eq('stream_id', streamId)
-            .eq('is_active', true);
 
-          if (slotsErr) throw slotsErr;
+        if (chaseSlots.length > 0) {
+          const slotIds = chaseSlots.map((s) => s.id);
+          const { data: bidsData, error: bidsErr } = await supabase
+            .from('chase_bids')
+            .select('slot_id, user_id, amount, created_at')
+            .in('slot_id', slotIds);
 
-          const slotIds = (activeSlots || []).map((s: any) => s.id);
-          if (slotIds.length > 0) {
-            const { data: bidsData, error: bidsErr } = await supabase
-              .from('chase_bids')
-              .select('slot_id, user_id, amount, created_at')
-              .in('slot_id', slotIds);
+          if (bidsErr) throw bidsErr;
 
-            if (bidsErr) throw bidsErr;
+          const bySlot: Record<string, ChaseSlotRow> = {};
 
-            const bySlot: Record<string, ChaseBid[]> = {};
-            (bidsData || []).forEach((b: any) => {
-              const bid = b as ChaseBid;
-              if (!bySlot[bid.slot_id]) bySlot[bid.slot_id] = [];
-              bySlot[bid.slot_id].push(bid);
-            });
+          chaseSlots.forEach((slot) => {
+            bySlot[slot.id] = {
+              id: slot.id,
+              card_name: slot.card_name || null,
+              set_name: slot.set_name || null,
+              rarity: slot.rarity || null,
+              starting_bid: Number(slot.starting_bid || 1),
+              top_bid: null,
+              you_are_leading: false,
+            };
+          });
 
-            Object.values(bySlot).forEach((bids) => {
-              if (!bids.length) return;
-              bids.sort((a, b) => {
-                if (b.amount !== a.amount) return b.amount - a.amount;
-                return (
-                  new Date(a.created_at).getTime() -
-                  new Date(b.created_at).getTime()
-                );
-              });
-              const top = bids[0];
-              if (top.user_id === currentUserId) userChaseLeadCount += 1;
-            });
-          }
+          (bidsData || []).forEach((b: any) => {
+            const slotId = b.slot_id;
+            if (!bySlot[slotId]) return;
+
+            const existing = bySlot[slotId];
+            const amount = Number(b.amount);
+            const createdAt = new Date(b.created_at).getTime();
+
+            const currentTop = existing.top_bid ?? existing.starting_bid ?? 0;
+            if (
+              existing.top_bid == null ||
+              amount > existing.top_bid ||
+              (amount === existing.top_bid &&
+                createdAt <
+                  new Date(
+                    // fallback: treat existing as later if no timestamp
+                    new Date().toISOString()
+                  ).getTime())
+            ) {
+              existing.top_bid = amount;
+              existing.you_are_leading = currentUserId
+                ? b.user_id === currentUserId
+                : false;
+            }
+          });
+
+          chaseSlotRowsLocal = Object.values(bySlot).map((row) => {
+            // If no bids, use starting_bid as baseline display top
+            return {
+              ...row,
+              top_bid: row.top_bid ?? null,
+            };
+          });
+
+          userChaseLeadCount = chaseSlotRowsLocal.filter(
+            (r) => r.you_are_leading
+          ).length;
         }
+
+        setChaseSlotRows(chaseSlotRowsLocal);
         setUserChaseLeading(userChaseLeadCount);
 
-        /** 3) Lottery summary for OPEN rounds (locked = false) */
-        const openRoundIds = rounds.filter((r) => !r.locked).map((r) => r.id);
+        /** 3) Lottery: open rounds summary + your entries */
+
+        const openRounds = rounds.filter((r) => !r.locked);
+        const openRoundIds = openRounds.map((r) => r.id);
+
+        let lotteryRowsLocal: LotteryRoundRow[] = [];
+        let totalEntriesAll = 0;
+        let totalUserEntriesAll = 0;
+
         if (openRoundIds.length > 0) {
           const { data: lotData, error: lotErr } = await supabase
             .from('lottery_entries')
@@ -407,77 +450,128 @@ const StreamDashboard: React.FC = () => {
           if (lotErr) throw lotErr;
 
           const entries = (lotData || []) as LotteryEntry[];
-          setLotteryEntriesOpenTotal(entries.length);
+          totalEntriesAll = entries.length;
 
-          if (currentUserId) {
-            const userEntriesCount = entries.filter(
-              (e) => e.user_id === currentUserId
-            ).length;
-            setUserLotteryEntriesOpen(userEntriesCount);
-          } else {
-            setUserLotteryEntriesOpen(0);
-          }
-        } else {
-          setLotteryEntriesOpenTotal(0);
-          setUserLotteryEntriesOpen(0);
+          const byRound: Record<
+            string,
+            { total: number; yours: number }
+          > = {};
+
+          entries.forEach((e) => {
+            if (!e.round_id) return;
+            if (!byRound[e.round_id]) {
+              byRound[e.round_id] = { total: 0, yours: 0 };
+            }
+            byRound[e.round_id].total += 1;
+            if (currentUserId && e.user_id === currentUserId) {
+              byRound[e.round_id].yours += 1;
+            }
+          });
+
+          lotteryRowsLocal = openRounds
+            .sort((a, b) => a.round_number - b.round_number)
+            .map((r) => {
+              const stats = byRound[r.id] || { total: 0, yours: 0 };
+              totalUserEntriesAll += stats.yours;
+              return {
+                round_id: r.id,
+                label: `Round ${r.round_number} – ${r.set_name}`,
+                locked: r.locked,
+                total_entries: stats.total,
+                your_entries: stats.yours,
+              };
+            });
         }
 
-        /** 4) Live singles summary */
-        const {
-          count: liveSinglesCount,
-          error: liveSinglesCountErr,
-        } = await supabase
+        setLotteryEntriesOpenTotal(totalEntriesAll);
+        setUserLotteryEntriesOpen(totalUserEntriesAll);
+        setLotteryRoundRows(lotteryRowsLocal);
+
+        /** 4) Live Singles: active singles + top bids + your status */
+
+        const { data: singlesData, error: singlesErr } = await supabase
           .from('live_singles')
-          .select('id', { count: 'exact', head: true })
+          .select(
+            'id, stream_id, card_name, set_name, buy_now, is_active'
+          )
           .eq('stream_id', streamId)
           .eq('is_active', true);
 
-        if (liveSinglesCountErr) throw liveSinglesCountErr;
-        setLiveSinglesActive(liveSinglesCount || 0);
+        if (singlesErr) throw singlesErr;
 
-        let userSinglesLeadCount = 0;
-        if (currentUserId && (liveSinglesCount || 0) > 0) {
-          const { data: singlesRows, error: singlesErr } = await supabase
-            .from('live_singles')
-            .select('id')
-            .eq('stream_id', streamId)
-            .eq('is_active', true);
+        const singles = (singlesData || []) as any[];
+        setLiveSinglesActive(singles.length || 0);
 
-          if (singlesErr) throw singlesErr;
+        let singlesRowsLocal: LiveSingleRow[] = [];
+        let userSinglesLeadCountLocal = 0;
 
-          const singleIds = (singlesRows || []).map((s: any) => s.id);
-          if (singleIds.length > 0) {
-            const { data: bidsRows, error: bidsErr } = await supabase
-              .from('live_singles_bids')
-              .select('card_id, user_id, amount, created_at')
-              .in('card_id', singleIds);
+        if (singles.length > 0) {
+          const singleIds = singles.map((s) => s.id);
+          const { data: bidsRows, error: bidsErr } = await supabase
+            .from('live_singles_bids')
+            .select('card_id, user_id, amount, created_at')
+            .in('card_id', singleIds);
 
-            if (bidsErr) throw bidsErr;
+          if (bidsErr) throw bidsErr;
 
-            const byCard: Record<string, LiveSingleBid[]> = {};
-            (bidsRows || []).forEach((b: any) => {
-              const bid = b as LiveSingleBid;
-              if (!byCard[bid.card_id]) byCard[bid.card_id] = [];
-              byCard[bid.card_id].push(bid);
-            });
+          const byCard: Record<
+            string,
+            { topBid: number | null; leaderUserId: string | null }
+          > = {};
 
-            Object.values(byCard).forEach((bids) => {
-              if (!bids.length) return;
-              bids.sort((a, b) => {
-                if (b.amount !== a.amount) return b.amount - a.amount;
-                return (
-                  new Date(a.created_at).getTime() -
-                  new Date(b.created_at).getTime()
-                );
-              });
-              const top = bids[0];
-              if (top.user_id === currentUserId) userSinglesLeadCount += 1;
-            });
-          }
+          (bidsRows || []).forEach((b: any) => {
+            const cardId = b.card_id;
+            const amount = Number(b.amount);
+            const createdAt = new Date(b.created_at).getTime();
+
+            if (!byCard[cardId]) {
+              byCard[cardId] = {
+                topBid: amount,
+                leaderUserId: b.user_id,
+              };
+              return;
+            }
+
+            const curr = byCard[cardId];
+            if (
+              curr.topBid == null ||
+              amount > curr.topBid ||
+              (amount === curr.topBid &&
+                createdAt <
+                  new Date().getTime())
+            ) {
+              curr.topBid = amount;
+              curr.leaderUserId = b.user_id;
+            }
+          });
+
+          singlesRowsLocal = singles.map((s) => {
+            const agg = byCard[s.id] || {
+              topBid: null,
+              leaderUserId: null,
+            };
+            const youLead =
+              !!currentUserId && agg.leaderUserId === currentUserId;
+
+            if (youLead) userSinglesLeadCountLocal += 1;
+
+            return {
+              id: s.id,
+              card_name: s.card_name,
+              set_name: s.set_name || null,
+              buy_now:
+                s.buy_now != null ? Number(s.buy_now) : null,
+              top_bid: agg.topBid,
+              you_are_leading: youLead,
+            };
+          });
         }
-        setUserSinglesLeading(userSinglesLeadCount);
+
+        setLiveSingleRows(singlesRowsLocal);
+        setUserSinglesLeading(userSinglesLeadCountLocal);
 
         /** 5) Last big hit (pulled_cards) */
+
         if (rounds.length > 0) {
           const roundIds = rounds.map((r) => r.id);
           const { data: pulls, error: pullsErr } = await supabase
@@ -783,10 +877,207 @@ const StreamDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Hook for future detailed tables */}
+        {/* ---------- Chase Slots Table ---------- */}
+        <div className="mt-8">
+          <div className="flex items-center mb-3 space-x-2">
+            <Trophy className="h-4 w-4 text-red-400" />
+            <h2 className="text-sm sm:text-base text-red-200 font-pokemon font-semibold">
+              Chase Slots Summary
+            </h2>
+          </div>
+          <div className="bg-gray-900/80 border border-red-500/20 rounded-2xl overflow-x-auto">
+            {chaseSlotRows.length === 0 ? (
+              <div className="px-4 py-6 text-xs text-gray-500 font-pokemon text-center">
+                No active chase slots for this stream yet.
+              </div>
+            ) : (
+              <table className="min-w-full text-xs font-pokemon">
+                <thead>
+                  <tr className="text-gray-400 border-b border-gray-800">
+                    <th className="px-3 py-2 text-left">Card / Slot</th>
+                    <th className="px-3 py-2 text-left">Set</th>
+                    <th className="px-3 py-2 text-left">Rarity</th>
+                    <th className="px-3 py-2 text-right">Top Bid</th>
+                    <th className="px-3 py-2 text-center">Your Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {chaseSlotRows.map((row) => (
+                    <tr
+                      key={row.id}
+                      className={`border-t border-gray-900 ${
+                        row.you_are_leading
+                          ? 'bg-red-600/10'
+                          : 'hover:bg-gray-800/60'
+                      }`}
+                    >
+                      <td className="px-3 py-2 text-gray-100">
+                        {row.card_name || 'Chase Slot'}
+                      </td>
+                      <td className="px-3 py-2 text-gray-400">
+                        {row.set_name || '—'}
+                      </td>
+                      <td className="px-3 py-2 text-gray-400">
+                        {row.rarity || '—'}
+                      </td>
+                      <td className="px-3 py-2 text-right text-red-300">
+                        {row.top_bid != null
+                          ? `$${row.top_bid.toFixed(2)}`
+                          : `$${row.starting_bid.toFixed(2)} (start)`}
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        {row.you_are_leading ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px]">
+                            <Crown className="h-3 w-3 mr-1" />
+                            You&apos;re leading
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-gray-500">
+                            Not leading
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        {/* ---------- Lottery Table ---------- */}
+        <div className="mt-8">
+          <div className="flex items-center mb-3 space-x-2">
+            <Ticket className="h-4 w-4 text-blue-300" />
+            <h2 className="text-sm sm:text-base text-blue-200 font-pokemon font-semibold">
+              Lottery Summary (Open Rounds)
+            </h2>
+          </div>
+          <div className="bg-gray-900/80 border border-blue-500/20 rounded-2xl overflow-x-auto">
+            {lotteryRoundRows.length === 0 ? (
+              <div className="px-4 py-6 text-xs text-gray-500 font-pokemon text-center">
+                No open lottery rounds. Once new rounds unlock, entries will appear here.
+              </div>
+            ) : (
+              <table className="min-w-full text-xs font-pokemon">
+                <thead>
+                  <tr className="text-gray-400 border-b border-gray-800">
+                    <th className="px-3 py-2 text-left">Round</th>
+                    <th className="px-3 py-2 text-left">Status</th>
+                    <th className="px-3 py-2 text-right">Total Entries</th>
+                    <th className="px-3 py-2 text-right">Your Entries</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lotteryRoundRows.map((row) => (
+                    <tr
+                      key={row.round_id}
+                      className="border-t border-gray-900 hover:bg-gray-800/60"
+                    >
+                      <td className="px-3 py-2 text-gray-100">{row.label}</td>
+                      <td className="px-3 py-2 text-gray-400">
+                        {row.locked ? 'Locked' : 'Open'}
+                      </td>
+                      <td className="px-3 py-2 text-right text-blue-300">
+                        {row.total_entries}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {row.your_entries > 0 ? (
+                          <span className="text-blue-200 font-semibold">
+                            {row.your_entries}
+                          </span>
+                        ) : (
+                          <span className="text-gray-500 text-[10px]">
+                            None yet
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        {/* ---------- Live Singles Table ---------- */}
+        <div className="mt-8">
+          <div className="flex items-center mb-3 space-x-2">
+            <Gavel className="h-4 w-4 text-purple-300" />
+            <h2 className="text-sm sm:text-base text-purple-200 font-pokemon font-semibold">
+              Live Singles Summary
+            </h2>
+          </div>
+          <div className="bg-gray-900/80 border border-purple-500/20 rounded-2xl overflow-x-auto">
+            {liveSingleRows.length === 0 ? (
+              <div className="px-4 py-6 text-xs text-gray-500 font-pokemon text-center">
+                No active Live Singles for this stream.
+              </div>
+            ) : (
+              <table className="min-w-full text-xs font-pokemon">
+                <thead>
+                  <tr className="text-gray-400 border-b border-gray-800">
+                    <th className="px-3 py-2 text-left">Card</th>
+                    <th className="px-3 py-2 text-left">Set</th>
+                    <th className="px-3 py-2 text-right">Top Bid</th>
+                    <th className="px-3 py-2 text-right">Buy Now</th>
+                    <th className="px-3 py-2 text-center">Your Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {liveSingleRows.map((row) => (
+                    <tr
+                      key={row.id}
+                      className={`border-t border-gray-900 ${
+                        row.you_are_leading
+                          ? 'bg-purple-600/10'
+                          : 'hover:bg-gray-800/60'
+                      }`}
+                    >
+                      <td className="px-3 py-2 text-gray-100">
+                        {row.card_name}
+                      </td>
+                      <td className="px-3 py-2 text-gray-400">
+                        {row.set_name || '—'}
+                      </td>
+                      <td className="px-3 py-2 text-right text-purple-300">
+                        {row.top_bid != null
+                          ? `$${row.top_bid.toFixed(2)}`
+                          : '—'}
+                      </td>
+                      <td className="px-3 py-2 text-right text-gray-300">
+                        {row.buy_now != null
+                          ? `$${row.buy_now.toFixed(2)}`
+                          : '—'}
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        {row.you_are_leading ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-500 text-white text-[10px]">
+                            <Crown className="h-3 w-3 mr-1" />
+                            You&apos;re leading
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-gray-500">
+                            Not leading
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
         <div className="mt-6 text-[10px] text-gray-500 font-pokemon text-center">
-          Detailed tables for Chase Slots, Lottery, and Live Singles can be rendered
-          below this overview using the same stream context.
+          This dashboard is a read-only snapshot powered by live data from your
+          current stream. All calculations are derived from your existing tables:
+          <span className="text-gray-400">
+            {' '}
+            streams, rounds, chase_slots, chase_bids, lottery_entries,
+            live_singles, live_singles_bids, pulled_cards.
+          </span>
         </div>
       </div>
     </section>
