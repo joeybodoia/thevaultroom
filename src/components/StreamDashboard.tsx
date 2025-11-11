@@ -48,8 +48,9 @@ interface ChaseSlotRow {
   card_name: string | null;
   set_name: string | null;
   rarity: string | null;
+  ungraded_market_price: number | null;
   starting_bid: number;
-  top_bid: number | null;
+  top_bid: number; // credits, default 0
   you_are_leading: boolean;
 }
 
@@ -57,8 +58,10 @@ interface LiveSingleRow {
   id: string;
   card_name: string;
   set_name: string | null;
+  ungraded_market_price: number | null;
+  psa_10_price: number | null;
   buy_now: number | null;
-  top_bid: number | null;
+  top_bid: number; // credits, default 0
   you_are_leading: boolean;
 }
 
@@ -154,15 +157,21 @@ const StreamDashboard: React.FC = () => {
   const [packsOpened, setPacksOpened] = useState<number>(0);
   const [packsPlanned, setPacksPlanned] = useState<number | null>(null);
   const [totalRounds, setTotalRounds] = useState<number>(0);
-  const [currentRoundNumber, setCurrentRoundNumber] = useState<number | null>(null);
+  const [currentRoundNumber, setCurrentRoundNumber] = useState<number | null>(
+    null
+  );
 
   const [chaseSlotsActive, setChaseSlotsActive] = useState<number>(0);
   const [userChaseLeading, setUserChaseLeading] = useState<number>(0);
   const [chaseSlotRows, setChaseSlotRows] = useState<ChaseSlotRow[]>([]);
 
-  const [lotteryEntriesOpenTotal, setLotteryEntriesOpenTotal] = useState<number>(0);
-  const [userLotteryEntriesOpen, setUserLotteryEntriesOpen] = useState<number>(0);
-  const [lotteryRoundRows, setLotteryRoundRows] = useState<LotteryRoundRow[]>([]);
+  const [lotteryEntriesOpenTotal, setLotteryEntriesOpenTotal] =
+    useState<number>(0);
+  const [userLotteryEntriesOpen, setUserLotteryEntriesOpen] =
+    useState<number>(0);
+  const [lotteryRoundRows, setLotteryRoundRows] = useState<LotteryRoundRow[]>(
+    []
+  );
 
   const [liveSinglesActive, setLiveSinglesActive] = useState<number>(0);
   const [userSinglesLeading, setUserSinglesLeading] = useState<number>(0);
@@ -172,7 +181,7 @@ const StreamDashboard: React.FC = () => {
 
   const [loadingOverview, setLoadingOverview] = useState<boolean>(true);
 
-  /** -------- Auth bootstrap (mirrors PokemonSection style) -------- */
+  /** -------- Auth bootstrap -------- */
 
   useEffect(() => {
     const init = async () => {
@@ -227,12 +236,7 @@ const StreamDashboard: React.FC = () => {
     };
   }, []);
 
-  /** -------- Pick "current" stream for dashboard --------
-   * Priority:
-   * 1) latest LIVE
-   * 2) next SCHEDULED
-   * 3) latest ENDED
-   */
+  /** -------- Select "current" stream -------- */
 
   useEffect(() => {
     const fetchStream = async () => {
@@ -240,7 +244,7 @@ const StreamDashboard: React.FC = () => {
         setLoadingStream(true);
         setError(null);
 
-        // 1) LIVE
+        // Prefer LIVE
         let { data, error } = await supabase
           .from('streams')
           .select('*')
@@ -253,7 +257,7 @@ const StreamDashboard: React.FC = () => {
 
         let picked: Stream | null = (data?.[0] as Stream) || null;
 
-        // 2) SCHEDULED
+        // Then SCHEDULED
         if (!picked) {
           const { data: schedData, error: schedErr } = await supabase
             .from('streams')
@@ -266,7 +270,7 @@ const StreamDashboard: React.FC = () => {
           picked = (schedData?.[0] as Stream) || null;
         }
 
-        // 3) ENDED
+        // Then latest ENDED
         if (!picked) {
           const { data: endedData, error: endedErr } = await supabase
             .from('streams')
@@ -291,7 +295,7 @@ const StreamDashboard: React.FC = () => {
     fetchStream();
   }, []);
 
-  /** -------- Overview + table data once we know the stream -------- */
+  /** -------- Overview + mechanic summaries -------- */
 
   useEffect(() => {
     if (!stream?.id) {
@@ -306,7 +310,7 @@ const StreamDashboard: React.FC = () => {
         const streamId = stream.id;
         const currentUserId = user?.id || null;
 
-        /** 1) Rounds + pack progress */
+        /** 1) Rounds / packs */
         const { data: roundsData, error: roundsErr } = await supabase
           .from('rounds')
           .select('*')
@@ -336,7 +340,6 @@ const StreamDashboard: React.FC = () => {
           : 0;
         setTotalRounds(maxRound);
 
-        // Current round: first unlocked; fallback to highest round_number
         let currentRound: Round | undefined = rounds
           .filter((r) => !r.locked)
           .sort((a, b) => a.round_number - b.round_number)[0];
@@ -349,12 +352,12 @@ const StreamDashboard: React.FC = () => {
 
         setCurrentRoundNumber(currentRound ? currentRound.round_number : null);
 
-        /** 2) Chase Slots: active slots + top bids + user-leading flags */
+        /** 2) Chase Slots Summary (ungraded only) */
 
         const { data: chaseSlotsData, error: chaseSlotsErr } = await supabase
           .from('chase_slots')
           .select(
-            'id, stream_id, card_name, set_name, rarity, starting_bid, min_increment, is_active'
+            'id, stream_id, card_name, set_name, rarity, starting_bid, min_increment, is_active, ungraded_market_price'
           )
           .eq('stream_id', streamId)
           .eq('is_active', true);
@@ -376,63 +379,71 @@ const StreamDashboard: React.FC = () => {
 
           if (bidsErr) throw bidsErr;
 
-          const bySlot: Record<string, ChaseSlotRow> = {};
+          type SlotAgg = {
+            row: ChaseSlotRow;
+            topBidTs: number;
+            topBidUserId: string | null;
+          };
+
+          const bySlot: Record<string, SlotAgg> = {};
 
           chaseSlots.forEach((slot) => {
             bySlot[slot.id] = {
-              id: slot.id,
-              card_name: slot.card_name || null,
-              set_name: slot.set_name || null,
-              rarity: slot.rarity || null,
-              starting_bid: Number(slot.starting_bid || 1),
-              top_bid: null,
-              you_are_leading: false,
+              row: {
+                id: slot.id,
+                card_name: slot.card_name || null,
+                set_name: slot.set_name || null,
+                rarity: slot.rarity || null,
+                ungraded_market_price:
+                  slot.ungraded_market_price != null
+                    ? Number(slot.ungraded_market_price)
+                    : null,
+                starting_bid: Number(slot.starting_bid || 1),
+                top_bid: 0,
+                you_are_leading: false,
+              },
+              topBidTs: 0,
+              topBidUserId: null,
             };
           });
 
           (bidsData || []).forEach((b: any) => {
-            const slotId = b.slot_id;
-            if (!bySlot[slotId]) return;
+            const agg = bySlot[b.slot_id];
+            if (!agg) return;
 
-            const existing = bySlot[slotId];
             const amount = Number(b.amount);
-            const createdAt = new Date(b.created_at).getTime();
+            const ts = new Date(b.created_at).getTime() || 0;
 
-            const currentTop = existing.top_bid ?? existing.starting_bid ?? 0;
             if (
-              existing.top_bid == null ||
-              amount > existing.top_bid ||
-              (amount === existing.top_bid &&
-                createdAt <
-                  new Date(
-                    // fallback: treat existing as later if no timestamp
-                    new Date().toISOString()
-                  ).getTime())
+              amount > agg.row.top_bid ||
+              (amount === agg.row.top_bid && ts > 0 && ts < agg.topBidTs)
             ) {
-              existing.top_bid = amount;
-              existing.you_are_leading = currentUserId
-                ? b.user_id === currentUserId
-                : false;
+              agg.row.top_bid = amount;
+              agg.topBidTs = ts;
+              agg.topBidUserId = b.user_id;
             }
           });
 
-          chaseSlotRowsLocal = Object.values(bySlot).map((row) => {
-            // If no bids, use starting_bid as baseline display top
-            return {
-              ...row,
-              top_bid: row.top_bid ?? null,
-            };
+          chaseSlotRowsLocal = Object.values(bySlot).map((agg) => {
+            if (currentUserId && agg.topBidUserId === currentUserId) {
+              agg.row.you_are_leading = true;
+              userChaseLeadCount += 1;
+            }
+            return agg.row;
           });
 
-          userChaseLeadCount = chaseSlotRowsLocal.filter(
-            (r) => r.you_are_leading
-          ).length;
+          // Sort by ungraded NM price desc (fallback 0)
+          chaseSlotRowsLocal.sort(
+            (a, b) =>
+              (b.ungraded_market_price || 0) -
+              (a.ungraded_market_price || 0)
+          );
         }
 
         setChaseSlotRows(chaseSlotRowsLocal);
         setUserChaseLeading(userChaseLeadCount);
 
-        /** 3) Lottery: open rounds summary + your entries */
+        /** 3) Lottery Summary (Open Rounds) */
 
         const openRounds = rounds.filter((r) => !r.locked);
         const openRoundIds = openRounds.map((r) => r.id);
@@ -487,12 +498,12 @@ const StreamDashboard: React.FC = () => {
         setUserLotteryEntriesOpen(totalUserEntriesAll);
         setLotteryRoundRows(lotteryRowsLocal);
 
-        /** 4) Live Singles: active singles + top bids + your status */
+        /** 4) Live Singles Summary (ungraded + PSA10) */
 
         const { data: singlesData, error: singlesErr } = await supabase
           .from('live_singles')
           .select(
-            'id, stream_id, card_name, set_name, buy_now, is_active'
+            'id, stream_id, card_name, set_name, buy_now, is_active, ungraded_market_price, psa_10_price'
           )
           .eq('stream_id', streamId)
           .eq('is_active', true);
@@ -514,63 +525,79 @@ const StreamDashboard: React.FC = () => {
 
           if (bidsErr) throw bidsErr;
 
-          const byCard: Record<
-            string,
-            { topBid: number | null; leaderUserId: string | null }
-          > = {};
+          type CardAgg = {
+            topBid: number;
+            topBidTs: number;
+            topBidUserId: string | null;
+          };
+
+          const byCard: Record<string, CardAgg> = {};
 
           (bidsRows || []).forEach((b: any) => {
             const cardId = b.card_id;
             const amount = Number(b.amount);
-            const createdAt = new Date(b.created_at).getTime();
+            const ts = new Date(b.created_at).getTime() || 0;
 
-            if (!byCard[cardId]) {
-              byCard[cardId] = {
-                topBid: amount,
-                leaderUserId: b.user_id,
-              };
-              return;
-            }
+            const curr = byCard[cardId] || {
+              topBid: 0,
+              topBidTs: 0,
+              topBidUserId: null,
+            };
 
-            const curr = byCard[cardId];
             if (
-              curr.topBid == null ||
               amount > curr.topBid ||
-              (amount === curr.topBid &&
-                createdAt <
-                  new Date().getTime())
+              (amount === curr.topBid && ts > 0 && ts < curr.topBidTs)
             ) {
               curr.topBid = amount;
-              curr.leaderUserId = b.user_id;
+              curr.topBidTs = ts;
+              curr.topBidUserId = b.user_id;
             }
+
+            byCard[cardId] = curr;
           });
 
           singlesRowsLocal = singles.map((s) => {
             const agg = byCard[s.id] || {
-              topBid: null,
-              leaderUserId: null,
+              topBid: 0,
+              topBidTs: 0,
+              topBidUserId: null,
             };
             const youLead =
-              !!currentUserId && agg.leaderUserId === currentUserId;
+              !!currentUserId && agg.topBidUserId === currentUserId;
 
-            if (youLead) userSinglesLeadCountLocal += 1;
+            if (youLead) {
+              userSinglesLeadCountLocal += 1;
+            }
 
             return {
               id: s.id,
               card_name: s.card_name,
               set_name: s.set_name || null,
+              ungraded_market_price:
+                s.ungraded_market_price != null
+                  ? Number(s.ungraded_market_price)
+                  : null,
+              psa_10_price:
+                s.psa_10_price != null
+                  ? Number(s.psa_10_price)
+                  : null,
               buy_now:
                 s.buy_now != null ? Number(s.buy_now) : null,
-              top_bid: agg.topBid,
+              top_bid: agg.topBid || 0,
               you_are_leading: youLead,
             };
           });
+
+          // Sort by PSA 10 price desc (fallback 0)
+          singlesRowsLocal.sort(
+            (a, b) => (b.psa_10_price || 0) - (a.psa_10_price || 0)
+          );
         }
 
         setLiveSingleRows(singlesRowsLocal);
         setUserSinglesLeading(userSinglesLeadCountLocal);
 
-        /** 5) Last big hit (pulled_cards) */
+        /** 5) Last big hit */
 
         if (rounds.length > 0) {
           const roundIds = rounds.map((r) => r.id);
@@ -877,7 +904,7 @@ const StreamDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* ---------- Chase Slots Table ---------- */}
+        {/* ---------- Chase Slots Table (Ungraded only) ---------- */}
         <div className="mt-8">
           <div className="flex items-center mb-3 space-x-2">
             <Trophy className="h-4 w-4 text-red-400" />
@@ -885,62 +912,72 @@ const StreamDashboard: React.FC = () => {
               Chase Slots Summary
             </h2>
           </div>
-          <div className="bg-gray-900/80 border border-red-500/20 rounded-2xl overflow-x-auto">
+          <div className="bg-gray-900/80 border border-red-500/20 rounded-2xl">
             {chaseSlotRows.length === 0 ? (
               <div className="px-4 py-6 text-xs text-gray-500 font-pokemon text-center">
                 No active chase slots for this stream yet.
               </div>
             ) : (
-              <table className="min-w-full text-xs font-pokemon">
-                <thead>
-                  <tr className="text-gray-400 border-b border-gray-800">
-                    <th className="px-3 py-2 text-left">Card / Slot</th>
-                    <th className="px-3 py-2 text-left">Set</th>
-                    <th className="px-3 py-2 text-left">Rarity</th>
-                    <th className="px-3 py-2 text-right">Top Bid</th>
-                    <th className="px-3 py-2 text-center">Your Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {chaseSlotRows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className={`border-t border-gray-900 ${
-                        row.you_are_leading
-                          ? 'bg-red-600/10'
-                          : 'hover:bg-gray-800/60'
-                      }`}
-                    >
-                      <td className="px-3 py-2 text-gray-100">
-                        {row.card_name || 'Chase Slot'}
-                      </td>
-                      <td className="px-3 py-2 text-gray-400">
-                        {row.set_name || '—'}
-                      </td>
-                      <td className="px-3 py-2 text-gray-400">
-                        {row.rarity || '—'}
-                      </td>
-                      <td className="px-3 py-2 text-right text-red-300">
-                        {row.top_bid != null
-                          ? `$${row.top_bid.toFixed(2)}`
-                          : `$${row.starting_bid.toFixed(2)} (start)`}
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        {row.you_are_leading ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px]">
-                            <Crown className="h-3 w-3 mr-1" />
-                            You&apos;re leading
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-gray-500">
-                            Not leading
-                          </span>
-                        )}
-                      </td>
+              <div className="max-h-96 overflow-y-auto">
+                <table className="min-w-full text-xs font-pokemon">
+                  <thead>
+                    <tr className="text-gray-400 border-b border-gray-800">
+                      <th className="px-3 py-2 text-left">Card / Slot</th>
+                      <th className="px-3 py-2 text-left">Set</th>
+                      <th className="px-3 py-2 text-left">Rarity</th>
+                      <th className="px-3 py-2 text-right">
+                        Ungraded NM
+                      </th>
+                      <th className="px-3 py-2 text-right">
+                        Top Bid (credits)
+                      </th>
+                      <th className="px-3 py-2 text-center">Your Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {chaseSlotRows.map((row) => (
+                      <tr
+                        key={row.id}
+                        className={`border-t border-gray-900 ${
+                          row.you_are_leading
+                            ? 'bg-red-600/10'
+                            : 'hover:bg-gray-800/60'
+                        }`}
+                      >
+                        <td className="px-3 py-2 text-gray-100">
+                          {row.card_name || 'Chase Slot'}
+                        </td>
+                        <td className="px-3 py-2 text-gray-400">
+                          {row.set_name || '—'}
+                        </td>
+                        <td className="px-3 py-2 text-gray-400">
+                          {row.rarity || '—'}
+                        </td>
+                        <td className="px-3 py-2 text-right text-gray-300">
+                          {row.ungraded_market_price != null
+                            ? `$${row.ungraded_market_price.toFixed(2)}`
+                            : '—'}
+                        </td>
+                        <td className="px-3 py-2 text-right text-red-300">
+                          {row.top_bid.toFixed(2)}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          {row.you_are_leading ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px]">
+                              <Crown className="h-3 w-3 mr-1" />
+                              You&apos;re leading
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-gray-500">
+                              Not leading
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
@@ -1008,71 +1045,88 @@ const StreamDashboard: React.FC = () => {
               Live Singles Summary
             </h2>
           </div>
-          <div className="bg-gray-900/80 border border-purple-500/20 rounded-2xl overflow-x-auto">
+          <div className="bg-gray-900/80 border border-purple-500/20 rounded-2xl">
             {liveSingleRows.length === 0 ? (
               <div className="px-4 py-6 text-xs text-gray-500 font-pokemon text-center">
                 No active Live Singles for this stream.
               </div>
             ) : (
-              <table className="min-w-full text-xs font-pokemon">
-                <thead>
-                  <tr className="text-gray-400 border-b border-gray-800">
-                    <th className="px-3 py-2 text-left">Card</th>
-                    <th className="px-3 py-2 text-left">Set</th>
-                    <th className="px-3 py-2 text-right">Top Bid</th>
-                    <th className="px-3 py-2 text-right">Buy Now</th>
-                    <th className="px-3 py-2 text-center">Your Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {liveSingleRows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className={`border-t border-gray-900 ${
-                        row.you_are_leading
-                          ? 'bg-purple-600/10'
-                          : 'hover:bg-gray-800/60'
-                      }`}
-                    >
-                      <td className="px-3 py-2 text-gray-100">
-                        {row.card_name}
-                      </td>
-                      <td className="px-3 py-2 text-gray-400">
-                        {row.set_name || '—'}
-                      </td>
-                      <td className="px-3 py-2 text-right text-purple-300">
-                        {row.top_bid != null
-                          ? `$${row.top_bid.toFixed(2)}`
-                          : '—'}
-                      </td>
-                      <td className="px-3 py-2 text-right text-gray-300">
-                        {row.buy_now != null
-                          ? `$${row.buy_now.toFixed(2)}`
-                          : '—'}
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        {row.you_are_leading ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-500 text-white text-[10px]">
-                            <Crown className="h-3 w-3 mr-1" />
-                            You&apos;re leading
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-gray-500">
-                            Not leading
-                          </span>
-                        )}
-                      </td>
+              <div className="max-h-96 overflow-y-auto">
+                <table className="min-w-full text-xs font-pokemon">
+                  <thead>
+                    <tr className="text-gray-400 border-b border-gray-800">
+                      <th className="px-3 py-2 text-left">Card</th>
+                      <th className="px-3 py-2 text-left">Set</th>
+                      <th className="px-3 py-2 text-right">
+                        Ungraded NM
+                      </th>
+                      <th className="px-3 py-2 text-right">
+                        PSA 10
+                      </th>
+                      <th className="px-3 py-2 text-right">Buy Now</th>
+                      <th className="px-3 py-2 text-right">
+                        Top Bid (credits)
+                      </th>
+                      <th className="px-3 py-2 text-center">Your Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {liveSingleRows.map((row) => (
+                      <tr
+                        key={row.id}
+                        className={`border-t border-gray-900 ${
+                          row.you_are_leading
+                            ? 'bg-purple-600/10'
+                            : 'hover:bg-gray-800/60'
+                        }`}
+                      >
+                        <td className="px-3 py-2 text-gray-100">
+                          {row.card_name}
+                        </td>
+                        <td className="px-3 py-2 text-gray-400">
+                          {row.set_name || '—'}
+                        </td>
+                        <td className="px-3 py-2 text-right text-gray-300">
+                          {row.ungraded_market_price != null
+                            ? `$${row.ungraded_market_price.toFixed(2)}`
+                            : '—'}
+                        </td>
+                        <td className="px-3 py-2 text-right text-gray-300">
+                          {row.psa_10_price != null
+                            ? `$${row.psa_10_price.toFixed(2)}`
+                            : '—'}
+                        </td>
+                        <td className="px-3 py-2 text-right text-gray-300">
+                          {row.buy_now != null
+                            ? `$${row.buy_now.toFixed(2)}`
+                            : '—'}
+                        </td>
+                        <td className="px-3 py-2 text-right text-purple-300">
+                          {row.top_bid.toFixed(2)}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          {row.you_are_leading ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-500 text-white text-[10px]">
+                              <Crown className="h-3 w-3 mr-1" />
+                              You&apos;re leading
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-gray-500">
+                              Not leading
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
 
         <div className="mt-6 text-[10px] text-gray-500 font-pokemon text-center">
-          This dashboard is a read-only snapshot powered by live data from your
-          current stream. All calculations are derived from your existing tables:
+          This dashboard is a read-only snapshot powered by your existing tables:
           <span className="text-gray-400">
             {' '}
             streams, rounds, chase_slots, chase_bids, lottery_entries,
