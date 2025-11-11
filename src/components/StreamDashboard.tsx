@@ -11,6 +11,7 @@ import {
   Trophy,
   Users,
   Crown,
+  Info,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { User } from '@supabase/supabase-js';
@@ -43,6 +44,8 @@ interface LotteryEntry {
   round_id: string | null;
 }
 
+type UserStatus = 'no-bid' | 'highest-bid' | 'outbid';
+
 interface ChaseSlotRow {
   id: string;
   card_name: string | null;
@@ -50,8 +53,8 @@ interface ChaseSlotRow {
   rarity: string | null;
   ungraded_market_price: number | null;
   starting_bid: number;
-  top_bid: number; // credits, default 0
-  you_are_leading: boolean;
+  top_bid: number; // credits
+  your_status: UserStatus;
 }
 
 interface LiveSingleRow {
@@ -61,8 +64,8 @@ interface LiveSingleRow {
   ungraded_market_price: number | null;
   psa_10_price: number | null;
   buy_now: number | null;
-  top_bid: number; // credits, default 0
-  you_are_leading: boolean;
+  top_bid: number; // credits
+  your_status: UserStatus;
 }
 
 interface LotteryRoundRow {
@@ -180,6 +183,9 @@ const StreamDashboard: React.FC = () => {
   const [lastBigHit, setLastBigHit] = useState<PulledCard | null>(null);
 
   const [loadingOverview, setLoadingOverview] = useState<boolean>(true);
+
+  // Status legend modal
+  const [showStatusInfo, setShowStatusInfo] = useState(false);
 
   /** -------- Auth bootstrap -------- */
 
@@ -352,7 +358,7 @@ const StreamDashboard: React.FC = () => {
 
         setCurrentRoundNumber(currentRound ? currentRound.round_number : null);
 
-        /** 2) Chase Slots Summary (ungraded only) */
+        /** 2) Chase Slots Summary (ungraded only, with bid status) */
 
         const { data: chaseSlotsData, error: chaseSlotsErr } = await supabase
           .from('chase_slots')
@@ -383,6 +389,7 @@ const StreamDashboard: React.FC = () => {
             row: ChaseSlotRow;
             topBidTs: number;
             topBidUserId: string | null;
+            userHasBid: boolean;
           };
 
           const bySlot: Record<string, SlotAgg> = {};
@@ -400,10 +407,11 @@ const StreamDashboard: React.FC = () => {
                     : null,
                 starting_bid: Number(slot.starting_bid || 1),
                 top_bid: 0,
-                you_are_leading: false,
+                your_status: 'no-bid',
               },
               topBidTs: 0,
               topBidUserId: null,
+              userHasBid: false,
             };
           });
 
@@ -413,22 +421,37 @@ const StreamDashboard: React.FC = () => {
 
             const amount = Number(b.amount);
             const ts = new Date(b.created_at).getTime() || 0;
+            const isUser = currentUserId && b.user_id === currentUserId;
 
             if (
               amount > agg.row.top_bid ||
-              (amount === agg.row.top_bid && ts > 0 && ts < agg.topBidTs)
+              (amount === agg.row.top_bid &&
+                ts > 0 &&
+                (agg.topBidTs === 0 || ts < agg.topBidTs))
             ) {
               agg.row.top_bid = amount;
               agg.topBidTs = ts;
               agg.topBidUserId = b.user_id;
             }
+
+            if (isUser) {
+              agg.userHasBid = true;
+            }
           });
 
           chaseSlotRowsLocal = Object.values(bySlot).map((agg) => {
-            if (currentUserId && agg.topBidUserId === currentUserId) {
-              agg.row.you_are_leading = true;
-              userChaseLeadCount += 1;
+            let status: UserStatus = 'no-bid';
+
+            if (currentUserId && agg.userHasBid) {
+              if (agg.topBidUserId === currentUserId) {
+                status = 'highest-bid';
+                userChaseLeadCount += 1;
+              } else {
+                status = 'outbid';
+              }
             }
+
+            agg.row.your_status = status;
             return agg.row;
           });
 
@@ -498,7 +521,7 @@ const StreamDashboard: React.FC = () => {
         setUserLotteryEntriesOpen(totalUserEntriesAll);
         setLotteryRoundRows(lotteryRowsLocal);
 
-        /** 4) Live Singles Summary (ungraded + PSA10) */
+        /** 4) Live Singles Summary (ungraded + PSA10, with bid status) */
 
         const { data: singlesData, error: singlesErr } = await supabase
           .from('live_singles')
@@ -529,6 +552,7 @@ const StreamDashboard: React.FC = () => {
             topBid: number;
             topBidTs: number;
             topBidUserId: string | null;
+            userHasBid: boolean;
           };
 
           const byCard: Record<string, CardAgg> = {};
@@ -537,20 +561,28 @@ const StreamDashboard: React.FC = () => {
             const cardId = b.card_id;
             const amount = Number(b.amount);
             const ts = new Date(b.created_at).getTime() || 0;
+            const isUser = currentUserId && b.user_id === currentUserId;
 
             const curr = byCard[cardId] || {
               topBid: 0,
               topBidTs: 0,
               topBidUserId: null,
+              userHasBid: false,
             };
 
             if (
               amount > curr.topBid ||
-              (amount === curr.topBid && ts > 0 && ts < curr.topBidTs)
+              (amount === curr.topBid &&
+                ts > 0 &&
+                (curr.topBidTs === 0 || ts < curr.topBidTs))
             ) {
               curr.topBid = amount;
               curr.topBidTs = ts;
               curr.topBidUserId = b.user_id;
+            }
+
+            if (isUser) {
+              curr.userHasBid = true;
             }
 
             byCard[cardId] = curr;
@@ -561,12 +593,17 @@ const StreamDashboard: React.FC = () => {
               topBid: 0,
               topBidTs: 0,
               topBidUserId: null,
+              userHasBid: false,
             };
-            const youLead =
-              !!currentUserId && agg.topBidUserId === currentUserId;
 
-            if (youLead) {
-              userSinglesLeadCountLocal += 1;
+            let status: UserStatus = 'no-bid';
+            if (currentUserId && agg.userHasBid) {
+              if (agg.topBidUserId === currentUserId) {
+                status = 'highest-bid';
+                userSinglesLeadCountLocal += 1;
+              } else {
+                status = 'outbid';
+              }
             }
 
             return {
@@ -584,7 +621,7 @@ const StreamDashboard: React.FC = () => {
               buy_now:
                 s.buy_now != null ? Number(s.buy_now) : null,
               top_bid: agg.topBid || 0,
-              you_are_leading: youLead,
+              your_status: status,
             };
           });
 
@@ -630,7 +667,38 @@ const StreamDashboard: React.FC = () => {
 
   const loading = loadingStream || loadingOverview;
 
-  /** -------- Render states -------- */
+  /** -------- Render helpers -------- */
+
+  const renderStatusBadge = (status: UserStatus, color: 'red' | 'purple') => {
+    if (status === 'highest-bid') {
+      return (
+        <span
+          className={`inline-flex items-center px-2 py-0.5 rounded-full ${
+            color === 'red'
+              ? 'bg-red-500'
+              : 'bg-purple-500'
+          } text-white text-[10px]`}
+        >
+          <Crown className="h-3 w-3 mr-1" />
+          Highest bid
+        </span>
+      );
+    }
+    if (status === 'outbid') {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-red-600/80 text-white text-[10px]">
+          Outbid
+        </span>
+      );
+    }
+    return (
+      <span className="text-[10px] text-gray-500">
+        No bid
+      </span>
+    );
+  };
+
+  /** -------- Top-level states -------- */
 
   if (loading && !stream) {
     return (
@@ -698,6 +766,8 @@ const StreamDashboard: React.FC = () => {
     stream.started_at != null &&
     stream.ended_at != null;
 
+  /** -------- Render -------- */
+
   return (
     <section className="py-10 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8 bg-black min-h-screen">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -716,8 +786,7 @@ const StreamDashboard: React.FC = () => {
             </h1>
             <p className="text-gray-300 text-xs sm:text-sm mt-2 font-pokemon max-w-xl">
               One glance summary of chase slots, lotteries, and live singles for this
-              stream. Use this page to see where the action is and where you&apos;re
-              currently leading.
+              stream. Use this page to see where the action is and how your positions look.
             </p>
           </div>
 
@@ -797,7 +866,7 @@ const StreamDashboard: React.FC = () => {
               {chaseSlotsActive}
             </div>
             <div className="text-[10px] text-gray-400 font-pokemon mt-1">
-              You&apos;re leading on{' '}
+              You&apos;re highest on{' '}
               <span className="text-red-300 font-semibold">
                 {userChaseLeading}
               </span>{' '}
@@ -836,7 +905,7 @@ const StreamDashboard: React.FC = () => {
               {liveSinglesActive}
             </div>
             <div className="text-[10px] text-gray-400 font-pokemon mt-1">
-              You&apos;re top bidder on{' '}
+              You&apos;re highest on{' '}
               <span className="text-purple-200 font-semibold">
                 {userSinglesLeading}
               </span>
@@ -931,7 +1000,19 @@ const StreamDashboard: React.FC = () => {
                       <th className="px-3 py-2 text-right">
                         Top Bid (credits)
                       </th>
-                      <th className="px-3 py-2 text-center">Your Status</th>
+                      <th className="px-3 py-2 text-center">
+                        <div className="inline-flex items-center justify-center space-x-1">
+                          <span>Your Status</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowStatusInfo(true)}
+                            className="text-gray-500 hover:text-yellow-300 transition-colors"
+                            aria-label="Your Status legend"
+                          >
+                            <Info className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -939,7 +1020,7 @@ const StreamDashboard: React.FC = () => {
                       <tr
                         key={row.id}
                         className={`border-t border-gray-900 ${
-                          row.you_are_leading
+                          row.your_status === 'highest-bid'
                             ? 'bg-red-600/10'
                             : 'hover:bg-gray-800/60'
                         }`}
@@ -962,16 +1043,7 @@ const StreamDashboard: React.FC = () => {
                           {row.top_bid.toFixed(2)}
                         </td>
                         <td className="px-3 py-2 text-center">
-                          {row.you_are_leading ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px]">
-                              <Crown className="h-3 w-3 mr-1" />
-                              You&apos;re leading
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-gray-500">
-                              Not leading
-                            </span>
-                          )}
+                          {renderStatusBadge(row.your_status, 'red')}
                         </td>
                       </tr>
                     ))}
@@ -1024,7 +1096,7 @@ const StreamDashboard: React.FC = () => {
                             {row.your_entries}
                           </span>
                         ) : (
-                          <span className="text-gray-500 text-[10px]">
+                          <span className="text-[10px] text-gray-500">
                             None yet
                           </span>
                         )}
@@ -1067,7 +1139,19 @@ const StreamDashboard: React.FC = () => {
                       <th className="px-3 py-2 text-right">
                         Top Bid (credits)
                       </th>
-                      <th className="px-3 py-2 text-center">Your Status</th>
+                      <th className="px-3 py-2 text-center">
+                        <div className="inline-flex items-center justify-center space-x-1">
+                          <span>Your Status</span>
+                          <button
+                            type="button"
+                            onClick={() => setShowStatusInfo(true)}
+                            className="text-gray-500 hover:text-purple-300 transition-colors"
+                            aria-label="Your Status legend"
+                          >
+                            <Info className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1075,7 +1159,7 @@ const StreamDashboard: React.FC = () => {
                       <tr
                         key={row.id}
                         className={`border-t border-gray-900 ${
-                          row.you_are_leading
+                          row.your_status === 'highest-bid'
                             ? 'bg-purple-600/10'
                             : 'hover:bg-gray-800/60'
                         }`}
@@ -1105,16 +1189,7 @@ const StreamDashboard: React.FC = () => {
                           {row.top_bid.toFixed(2)}
                         </td>
                         <td className="px-3 py-2 text-center">
-                          {row.you_are_leading ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-500 text-white text-[10px]">
-                              <Crown className="h-3 w-3 mr-1" />
-                              You&apos;re leading
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-gray-500">
-                              Not leading
-                            </span>
-                          )}
+                          {renderStatusBadge(row.your_status, 'purple')}
                         </td>
                       </tr>
                     ))}
@@ -1124,6 +1199,57 @@ const StreamDashboard: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Status Legend Modal */}
+        {showStatusInfo && (
+          <div
+            className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70"
+            onClick={() => setShowStatusInfo(false)}
+          >
+            <div
+              className="bg-gray-900 border border-yellow-400/40 rounded-2xl p-4 max-w-sm w-[90%] shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <Info className="h-4 w-4 text-yellow-300" />
+                  <h3 className="text-sm text-yellow-300 font-pokemon font-semibold">
+                    Your Status Legend
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowStatusInfo(false)}
+                  className="text-gray-500 hover:text-yellow-300 transition-colors text-sm"
+                >
+                  ✕
+                </button>
+              </div>
+              <ul className="space-y-2 text-[10px] text-gray-200 font-pokemon">
+                <li>
+                  <span className="font-semibold text-yellow-300">
+                    No bid:
+                  </span>{' '}
+                  You have not placed any bids on this slot or card.
+                </li>
+                <li>
+                  <span className="font-semibold text-yellow-300">
+                    Highest bid:
+                  </span>{' '}
+                  You currently hold the top bid (in credits) for this slot or
+                  card.
+                </li>
+                <li>
+                  <span className="font-semibold text-yellow-300">
+                    Outbid:
+                  </span>{' '}
+                  You placed a bid previously, but another user now has the top
+                  bid.
+                </li>
+              </ul>
+            </div>
+          </div>
+        )}
 
         <div className="mt-6 text-[10px] text-gray-500 font-pokemon text-center">
           This dashboard is a read-only snapshot powered by your existing tables:
