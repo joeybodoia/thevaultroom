@@ -191,7 +191,7 @@ const Header: React.FC = () => {
                 Bidding
               </button>
               <button
-                onClick={() => scrollToSection('stream-dashboard')}
+                onClick={() => window.location.hash = 'stream-dashboard'}
                 className="text-white/80 hover:text-white transition-colors font-pokemon"
               >
                 Stream Dashboard
@@ -340,7 +340,10 @@ const Header: React.FC = () => {
                   Bidding
                 </button>
                 <button
-                  onClick={() => scrollToSection('stream-dashboard')}
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    window.location.hash = 'stream-dashboard';
+                  }}
                   className="block w-full text-left text-white/80 hover:text-white transition-colors font-pokemon"
                 >
                   Stream Dashboard

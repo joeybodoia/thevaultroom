@@ -17,6 +17,7 @@ function App() {
   const { user, loading } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminPortal, setShowAdminPortal] = useState(false);
+  const [showStreamDashboard, setShowStreamDashboard] = useState(false);
   const [currentStreamId, setCurrentStreamId] = useState<string | null>(null);
   const [timedOut, setTimedOut] = useState(false);
 
@@ -50,13 +51,18 @@ function App() {
     }
   };
 
-  // Listen for admin portal navigation
+  // Listen for navigation changes
   useEffect(() => {
     const handleHashChange = () => {
       if (window.location.hash === '#admin' && isAdmin) {
         setShowAdminPortal(true);
+        setShowStreamDashboard(false);
+      } else if (window.location.hash === '#stream-dashboard') {
+        setShowStreamDashboard(true);
+        setShowAdminPortal(false);
       } else {
         setShowAdminPortal(false);
+        setShowStreamDashboard(false);
       }
     };
 
@@ -101,6 +107,15 @@ function App() {
     );
   }
 
+  // Show stream dashboard if hash is #stream-dashboard
+  if (showStreamDashboard) {
+    return (
+      <div className="min-h-screen bg-yellow-400">
+        <Header />
+        <StreamDashboard />
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-white bolt-scale-fix">
       <Header />
@@ -110,7 +125,6 @@ function App() {
         <StreamCountdown onStreamChange={setCurrentStreamId} />
         <CurrentSetSection />
         <PokemonSection currentStreamId={currentStreamId} />
-        <StreamDashboard />
       </main>
       <Footer />
     </div>
