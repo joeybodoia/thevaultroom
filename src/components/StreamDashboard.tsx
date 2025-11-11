@@ -7,6 +7,7 @@ import {
   Gavel,
   Loader,
   Sparkles,
+  Search,
   Ticket,
   Trophy,
   Users,
@@ -63,7 +64,6 @@ interface LiveSingleRow {
   set_name: string | null;
   ungraded_market_price: number | null;
   psa_10_price: number | null;
-  buy_now: number | null;
   top_bid: number; // credits
   your_status: UserStatus;
 }
@@ -184,7 +184,7 @@ const StreamDashboard: React.FC = () => {
 
   const [loadingOverview, setLoadingOverview] = useState<boolean>(true);
 
-  // Status legend modal
+  // Shared status legend modal
   const [showStatusInfo, setShowStatusInfo] = useState(false);
 
   /** -------- Auth bootstrap -------- */
@@ -358,7 +358,7 @@ const StreamDashboard: React.FC = () => {
 
         setCurrentRoundNumber(currentRound ? currentRound.round_number : null);
 
-        /** 2) Chase Slots Summary (ungraded only, with bid status) */
+        /** 2) Chase Slots Summary */
 
         const { data: chaseSlotsData, error: chaseSlotsErr } = await supabase
           .from('chase_slots')
@@ -455,7 +455,7 @@ const StreamDashboard: React.FC = () => {
             return agg.row;
           });
 
-          // Sort by ungraded NM price desc (fallback 0)
+          // Sort by ungraded NM price desc
           chaseSlotRowsLocal.sort(
             (a, b) =>
               (b.ungraded_market_price || 0) -
@@ -521,12 +521,12 @@ const StreamDashboard: React.FC = () => {
         setUserLotteryEntriesOpen(totalUserEntriesAll);
         setLotteryRoundRows(lotteryRowsLocal);
 
-        /** 4) Live Singles Summary (ungraded + PSA10, with bid status) */
+        /** 4) Live Singles Summary (no Buy Now) */
 
         const { data: singlesData, error: singlesErr } = await supabase
           .from('live_singles')
           .select(
-            'id, stream_id, card_name, set_name, buy_now, is_active, ungraded_market_price, psa_10_price'
+            'id, stream_id, card_name, set_name, is_active, ungraded_market_price, psa_10_price'
           )
           .eq('stream_id', streamId)
           .eq('is_active', true);
@@ -618,8 +618,6 @@ const StreamDashboard: React.FC = () => {
                 s.psa_10_price != null
                   ? Number(s.psa_10_price)
                   : null,
-              buy_now:
-                s.buy_now != null ? Number(s.buy_now) : null,
               top_bid: agg.topBid || 0,
               your_status: status,
             };
@@ -770,7 +768,7 @@ const StreamDashboard: React.FC = () => {
 
   return (
     <section className="py-10 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8 bg-black min-h-screen">
-      <div className="max-w-6xl mx-auto space-y-8">
+      <div className="max-w-6xl mx-autoextent space-y-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -786,7 +784,7 @@ const StreamDashboard: React.FC = () => {
             </h1>
             <p className="text-gray-300 text-xs sm:text-sm mt-2 font-pokemon max-w-xl">
               One glance summary of chase slots, lotteries, and live singles for this
-              stream. Use this page to see where the action is and how your positions look.
+              stream. See where the action is and how your positions look.
             </p>
           </div>
 
@@ -973,7 +971,7 @@ const StreamDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* ---------- Chase Slots Table (Ungraded only) ---------- */}
+        {/* ---------- Chase Slots Table ---------- */}
         <div className="mt-8">
           <div className="flex items-center mb-3 space-x-2">
             <Trophy className="h-4 w-4 text-red-400" />
@@ -1109,7 +1107,7 @@ const StreamDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* ---------- Live Singles Table ---------- */}
+        {/* ---------- Live Singles Table (no Buy Now) ---------- */}
         <div className="mt-8">
           <div className="flex items-center mb-3 space-x-2">
             <Gavel className="h-4 w-4 text-purple-300" />
@@ -1135,7 +1133,6 @@ const StreamDashboard: React.FC = () => {
                       <th className="px-3 py-2 text-right">
                         PSA 10
                       </th>
-                      <th className="px-3 py-2 text-right">Buy Now</th>
                       <th className="px-3 py-2 text-right">
                         Top Bid (credits)
                       </th>
@@ -1178,11 +1175,6 @@ const StreamDashboard: React.FC = () => {
                         <td className="px-3 py-2 text-right text-gray-300">
                           {row.psa_10_price != null
                             ? `$${row.psa_10_price.toFixed(2)}`
-                            : '—'}
-                        </td>
-                        <td className="px-3 py-2 text-right text-gray-300">
-                          {row.buy_now != null
-                            ? `$${row.buy_now.toFixed(2)}`
                             : '—'}
                         </td>
                         <td className="px-3 py-2 text-right text-purple-300">
@@ -1252,9 +1244,8 @@ const StreamDashboard: React.FC = () => {
         )}
 
         <div className="mt-6 text-[10px] text-gray-500 font-pokemon text-center">
-          This dashboard is a read-only snapshot powered by your existing tables:
+          This dashboard is a read-only snapshot powered by:{' '}
           <span className="text-gray-400">
-            {' '}
             streams, rounds, chase_slots, chase_bids, lottery_entries,
             live_singles, live_singles_bids, pulled_cards.
           </span>
