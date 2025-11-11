@@ -4,6 +4,7 @@ import HowItWorks from './components/HowItWorks';
 import StreamCountdown from './components/StreamCountdown';
 import CurrentSetSection from './components/CurrentSetSection';
 import PokemonSection from './components/PokemonSection';
+import StreamDashboard from './components/StreamDashboard';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import AdminPortal from './components/AdminPortal';
@@ -109,6 +110,7 @@ function App() {
         <StreamCountdown onStreamChange={setCurrentStreamId} />
         <CurrentSetSection />
         <PokemonSection currentStreamId={currentStreamId} />
+        <StreamDashboard />
       </main>
       <Footer />
     </div>

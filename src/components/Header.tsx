@@ -190,6 +190,12 @@ const Header: React.FC = () => {
               >
                 Bidding
               </button>
+              <button
+                onClick={() => scrollToSection('stream-dashboard')}
+                className="text-white/80 hover:text-white transition-colors font-pokemon"
+              >
+                Stream Dashboard
+              </button>
               {/* Future feature:
               <button
                 onClick={(e) => e.preventDefault()}
@@ -332,6 +338,12 @@ const Header: React.FC = () => {
                   className="block w-full text-left text-white/80 hover:text-white transition-colors font-pokemon"
                 >
                   Bidding
+                </button>
+                <button
+                  onClick={() => scrollToSection('stream-dashboard')}
+                  className="block w-full text-left text-white/80 hover:text-white transition-colors font-pokemon"
+                >
+                  Stream Dashboard
                 </button>
                 {/* Future feature:
                 <button
