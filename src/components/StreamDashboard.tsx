@@ -1,19 +1,3 @@
-// import React from 'react';
-
-// const StreamDashboard: React.FC = () => {
-//   return (
-//     <section className="py-8 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8 bg-yellow-400 min-h-screen">
-//       <div className="max-w-4xl mx-auto text-center">
-//         <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-black mb-4 sm:mb-6 lg:mb-8 font-pokemon">
-//           Stream Dashboard
-//         </h1>
-//       </div>
-//     </section>
-//   );
-// };
-
-// export default StreamDashboard;
-
 import React, { useEffect, useState } from 'react';
 import {
   Activity,
@@ -37,10 +21,8 @@ interface Stream {
   scheduled_date: string | null;
   created_at: string;
   singles_close_at: string | null;
-  // Once added:
-  // started_at: string | null;
-  // ended_at: string | null;
-  // total_packs_planned: number | null;
+  started_at: string | null;
+  ended_at: string | null;
 }
 
 interface Round {
@@ -49,6 +31,7 @@ interface Round {
   set_name: string;
   round_number: number;
   packs_opened: number;
+  total_packs_planned: number | null;
   locked: boolean;
   created_at: string;
 }
@@ -93,9 +76,8 @@ interface PulledCard {
   date_updated: string | null;
 }
 
-/**
- * Small helpers
- */
+/** ----------------- Helpers ----------------- */
+
 const formatTime = (iso: string | null) => {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -111,6 +93,23 @@ const formatDateTime = (iso: string | null) => {
     hour: 'numeric',
     minute: '2-digit',
   });
+};
+
+const formatElapsed = (startIso: string | null, endIso?: string | null) => {
+  if (!startIso) return '—';
+  const start = new Date(startIso).getTime();
+  const end = endIso ? new Date(endIso).getTime() : Date.now();
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return '—';
+
+  const diffMs = end - start;
+  const totalMinutes = Math.floor(diffMs / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours <= 0 && minutes <= 0) return '<1 min';
+  if (hours <= 0) return `${minutes} min`;
+  if (minutes === 0) return `${hours} hr`;
+  return `${hours} hr ${minutes} min`;
 };
 
 const statusLabel = (status: Stream['status']) => {
@@ -139,6 +138,8 @@ const statusColor = (status: Stream['status']) => {
   }
 };
 
+/** ----------------- Component ----------------- */
+
 const StreamDashboard: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
@@ -149,6 +150,7 @@ const StreamDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [packsOpened, setPacksOpened] = useState<number>(0);
+  const [packsPlanned, setPacksPlanned] = useState<number | null>(null);
   const [totalRounds, setTotalRounds] = useState<number>(0);
   const [currentRoundNumber, setCurrentRoundNumber] = useState<number | null>(null);
 
@@ -165,9 +167,8 @@ const StreamDashboard: React.FC = () => {
 
   const [loadingOverview, setLoadingOverview] = useState<boolean>(true);
 
-  /**
-   * Auth bootstrap (matches pattern from PokemonSection)
-   */
+  /** -------- Auth bootstrap (mirrors PokemonSection style) -------- */
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -221,20 +222,20 @@ const StreamDashboard: React.FC = () => {
     };
   }, []);
 
-  /**
-   * Fetch "current" stream for the dashboard.
+  /** -------- Pick "current" stream for dashboard --------
    * Priority:
-   *  1) latest LIVE
-   *  2) latest SCHEDULED
-   *  3) latest ENDED
+   * 1) latest LIVE
+   * 2) next SCHEDULED
+   * 3) latest ENDED
    */
+
   useEffect(() => {
     const fetchStream = async () => {
       try {
         setLoadingStream(true);
         setError(null);
 
-        // 1) Try LIVE
+        // 1) LIVE
         let { data, error } = await supabase
           .from('streams')
           .select('*')
@@ -247,8 +248,8 @@ const StreamDashboard: React.FC = () => {
 
         let picked: Stream | null = (data?.[0] as Stream) || null;
 
+        // 2) SCHEDULED
         if (!picked) {
-          // 2) Next: upcoming / scheduled
           const { data: schedData, error: schedErr } = await supabase
             .from('streams')
             .select('*')
@@ -260,8 +261,8 @@ const StreamDashboard: React.FC = () => {
           picked = (schedData?.[0] as Stream) || null;
         }
 
+        // 3) ENDED
         if (!picked) {
-          // 3) Fallback: most recent ended
           const { data: endedData, error: endedErr } = await supabase
             .from('streams')
             .select('*')
@@ -285,9 +286,8 @@ const StreamDashboard: React.FC = () => {
     fetchStream();
   }, []);
 
-  /**
-   * Fetch overview metrics once we know the stream.
-   */
+  /** -------- Overview metrics once we know the stream -------- */
+
   useEffect(() => {
     if (!stream?.id) {
       setLoadingOverview(false);
@@ -301,7 +301,7 @@ const StreamDashboard: React.FC = () => {
         const streamId = stream.id;
         const currentUserId = user?.id || null;
 
-        /** 1) Rounds: packs opened, total rounds, current round */
+        /** 1) Rounds: packs opened, planned, current round info */
         const { data: roundsData, error: roundsErr } = await supabase
           .from('rounds')
           .select('*')
@@ -310,11 +310,21 @@ const StreamDashboard: React.FC = () => {
         if (roundsErr) throw roundsErr;
 
         const rounds = (roundsData || []) as Round[];
+
         const totalOpened = rounds.reduce(
-          (sum, r) => sum + (r.packs_opened ?? 0),
+          (sum, r) => sum + (r.packs_opened || 0),
           0
         );
         setPacksOpened(totalOpened);
+
+        const totalPlannedRaw = rounds.reduce((sum, r) => {
+          const planned =
+            r.total_packs_planned != null
+              ? r.total_packs_planned
+              : r.packs_opened || 0; // fallback if not filled
+          return sum + planned;
+        }, 0);
+        setPacksPlanned(totalPlannedRaw > 0 ? totalPlannedRaw : null);
 
         const maxRound = rounds.length
           ? Math.max(...rounds.map((r) => r.round_number || 0))
@@ -333,10 +343,6 @@ const StreamDashboard: React.FC = () => {
         }
 
         setCurrentRoundNumber(currentRound ? currentRound.round_number : null);
-
-        // NOTE: Once you add streams.total_packs_planned, you can compute:
-        // const totalPlanned = stream.total_packs_planned ?? null;
-        // and show `${totalOpened} / ${totalPlanned}` instead of just totalOpened.
 
         /** 2) Chase slots summary */
         const { count: chaseActiveCount, error: chaseCountErr } = await supabase
@@ -378,7 +384,10 @@ const StreamDashboard: React.FC = () => {
               if (!bids.length) return;
               bids.sort((a, b) => {
                 if (b.amount !== a.amount) return b.amount - a.amount;
-                return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                return (
+                  new Date(a.created_at).getTime() -
+                  new Date(b.created_at).getTime()
+                );
               });
               const top = bids[0];
               if (top.user_id === currentUserId) userChaseLeadCount += 1;
@@ -456,7 +465,10 @@ const StreamDashboard: React.FC = () => {
               if (!bids.length) return;
               bids.sort((a, b) => {
                 if (b.amount !== a.amount) return b.amount - a.amount;
-                return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                return (
+                  new Date(a.created_at).getTime() -
+                  new Date(b.created_at).getTime()
+                );
               });
               const top = bids[0];
               if (top.user_id === currentUserId) userSinglesLeadCount += 1;
@@ -465,7 +477,7 @@ const StreamDashboard: React.FC = () => {
         }
         setUserSinglesLeading(userSinglesLeadCount);
 
-        /** 5) Last big hit (from pulled_cards) */
+        /** 5) Last big hit (pulled_cards) */
         if (rounds.length > 0) {
           const roundIds = rounds.map((r) => r.id);
           const { data: pulls, error: pullsErr } = await supabase
@@ -493,13 +505,12 @@ const StreamDashboard: React.FC = () => {
     };
 
     fetchOverview();
-  }, [stream?.id, user?.id]); // re-run when stream or user changes
+  }, [stream?.id, user?.id]);
 
   const loading = loadingStream || loadingOverview;
 
-  /**
-   * RENDER
-   */
+  /** -------- Render states -------- */
+
   if (loading && !stream) {
     return (
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black min-h-screen flex items-center justify-center">
@@ -559,6 +570,13 @@ const StreamDashboard: React.FC = () => {
     </span>
   );
 
+  const showLiveElapsed =
+    stream.status === 'live' && stream.started_at != null;
+  const showEndedElapsed =
+    stream.status === 'ended' &&
+    stream.started_at != null &&
+    stream.ended_at != null;
+
   return (
     <section className="py-10 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8 bg-black min-h-screen">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -582,23 +600,31 @@ const StreamDashboard: React.FC = () => {
             </p>
           </div>
 
-          <div className="bg-yellow-400/10 border border-yellow-400/40 rounded-2xl px-4 py-3 flex flex-col space-y-1 min-w-[200px]">
+          <div className="bg-yellow-400/10 border border-yellow-400/40 rounded-2xl px-4 py-3 flex flex-col space-y-1 min-w-[220px]">
             <div className="flex items-center justify-between text-xs text-gray-300 font-pokemon">
               <span>Scheduled</span>
               <span>{formatDateTime(stream.scheduled_date)}</span>
             </div>
-            {/* Once started_at is added, this becomes real elapsed time:
-            {stream.started_at && stream.status === 'live' && (
-              <div className="flex items-center justify-between text-xs text-gray-300 font-pokemon">
+
+            {showLiveElapsed && (
+              <div className="flex items-center justify-between text-xs text-yellow-300 font-pokemon">
                 <span>Live for</span>
                 <span>{formatElapsed(stream.started_at)}</span>
               </div>
             )}
-            */}
+
+            {showEndedElapsed && (
+              <div className="flex items-center justify-between text-xs text-gray-300 font-pokemon">
+                <span>Ran for</span>
+                <span>{formatElapsed(stream.started_at, stream.ended_at)}</span>
+              </div>
+            )}
+
             <div className="flex items-center justify-between text-xs text-gray-300 font-pokemon">
               <span>Singles Close</span>
               <span>{formatDateTime(stream.singles_close_at)}</span>
             </div>
+
             <div className="flex items-center justify-between text-xs text-yellow-300 font-pokemon">
               <span>Your Credits</span>
               <span>
@@ -624,13 +650,11 @@ const StreamDashboard: React.FC = () => {
             </div>
             <div className="text-xl sm:text-2xl font-bold text-yellow-400 font-pokemon">
               {packsOpened}
-              {/* Once total_packs_planned is added on streams:
-              {stream.total_packs_planned != null && (
+              {packsPlanned != null && (
                 <span className="text-xs text-gray-400 ml-1">
-                  / {stream.total_packs_planned}
+                  / {packsPlanned}
                 </span>
               )}
-              */}
             </div>
             <div className="text-[10px] text-gray-400 font-pokemon mt-1">
               Rounds: {totalRounds || '—'}
@@ -752,17 +776,17 @@ const StreamDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Activity className="h-3 w-3 text-gray-400" />
-                <span>Overview Loaded</span>
+                <span>Overview</span>
               </div>
               <span>{loadingOverview ? 'Updating...' : 'Live snapshot'}</span>
             </div>
           </div>
         </div>
 
-        {/* Placeholder for future per-mechanic tables */}
+        {/* Hook for future detailed tables */}
         <div className="mt-6 text-[10px] text-gray-500 font-pokemon text-center">
-          Detailed tables for Chase Slots, Lottery, and Live Singles can slot in
-          below this overview, using the same stream_id and schema.
+          Detailed tables for Chase Slots, Lottery, and Live Singles can be rendered
+          below this overview using the same stream context.
         </div>
       </div>
     </section>
