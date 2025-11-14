@@ -23,6 +23,7 @@ interface Round {
   set_name: string;
   round_number: number;
   packs_opened: number;
+  total_packs_planned: number | null;
   locked: boolean;
   created_at: string;
 }
@@ -108,8 +109,6 @@ interface LiveSingleLeader {
 
 /** ========= CONSTANTS ========= */
 
-const PACKS = Array.from({ length: 10 }, (_, i) => i + 1);
-
 const LOTTERY_RARITIES_BY_SET: Record<string, string[]> = {
   'SV: Prismatic Evolutions': ['SIR', 'Masterball Pattern', 'Ultra Rare', 'Pokeball Pattern'],
   'Crown Zenith: Galarian Gallery': [
@@ -148,7 +147,8 @@ const AdminPortal: React.FC = () => {
   const [formData, setFormData] = useState({
     set_name: '',
     round_number: 1,
-    packs_opened: 10,
+    packs_opened: 0,
+    total_packs_planned: 10,
     locked: false,
   });
   const [saving, setSaving] = useState(false);
@@ -455,7 +455,8 @@ const AdminPortal: React.FC = () => {
     setFormData({
       set_name: round.set_name,
       round_number: round.round_number,
-      packs_opened: round.packs_opened,
+      packs_opened: round.packs_opened ?? 0,
+      total_packs_planned: round.total_packs_planned ?? 10,
       locked: round.locked,
     });
   };
@@ -470,7 +471,8 @@ const AdminPortal: React.FC = () => {
     setFormData({
       set_name: '',
       round_number: 1,
-      packs_opened: 10,
+      packs_opened: 0,
+      total_packs_planned: 10,
       locked: false,
     });
   };
@@ -614,13 +616,8 @@ const AdminPortal: React.FC = () => {
                 </p>
                 <p className="text-gray-700 text-xs font-pokemon">
                   Starting Bid:{' '}
-                  {slot.starting_bid != null
-                    ? `$${slot.starting_bid.toFixed(2)}`
-                    : '—'}{' '}
-                  • Min Inc:{' '}
-                  {slot.min_increment != null
-                    ? `$${slot.min_increment.toFixed(2)}`
-                    : '—'}
+                  {slot.starting_bid != null ? `$${slot.starting_bid.toFixed(2)}` : '—'} • Min Inc:{' '}
+                  {slot.min_increment != null ? `$${slot.min_increment.toFixed(2)}` : '—'}
                 </p>
                 <p className="text-gray-500 text-[10px] font-pokemon">
                   Active: {slot.is_active ? 'Yes' : 'No'}
@@ -653,6 +650,14 @@ const AdminPortal: React.FC = () => {
 
     const rarities = LOTTERY_RARITIES_BY_SET[round.set_name] || [];
 
+    const totalPacks = round.total_packs_planned ?? 0;
+    const packNumbers =
+      totalPacks > 0
+        ? Array.from({ length: totalPacks }, (_, i) => i + 1)
+        : Object.keys(counts)
+            .map((n) => parseInt(n, 10))
+            .sort((a, b) => a - b);
+
     return (
       <div className="space-y-3">
         <p className="text-gray-600 text-xs font-pokemon">
@@ -660,7 +665,7 @@ const AdminPortal: React.FC = () => {
           <span className="font-semibold">{entries.length}</span>
         </p>
         <div className="space-y-2">
-          {PACKS.map((pack) => {
+          {packNumbers.map((pack) => {
             const row = counts[pack] || {};
             const totalForPack = Object.values(row).reduce((a, b) => a + b, 0);
             if (!totalForPack) return null;
@@ -1071,7 +1076,7 @@ const AdminPortal: React.FC = () => {
                   }
                   className="space-y-4"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2 font-pokemon">
                         Set Name{' '}
@@ -1107,10 +1112,7 @@ const AdminPortal: React.FC = () => {
                         onChange={(e) =>
                           setFormData((prev) => ({
                             ...prev,
-                            round_number: parseInt(
-                              e.target.value,
-                              10
-                            ),
+                            round_number: parseInt(e.target.value, 10),
                           }))
                         }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-yellow-600 focus:outline-none font-pokemon"
@@ -1120,9 +1122,11 @@ const AdminPortal: React.FC = () => {
                         <option value={3}>Round 3</option>
                       </select>
                     </div>
+
+                    {/* Total Packs Planned */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2 font-pokemon">
-                        Packs to Open{' '}
+                        Total Packs Planned{' '}
                         <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -1130,19 +1134,40 @@ const AdminPortal: React.FC = () => {
                         required
                         min={1}
                         max={50}
-                        value={formData.packs_opened}
+                        value={formData.total_packs_planned}
                         onChange={(e) =>
                           setFormData((prev) => ({
                             ...prev,
-                            packs_opened: parseInt(
-                              e.target.value,
-                              10
-                            ),
+                            total_packs_planned: parseInt(e.target.value, 10) || 0,
                           }))
                         }
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-yellow-600 focus:outline-none font-pokemon"
                       />
                     </div>
+
+                    {/* Packs Opened */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2 font-pokemon">
+                        Packs Opened So Far
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={formData.total_packs_planned || 999}
+                        value={formData.packs_opened}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            packs_opened: parseInt(e.target.value, 10) || 0,
+                          }))
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-yellow-600 focus:outline-none font-pokemon"
+                      />
+                      <p className="text-[10px] text-gray-500 mt-1 font-pokemon">
+                        This tracks how many packs you&apos;ve actually opened during the stream.
+                      </p>
+                    </div>
+
                     <div className="flex items-center">
                       <label className="flex items-center space-x-2 font-pokemon">
                         <input
@@ -1151,8 +1176,7 @@ const AdminPortal: React.FC = () => {
                           onChange={(e) =>
                             setFormData((prev) => ({
                               ...prev,
-                              locked:
-                                e.target.checked,
+                              locked: e.target.checked,
                             }))
                           }
                           className="rounded border-gray-300 text-yellow-600 focus:ring-yellow-600"
@@ -1243,8 +1267,9 @@ const AdminPortal: React.FC = () => {
                           </div>
                           <p className="text-gray-600 text-xs font-pokemon mt-1">
                             Stream:{' '}
-                            {round.stream_id || '—'} •{' '}
-                            {round.packs_opened} packs • Created{' '}
+                            {round.stream_id || '—'} • Packs Opened:{' '}
+                            {round.packs_opened ?? 0} /{' '}
+                            {round.total_packs_planned ?? 0} planned • Created{' '}
                             {new Date(
                               round.created_at
                             ).toLocaleDateString()}
@@ -1564,4 +1589,3 @@ const CreditCardIcon: React.FC = () => (
 );
 
 export default AdminPortal;
-
