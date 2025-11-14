@@ -19,13 +19,12 @@ const Header: React.FC = () => {
 
   const isLoggedIn = !!user;
 
-  // Start "Loading..." only when a user is present
-  const [loadingCredits, setLoadingCredits] = useState<boolean>(!!user);
+  // Explicit loading flag, controlled in effects
+  const [loadingCredits, setLoadingCredits] = useState<boolean>(false);
 
   /** Fetch avatar + admin flag + credits for a user */
   const fetchUserRow = useCallback(
     async (userId: string) => {
-      setLoadingCredits(true);
       try {
         const { data, error } = await supabase
           .from('users')
@@ -59,6 +58,8 @@ const Header: React.FC = () => {
       setLoadingCredits(false);
       return;
     }
+
+    setLoadingCredits(true);
     fetchUserRow(user.id);
   }, [user?.id, fetchUserRow]);
 
@@ -72,6 +73,7 @@ const Header: React.FC = () => {
         setSiteCredits(0);
         setLoadingCredits(false);
       } else {
+        setLoadingCredits(true);
         fetchUserRow(authedUser.id);
       }
     });
@@ -92,16 +94,23 @@ const Header: React.FC = () => {
       .channel('users_site_credit')
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${user.id}` },
+        {
+          event: '*', // listen to INSERT/UPDATE/DELETE for this row
+          schema: 'public',
+          table: 'users',
+          filter: `id=eq.${user.id}`,
+        },
         (payload) => {
           const next = payload.new as any;
-          if (next?.site_credit !== undefined) {
+          if (!next) return;
+
+          if (next.site_credit !== undefined) {
             setSiteCredits(Number(next.site_credit));
           }
-          if (next?.avatar !== undefined) {
+          if (next.avatar !== undefined) {
             setAvatarUrl(next.avatar ?? null);
           }
-          if (next?.is_admin !== undefined) {
+          if (next.is_admin !== undefined) {
             setIsAdmin(!!next.is_admin);
           }
         }
@@ -191,19 +200,11 @@ const Header: React.FC = () => {
                 Bidding
               </button>
               <button
-                onClick={() => window.location.hash = 'stream-dashboard'}
+                onClick={() => (window.location.hash = 'stream-dashboard')}
                 className="text-white/80 hover:text-white transition-colors font-pokemon"
               >
                 Stream Dashboard
               </button>
-              {/* Future feature:
-              <button
-                onClick={(e) => e.preventDefault()}
-                className="text-white/40 cursor-not-allowed font-pokemon"
-              >
-                Past Streams
-              </button>
-              */}
               {isLoggedIn && isAdmin && (
                 <a
                   href="#admin"
@@ -297,12 +298,7 @@ const Header: React.FC = () => {
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="text-white p-2"
               >
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   {mobileMenuOpen ? (
                     <path
                       strokeLinecap="round"
@@ -348,14 +344,7 @@ const Header: React.FC = () => {
                 >
                   Stream Dashboard
                 </button>
-                {/* Future feature:
-                <button
-                  onClick={(e) => e.preventDefault()}
-                  className="block w-full text-left text-white/40 cursor-not-allowed font-pokemon"
-                >
-                  Past Streams
-                </button>
-                */}
+
                 {isLoggedIn && isAdmin && (
                   <a
                     href="#admin"
@@ -408,11 +397,7 @@ const Header: React.FC = () => {
         </div>
       </header>
 
-      <AuthModal
-        isOpen={authModal.isOpen}
-        onClose={closeAuthModal}
-        mode={authModal.mode}
-      />
+      <AuthModal isOpen={authModal.isOpen} onClose={closeAuthModal} mode={authModal.mode} />
 
       <ProfileModal
         isOpen={profileModal && !!user}
@@ -426,5 +411,3 @@ const Header: React.FC = () => {
 };
 
 export default Header;
-
-
