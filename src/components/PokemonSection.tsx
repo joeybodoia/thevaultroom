@@ -15,6 +15,7 @@ interface Round {
   set_name: string;
   round_number: number;
   packs_opened: number;
+  total_packs_planned: number;
   locked: boolean;
   created_at: string;
 }
@@ -46,7 +47,6 @@ interface PokemonSectionProps {
 }
 
 /** ----------------- CONSTANTS / HELPERS ----------------- */
-const PACKS = Array.from({ length: 10 }, (_, i) => i + 1);
 
 const RARITIES = {
   prismatic: ['SIR', 'Masterball Pattern', 'Ultra Rare', 'Pokeball Pattern'],
@@ -215,6 +215,8 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
   useEffect(() => {
     if (currentStreamId) fetchCurrentRound();
+    else setCurrentRound(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStreamId, activeTab, lotteryActiveTab, biddingMode]);
 
   useEffect(() => {
@@ -303,10 +305,12 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         .select('*')
         .eq('stream_id', currentStreamId)
         .eq('set_name', setName)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error;
-      setCurrentRound(data);
+      if (error) throw error;
+      setCurrentRound(data ?? null);
     } catch (err: any) {
       console.error('Error fetching current round:', err);
       setCurrentRound(null);
@@ -607,7 +611,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     }
     const raw = bidInputs[card.id];
     const amt = Number(raw);
-    if (!raw || isNaN(amt) || amt <= 0) {
+       if (!raw || isNaN(amt) || amt <= 0) {
       setBidError('Enter a valid bid amount.');
       return;
     }
@@ -660,6 +664,18 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
   /** ----------------- RENDERER FOR A SET (even spacing) ----------------- */
   function renderSetPacks(setKey: SetKey, title: string) {
+    const plannedPacks =
+      currentRound?.total_packs_planned ??
+      currentRound?.packs_opened ??
+      0;
+    const packNumbers =
+      currentRound && plannedPacks > 0
+        ? Array.from({ length: plannedPacks }, (_, i) => i + 1)
+        : [];
+
+    const plannedDisplay =
+      currentRound?.total_packs_planned ?? currentRound?.packs_opened ?? 0;
+
     return (
       <div className="space-y-6">
         <h3 className="text-2xl font-bold text-black font-pokemon text-center mb-8">
@@ -683,7 +699,8 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                   Round ID: {currentRound.id}
                 </p>
                 <p className="text-blue-600 text-sm font-pokemon">
-                  Round {currentRound.round_number} • {currentRound.packs_opened} packs •
+                  Round {currentRound.round_number} • {plannedDisplay} planned •{' '}
+                  {currentRound.packs_opened} opened •
                   {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
                 </p>
               </div>
@@ -695,7 +712,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
         {/* PACK ROWS */}
         <div className="space-y-4">
-          {PACKS.map((packNum) => (
+          {packNumbers.map((packNum) => (
             <div key={`${setKey}-${packNum}`} className="rounded-2xl p-4 border shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-lg font-semibold font-pokemon">Pack {packNum}</h4>
@@ -768,6 +785,12 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               </div>
             </div>
           ))}
+
+          {currentRound && packNumbers.length === 0 && (
+            <div className="text-center py-6 text-gray-600 font-pokemon">
+              This round has 0 packs planned.
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1156,6 +1179,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     },
   ];
 
+  const plannedDisplayDirect =
+    currentRound?.total_packs_planned ?? currentRound?.packs_opened ?? 0;
+
   return (
     <section
       id="bidding"
@@ -1170,11 +1196,11 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
             <p className="mb-4">
               Three exciting rounds:
               <br />
-              Round 1 (10 Prismatic Evolutions packs)
+              Round 1 (Prismatic Evolutions)
               <br />
-              Round 2 (10 Destined Rivals packs)
+              Round 2 (Destined Rivals)
               <br />
-              Round 3 (10 Crown Zenith packs)
+              Round 3 (Crown Zenith)
               <br />
               Each round offers three entry options.
             </p>
@@ -1198,7 +1224,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               </h4>
               <ul className="text-left space-y-2 mb-4">
                 <li>
-                  • Use credits to enter a lottery for Packs 1–10 in a given
+                  • Use credits to enter a lottery for Packs 1–N in a given
                   round by selecting a rarity for a specific pack
                 </li>
                 <li>
@@ -1208,7 +1234,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                 <li>
                   • One winner is drawn per pack — winner keeps all cards from
                   that specific pack (minus any cards won via Chase Slots).
-                  That’s up to 10 winners per round.
+                  That’s up to N winners per round.
                 </li>
               </ul>
 
@@ -1347,7 +1373,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               </div>
             </div>
 
-            {/* Round Info */}
+            {/* Round Info (Direct / Chase Slots) */}
             <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
               <div className="text-center">
                 <h4 className="font-semibold text-blue-800 font-pokemon mb-2">
@@ -1368,7 +1394,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                     </p>
                     <p className="text-blue-600 text-sm font-pokemon">
                       Round {currentRound.round_number} •{' '}
-                      {currentRound.packs_opened} packs •
+                      {plannedDisplayDirect} planned • {currentRound.packs_opened} opened •
                       {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
                     </p>
                   </div>
@@ -1553,7 +1579,3 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 };
 
 export default PokemonSection;
-
-
-
-
