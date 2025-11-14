@@ -39,15 +39,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode }) => {
     setSuccess(null);
 
     try {
-      // Sign up with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            username: username || null
-          }
-        }
+            username: username || null,
+          },
+        },
       });
 
       if (authError) {
@@ -55,7 +54,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode }) => {
       }
 
       if (authData.user) {
-        setSuccess('Account created successfully! Please check your email and click the verification link to complete your registration.');
+        setSuccess(
+          'Account created successfully! Please check your email and click the verification link to complete your registration.'
+        );
       }
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
@@ -82,9 +83,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode }) => {
 
       if (data.user) {
         setSuccess('Signed in successfully!');
+        // Close quickly so sign-in feels snappy (no 1.5s wait)
         setTimeout(() => {
           handleClose();
-        }, 1500);
+        }, 300);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to sign in');
@@ -96,9 +98,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode }) => {
   if (!isOpen) return null;
 
   return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 pt-16 overflow-y-auto" 
-      style={{ 
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 pt-16 overflow-y-auto"
+      style={{
         zIndex: 99999,
         position: 'fixed',
         top: 0,
@@ -107,9 +109,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode }) => {
         bottom: 0,
       }}
     >
-      <div 
+      <div
         className="bg-white rounded-2xl p-6 max-w-md w-full relative"
-        style={{ 
+        style={{
           zIndex: 100000,
         }}
       >
@@ -117,10 +119,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode }) => {
           <h3 className="text-2xl font-bold text-black font-pokemon">
             {mode === 'signup' ? 'Create Account' : 'Sign In'}
           </h3>
-          <button
-            onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
+          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
             <X className="h-6 w-6" />
           </button>
         </div>
@@ -227,7 +226,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode }) => {
             <button
               onClick={() => {
                 resetForm();
-                // This would need to be handled by the parent component
+                // Parent component should toggle mode
               }}
               className="text-red-600 hover:text-red-700 font-semibold ml-1"
             >
