@@ -892,6 +892,9 @@ const AdminPortal: React.FC = () => {
     );
   };
 
+  /** ========= DERIVED CURRENT STREAM ========= */
+  const currentStream = streams.find((s) => s.is_current);
+
   /** ========= LOADING STATE ========= */
 
   if (loading) {
@@ -932,6 +935,49 @@ const AdminPortal: React.FC = () => {
             Manage streams, rounds, Chase Slots, lottery entries, Live Singles,
             and pulled cards for your events.
           </p>
+
+          {/* Current Stream Banner */}
+          <div className="mt-4">
+            <div className="text-xs uppercase tracking-wide text-purple-700 font-pokemon mb-1">
+              Current Stream
+            </div>
+            <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-3 flex items-center justify-between">
+              {currentStream ? (
+                <>
+                  <div>
+                    <p className="text-sm font-semibold text-purple-900 font-pokemon">
+                      {currentStream.title}
+                    </p>
+                    <p className="text-xs text-purple-800 font-pokemon mt-1">
+                      {currentStream.scheduled_date
+                        ? `Scheduled: ${new Date(
+                            currentStream.scheduled_date
+                          ).toLocaleString()}`
+                        : 'No scheduled date'}
+                    </p>
+                    <p className="text-[11px] text-purple-700 font-mono mt-1">
+                      ID: {currentStream.id}
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-purple-600 text-white text-xs font-pokemon font-semibold">
+                    ACTIVE
+                  </span>
+                </>
+              ) : (
+                <div className="flex items-center justify-between w-full">
+                  <div>
+                    <p className="text-sm font-semibold text-purple-900 font-pokemon">
+                      No current stream is set
+                    </p>
+                    <p className="text-xs text-purple-800 font-pokemon mt-1">
+                      Use the “Set as Current Stream” button in Stream Management
+                      to mark one as active.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Error */}
