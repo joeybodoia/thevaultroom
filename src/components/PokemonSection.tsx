@@ -251,8 +251,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
             .from('chase_slots')
             .select('id', { count: 'exact', head: true })
             .eq('is_active', true)
-            .eq('set_name', SET_DB_NAME[setKey])
-            .gte('ungraded_market_price', 40);
+            .eq('set_name', SET_DB_NAME[setKey]);
 
           if (currentStreamId) q = q.eq('stream_id', currentStreamId);
 
@@ -272,8 +271,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
           .from('chase_slots')
           .select('all_card_id')
           .eq('is_active', true)
-          .eq('set_name', SET_DB_NAME[activeTab])
-          .gte('ungraded_market_price', 40);
+          .eq('set_name', SET_DB_NAME[activeTab]);
 
         if (currentStreamId) idsQuery = idsQuery.eq('stream_id', currentStreamId);
 
@@ -383,15 +381,15 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       );
     }
 
+    // Only include cards that have an active chase_slot for the current tab
     if (chaseCardIdsForActiveTab.size > 0) {
       currentCards = currentCards.filter((c) =>
         chaseCardIdsForActiveTab.has(String(c.id))
       );
     }
 
-    currentCards = currentCards.filter(
-      (card) => (card.ungraded_market_price || 0) >= 40
-    );
+    // No hard-coded price floor here — chase_slots in the DB already reflect
+    // whatever min price you configured for the current round.
 
     let filtered = currentCards;
 
