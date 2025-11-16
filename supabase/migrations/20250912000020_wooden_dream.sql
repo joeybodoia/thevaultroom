@@ -2,7 +2,7 @@
   Migration #2 — Site Credits + Live Singles + Atomic Bid/Credit RPCs
 
   Contents:
-    1) Ensure users.site_credit precision/check + index
+    1) Ensure users.site_credit precision/check
     2) New-user trigger: grant $10 to first 100 users
     3) RPC: enter_lottery_with_debit (atomic debit + insert)
     4) Live Singles tables + leader view + RLS policies
@@ -11,7 +11,7 @@
     7) Grants for authenticated role
 */
 
--- 1) Users: site_credit precision/check + index
+-- 1) Users: site_credit precision/check
 DO $$
 BEGIN
   IF EXISTS (
@@ -30,7 +30,7 @@ BEGIN
   END IF;
 END$$;
 
-CREATE INDEX IF NOT EXISTS idx_users_credit ON public.users (site_credit);
+-- Note: no idx_users_credit index here, matching current DB state.
 
 -- 2) New-user trigger: credit on signup (first 100 users)
 CREATE OR REPLACE FUNCTION public.handle_new_user_with_credits()
@@ -115,9 +115,12 @@ CREATE TABLE IF NOT EXISTS public.live_singles (
   psa_10_price         numeric(12,2) CHECK (psa_10_price IS NULL OR psa_10_price >= 0)
 );
 
-CREATE INDEX IF NOT EXISTS idx_live_singles_stream ON public.live_singles (stream_id, is_active);
-CREATE INDEX IF NOT EXISTS idx_live_singles_stream_active_price
-  ON public.live_singles (stream_id, is_active, ungraded_market_price DESC);
+-- match current DB index set
+CREATE INDEX IF NOT EXISTS live_singles_stream_id_is_active_idx
+  ON public.live_singles (stream_id, is_active);
+
+CREATE INDEX IF NOT EXISTS idx_live_singles_stream_active_psa10_price
+  ON public.live_singles (stream_id, is_active, psa_10_price DESC, ungraded_market_price DESC);
 
 CREATE TABLE IF NOT EXISTS public.live_singles_bids (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -127,8 +130,12 @@ CREATE TABLE IF NOT EXISTS public.live_singles_bids (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_live_singles_bids_card ON public.live_singles_bids (card_id);
-CREATE INDEX IF NOT EXISTS idx_live_singles_bids_user ON public.live_singles_bids (user_id, created_at DESC);
+-- match current DB index set
+CREATE INDEX IF NOT EXISTS idx_individual_bids_top
+  ON public.live_singles_bids (card_id, amount DESC);
+
+CREATE INDEX IF NOT EXISTS live_singles_bids_user_id_created_at_idx
+  ON public.live_singles_bids (user_id, created_at DESC);
 
 CREATE OR REPLACE VIEW public.live_singles_leaders AS
 SELECT card_id, MAX(amount) AS top_bid
@@ -342,4 +349,3 @@ GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT EXECUTE ON FUNCTION public.enter_lottery_with_debit(uuid, uuid, text, int, numeric) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.place_chase_bid_immediate_refund(uuid, uuid, numeric) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.place_live_single_bid_immediate_refund(uuid, uuid, numeric) TO authenticated;
-
