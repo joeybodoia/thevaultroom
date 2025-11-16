@@ -15,7 +15,7 @@ interface Round {
   set_name: string;
   round_number: number;
   packs_opened: number;
-  total_packs_planned: number;
+  total_packs_planned: number | null;
   locked: boolean;
   created_at: string;
 }
@@ -448,7 +448,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       !selectedLotteryEntry?.rarity ||
       !selectedLotteryEntry?.packNumber
     ) {
-      setError('Missing required information for lottery entry');
+      setEntryError('Missing required information for lottery entry');
       return;
     }
 
@@ -497,7 +497,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       await fetchLotteryParticipants();
 
       setEntrySuccess('Successfully entered the lottery! 5 credits deducted.');
+      setLotterySuccess('Successfully entered the lottery! 5 credits deducted.');
       setTimeout(() => setEntrySuccess(''), 3000);
+      setTimeout(() => setLotterySuccess(null), 3000);
     } catch (err: any) {
       console.error('Lottery entry error:', err);
       const msg = String(err?.message || '').toLowerCase();
@@ -508,8 +510,10 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         msg.includes('unique constraint')
       ) {
         setEntryError('You already entered this pack for this round.');
+        setLotteryError('You already entered this pack for this round.');
       } else {
         setEntryError(err.message || 'Failed to enter lottery');
+        setLotteryError(err.message || 'Failed to enter lottery');
       }
     } finally {
       setIsProcessingEntry(false);
@@ -611,7 +615,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     }
     const raw = bidInputs[card.id];
     const amt = Number(raw);
-       if (!raw || isNaN(amt) || amt <= 0) {
+    if (!raw || isNaN(amt) || amt <= 0) {
       setBidError('Enter a valid bid amount.');
       return;
     }
@@ -664,17 +668,13 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
   /** ----------------- RENDERER FOR A SET (even spacing) ----------------- */
   function renderSetPacks(setKey: SetKey, title: string) {
-    const plannedPacks =
-      currentRound?.total_packs_planned ??
-      currentRound?.packs_opened ??
-      0;
+    const plannedPacks = currentRound?.total_packs_planned ?? 0;
     const packNumbers =
       currentRound && plannedPacks > 0
         ? Array.from({ length: plannedPacks }, (_, i) => i + 1)
         : [];
 
-    const plannedDisplay =
-      currentRound?.total_packs_planned ?? currentRound?.packs_opened ?? 0;
+    const plannedDisplay = currentRound?.total_packs_planned ?? 0;
 
     return (
       <div className="space-y-6">
@@ -1179,8 +1179,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     },
   ];
 
-  const plannedDisplayDirect =
-    currentRound?.total_packs_planned ?? currentRound?.packs_opened ?? 0;
+  const plannedDisplayDirect = currentRound?.total_packs_planned ?? 0;
 
   return (
     <section
