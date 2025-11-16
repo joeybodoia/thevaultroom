@@ -7,6 +7,7 @@ interface Stream {
   title: string;
   scheduled_date: string | null;
   created_at: string;
+  is_current?: boolean | null;
 }
 
 interface StreamCountdownProps {
@@ -24,15 +25,32 @@ const StreamCountdown: React.FC<StreamCountdownProps> = ({ onStreamChange }) => 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch the next upcoming stream
+  // Fetch the current stream (if any), otherwise the next upcoming stream
   const fetchNextStream = async () => {
     try {
       setLoading(true);
       setError(null);
 
+      // 1) Prefer the stream marked as current
+      const { data: currentStream, error: currentError } = await supabase
+        .from('streams')
+        .select('*')
+        .eq('is_current', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (currentError) throw currentError;
+
+      if (currentStream) {
+        setNextStream(currentStream);
+        return;
+      }
+
+      // 2) Fallback to the nearest upcoming stream by scheduled_date
       const now = new Date().toISOString();
 
-      const { data, error } = await supabase
+      const { data: upcomingStream, error: upcomingError } = await supabase
         .from('streams')
         .select('*')
         .gte('scheduled_date', now)
@@ -40,9 +58,9 @@ const StreamCountdown: React.FC<StreamCountdownProps> = ({ onStreamChange }) => 
         .limit(1)
         .maybeSingle();
 
-      if (error) throw error;
+      if (upcomingError) throw upcomingError;
 
-      setNextStream(data ?? null);
+      setNextStream(upcomingStream ?? null);
     } catch (err: any) {
       console.error('Error fetching next stream:', err);
       setError(err.message || 'Failed to fetch stream data');
@@ -76,7 +94,7 @@ const StreamCountdown: React.FC<StreamCountdownProps> = ({ onStreamChange }) => 
       const distance = targetDate.getTime() - now;
 
       if (distance <= 0) {
-        // Stream has started or passed — reset & fetch next
+        // Stream has started or passed — reset & refetch
         clearInterval(timer);
         setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
         fetchNextStream();
@@ -127,7 +145,7 @@ const StreamCountdown: React.FC<StreamCountdownProps> = ({ onStreamChange }) => 
     );
   }
 
-  if (error || !nextStream?.scheduled_date) {
+  if (error || !nextStream) {
     return (
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
         <div className="max-w-4xl mx-auto text-center">
@@ -147,6 +165,29 @@ const StreamCountdown: React.FC<StreamCountdownProps> = ({ onStreamChange }) => 
               </p>
             </div>
           </div>
+        </div>
+      </section>
+    );
+  }
+
+  // If we have a current stream but no scheduled_date, show title but no countdown
+  if (!nextStream.scheduled_date) {
+    return (
+      <section className="py-8 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8 bg-gray-50">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-black mb-6 sm:mb-8 font-pokemon">
+            {nextStream.title}
+          </h2>
+
+          <div className="bg-white rounded-2xl p-4 sm:p-6 lg:p-8 border border-gray-200 mb-6 sm:mb-8 shadow-lg">
+            <p className="text-gray-600 font-pokemon">
+              Stream time to be announced. Stay tuned!
+            </p>
+          </div>
+
+          <button className="bg-red-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold text-base sm:text-lg hover:bg-red-700 transition-all transform hover:scale-105 font-pokemon">
+            Set Reminder
+          </button>
         </div>
       </section>
     );
