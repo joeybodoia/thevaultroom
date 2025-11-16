@@ -12,6 +12,7 @@ import {
   Loader,
   Ticket,
   Star,
+  CheckCircle2,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -168,6 +169,7 @@ const AdminPortal: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [loadingCards, setLoadingCards] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [expandedRound, setExpandedRound] = useState<string | null>(null);
   const [trackingRound, setTrackingRound] = useState<string | null>(null);
@@ -352,6 +354,7 @@ const AdminPortal: React.FC = () => {
     e.preventDefault();
     setSavingStream(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
       const { data, error } = await supabase
@@ -369,6 +372,7 @@ const AdminPortal: React.FC = () => {
       setStreams((prev) => [data, ...prev]);
       setShowCreateStreamForm(false);
       setStreamFormData({ title: '', scheduled_date: '' });
+      setSuccessMessage(`Stream "${data.title}" created successfully.`);
     } catch (err: any) {
       setError(err.message || 'Failed to create stream');
     } finally {
@@ -378,14 +382,24 @@ const AdminPortal: React.FC = () => {
 
   const handleSetCurrentStream = async () => {
     if (!selectedStreamId) return;
+
     setError(null);
+    setSuccessMessage(null);
+
+    const selectedStream = streams.find((s) => s.id === selectedStreamId);
+
     try {
       const { error } = await supabase.rpc('set_current_stream', {
         p_stream_id: selectedStreamId,
       });
       if (error) throw error;
+
       // Refresh streams so is_current flags are updated locally
       await fetchStreams();
+
+      setSuccessMessage(
+        `Current stream set to "${selectedStream?.title || 'Selected Stream'}" successfully.`
+      );
     } catch (err: any) {
       console.error('Failed to set current stream:', err);
       setError(err.message || 'Failed to set current stream');
@@ -403,6 +417,7 @@ const AdminPortal: React.FC = () => {
 
     setSaving(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
       const { data, error } = await supabase
@@ -420,6 +435,9 @@ const AdminPortal: React.FC = () => {
       setRounds((prev) => [data, ...prev]);
       setShowCreateForm(false);
       resetRoundForm();
+      setSuccessMessage(
+        `Round ${data.round_number} for "${data.set_name}" created successfully.`
+      );
     } catch (err: any) {
       setError(err.message || 'Failed to create round');
     } finally {
@@ -433,6 +451,7 @@ const AdminPortal: React.FC = () => {
 
     setSaving(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
       const { data, error } = await supabase
@@ -446,6 +465,9 @@ const AdminPortal: React.FC = () => {
       setRounds((prev) => prev.map((r) => (r.id === editingRound.id ? data : r)));
       setEditingRound(null);
       resetRoundForm();
+      setSuccessMessage(
+        `Round ${data.round_number} for "${data.set_name}" updated successfully.`
+      );
     } catch (err: any) {
       setError(err.message || 'Failed to update round');
     } finally {
@@ -454,6 +476,9 @@ const AdminPortal: React.FC = () => {
   };
 
   const toggleRoundLock = async (round: Round) => {
+    setError(null);
+    setSuccessMessage(null);
+
     try {
       const { data, error } = await supabase
         .from('rounds')
@@ -463,6 +488,12 @@ const AdminPortal: React.FC = () => {
         .single();
       if (error) throw error;
       setRounds((prev) => prev.map((r) => (r.id === round.id ? data : r)));
+
+      setSuccessMessage(
+        `Round ${data.round_number} for "${data.set_name}" is now ${
+          data.locked ? 'LOCKED' : 'UNLOCKED'
+        }.`
+      );
     } catch (err: any) {
       setError(err.message || 'Failed to toggle round lock');
     }
@@ -503,6 +534,7 @@ const AdminPortal: React.FC = () => {
   const handleAddPulledCard = async (card: AllCard, roundId: string) => {
     setAddingCard(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
       const { data, error } = await supabase
@@ -531,6 +563,7 @@ const AdminPortal: React.FC = () => {
 
       setSearchTerm('');
       setSearchResults([]);
+      setSuccessMessage(`Pulled card "${data.card_name}" added to this round.`);
     } catch (err: any) {
       setError(err.message || 'Failed to add pulled card');
     } finally {
@@ -910,6 +943,19 @@ const AdminPortal: React.FC = () => {
             </div>
             <p className="text-red-600 text-sm mt-1 font-pokemon">
               {error}
+            </p>
+          </div>
+        )}
+
+        {/* Success */}
+        {successMessage && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center space-x-2 text-green-800">
+              <CheckCircle2 className="h-5 w-5" />
+              <span className="font-semibold font-pokemon">Success</span>
+            </div>
+            <p className="text-green-700 text-sm mt-1 font-pokemon">
+              {successMessage}
             </p>
           </div>
         )}
