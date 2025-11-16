@@ -58,6 +58,10 @@ BEGIN
   END IF;
 END$$;
 
+-- match current index: idx_rounds_stream_set_created
+CREATE INDEX IF NOT EXISTS idx_rounds_stream_set_created
+  ON public.rounds (stream_id, set_name, created_at DESC);
+
 ALTER TABLE public.rounds ENABLE ROW LEVEL SECURITY;
 
 DO $$
@@ -154,22 +158,15 @@ BEGIN
   END IF;
 END$$;
 
--- Final index set
-CREATE INDEX IF NOT EXISTS idx_chase_slots_stream_set_active
-  ON public.chase_slots (stream_id, set_name, is_active);
-
+-- Final index set — match current DB
 CREATE INDEX IF NOT EXISTS idx_chase_slots_all_card_id
   ON public.chase_slots (all_card_id);
 
 CREATE INDEX IF NOT EXISTS idx_chase_slots_stream_set_locked
   ON public.chase_slots (stream_id, set_name, locked);
 
-CREATE INDEX IF NOT EXISTS idx_chase_slots_stream_set_price
-  ON public.chase_slots (stream_id, set_name, ungraded_market_price DESC);
-
-CREATE INDEX IF NOT EXISTS idx_chase_slots_active_true
-  ON public.chase_slots (id)
-  WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_chase_slots_stream_set_active_price
+  ON public.chase_slots (stream_id, set_name, is_active, ungraded_market_price DESC);
 
 -- Name search: trigram
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
@@ -274,8 +271,12 @@ CREATE TABLE IF NOT EXISTS public.chase_bids (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_chase_bids_slot ON public.chase_bids (slot_id);
-CREATE INDEX IF NOT EXISTS idx_chase_bids_user ON public.chase_bids (user_id, created_at DESC);
+-- match current DB index set
+CREATE INDEX IF NOT EXISTS idx_chase_bids_top
+  ON public.chase_bids (slot_id, amount DESC);
+
+CREATE INDEX IF NOT EXISTS chase_bids_user_id_created_at_idx
+  ON public.chase_bids (user_id, created_at DESC);
 
 CREATE OR REPLACE VIEW public.chase_slot_leaders AS
 SELECT slot_id, MAX(amount) AS top_bid
@@ -350,10 +351,12 @@ BEGIN
   END IF;
 END$$;
 
-CREATE INDEX IF NOT EXISTS idx_lottery_round_pack ON public.lottery_entries (round_id, pack_number);
-CREATE INDEX IF NOT EXISTS idx_lottery_round_rarity ON public.lottery_entries (round_id, selected_rarity);
-CREATE INDEX IF NOT EXISTS idx_lottery_round ON public.lottery_entries (round_id);
-CREATE INDEX IF NOT EXISTS idx_lottery_user ON public.lottery_entries (user_id);
+-- match current index set
+CREATE INDEX IF NOT EXISTS idx_lottery_round_pack_rarity
+  ON public.lottery_entries (round_id, pack_number, selected_rarity);
+
+CREATE INDEX IF NOT EXISTS idx_lottery_user
+  ON public.lottery_entries (user_id);
 
 ALTER TABLE public.lottery_entries ENABLE ROW LEVEL SECURITY;
 
@@ -417,4 +420,3 @@ BEGIN
 END$$;
 
 -- Optional legacy cleanup lives in a separate migration.
-
