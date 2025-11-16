@@ -8,7 +8,7 @@
     4) Live Singles tables + leader view + RLS policies
     5) RPC: place_chase_bid_immediate_refund (immediate refund on outbid)
     6) RPC: place_live_single_bid_immediate_refund (immediate refund on outbid)
-    7) Grants for authenticated role
+    7) Grants for authenticated role (including set_current_stream)
 */
 
 -- 1) Users: site_credit precision/check
@@ -349,3 +349,4 @@ GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT EXECUTE ON FUNCTION public.enter_lottery_with_debit(uuid, uuid, text, int, numeric) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.place_chase_bid_immediate_refund(uuid, uuid, numeric) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.place_live_single_bid_immediate_refund(uuid, uuid, numeric) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.set_current_stream(uuid) TO authenticated;
