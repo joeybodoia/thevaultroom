@@ -24,6 +24,7 @@ interface Round {
   round_number: number;
   packs_opened: number;
   total_packs_planned: number | null;
+  chase_min_ungraded_price: number | null;
   locked: boolean;
   created_at: string;
 }
@@ -57,6 +58,7 @@ interface Stream {
   title: string;
   scheduled_date: string | null;
   created_at: string;
+  is_current?: boolean | null;
 }
 
 interface ChaseSlot {
@@ -149,6 +151,7 @@ const AdminPortal: React.FC = () => {
     round_number: 1,
     packs_opened: 0,
     total_packs_planned: 10,
+    chase_min_ungraded_price: 40,
     locked: false,
   });
   const [saving, setSaving] = useState(false);
@@ -373,6 +376,22 @@ const AdminPortal: React.FC = () => {
     }
   };
 
+  const handleSetCurrentStream = async () => {
+    if (!selectedStreamId) return;
+    setError(null);
+    try {
+      const { error } = await supabase.rpc('set_current_stream', {
+        p_stream_id: selectedStreamId,
+      });
+      if (error) throw error;
+      // Refresh streams so is_current flags are updated locally
+      await fetchStreams();
+    } catch (err: any) {
+      console.error('Failed to set current stream:', err);
+      setError(err.message || 'Failed to set current stream');
+    }
+  };
+
   /** ========= ROUND HANDLERS ========= */
 
   const handleCreateRound = async (e: React.FormEvent) => {
@@ -457,6 +476,7 @@ const AdminPortal: React.FC = () => {
       round_number: round.round_number,
       packs_opened: round.packs_opened ?? 0,
       total_packs_planned: round.total_packs_planned ?? 10,
+      chase_min_ungraded_price: round.chase_min_ungraded_price ?? 40,
       locked: round.locked,
     });
   };
@@ -473,6 +493,7 @@ const AdminPortal: React.FC = () => {
       round_number: 1,
       packs_opened: 0,
       total_packs_planned: 10,
+      chase_min_ungraded_price: 40,
       locked: false,
     });
   };
@@ -937,17 +958,29 @@ const AdminPortal: React.FC = () => {
                                 s.scheduled_date
                               ).toLocaleString()}`
                             : ''}
+                          {s.is_current ? ' (Current)' : ''}
                         </option>
                       ))}
                     </select>
                   </div>
-                  <button
-                    onClick={() => setShowCreateStreamForm(true)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-all font-pokemon inline-flex items-center space-x-2 self-start"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Create New Stream</span>
-                  </button>
+                  <div className="flex space-x-3 self-start">
+                    <button
+                      type="button"
+                      disabled={!selectedStreamId}
+                      onClick={handleSetCurrentStream}
+                      className="bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-all font-pokemon inline-flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Star className="h-4 w-4" />
+                      <span>Set as Current Stream</span>
+                    </button>
+                    <button
+                      onClick={() => setShowCreateStreamForm(true)}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-all font-pokemon inline-flex items-center space-x-2 self-start"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Create New Stream</span>
+                    </button>
+                  </div>
                 </div>
 
                 {showCreateStreamForm && (
@@ -1168,6 +1201,32 @@ const AdminPortal: React.FC = () => {
                       </p>
                     </div>
 
+                    {/* Chase Slot Min Price */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2 font-pokemon">
+                        Chase Slot Min Price ($){' '}
+                        <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min={0}
+                        step={1}
+                        value={formData.chase_min_ungraded_price}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            chase_min_ungraded_price: Number(e.target.value),
+                          }))
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-yellow-600 focus:outline-none font-pokemon"
+                      />
+                      <p className="text-[10px] text-gray-500 mt-1 font-pokemon">
+                        All cards from this set with ungraded market price at or above this value
+                        will be used to populate Chase Slots (via your DB function/trigger).
+                      </p>
+                    </div>
+
                     <div className="flex items-center">
                       <label className="flex items-center space-x-2 font-pokemon">
                         <input
@@ -1269,7 +1328,11 @@ const AdminPortal: React.FC = () => {
                             Stream:{' '}
                             {round.stream_id || '—'} • Packs Opened:{' '}
                             {round.packs_opened ?? 0} /{' '}
-                            {round.total_packs_planned ?? 0} planned • Created{' '}
+                            {round.total_packs_planned ?? 0} planned • Chase Min:{' '}
+                            {round.chase_min_ungraded_price != null
+                              ? `$${round.chase_min_ungraded_price}`
+                              : '—'}{' '}
+                            • Created{' '}
                             {new Date(
                               round.created_at
                             ).toLocaleDateString()}
