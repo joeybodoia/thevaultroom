@@ -2,8 +2,8 @@
   # Streaming + Bidding (Chase Slots + Lottery) — Finalized
 
   Includes:
-  - streams (with singles_close_at)
-  - rounds (unique per stream/set/round)
+  - streams (with singles_close_at, status, started/ended, is_current)
+  - rounds (unique per stream/set/round, with total_packs_planned + chase_min_ungraded_price)
   - users (is_admin, site_credit numeric(12,2) non-negative)
   - chase_slots (denormalized display fields + sync triggers)
   - chase_bids + leaders view
@@ -18,7 +18,11 @@ CREATE TABLE IF NOT EXISTS public.streams (
   title text NOT NULL,
   scheduled_date timestamptz,
   singles_close_at timestamptz,               -- close time for Live Singles
-  created_at timestamptz DEFAULT now()
+  created_at timestamptz DEFAULT now(),
+  status text DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'live', 'ended')),
+  started_at timestamptz,
+  ended_at timestamptz,
+  is_current boolean NOT NULL DEFAULT false
 );
 
 ALTER TABLE public.streams ENABLE ROW LEVEL SECURITY;
@@ -44,7 +48,9 @@ CREATE TABLE IF NOT EXISTS public.rounds (
   round_number int NOT NULL CHECK (round_number BETWEEN 1 AND 3),
   packs_opened int NOT NULL DEFAULT 10,
   locked boolean NOT NULL DEFAULT false,
-  created_at timestamptz DEFAULT now()
+  created_at timestamptz DEFAULT now(),
+  total_packs_planned int,
+  chase_min_ungraded_price int
 );
 
 DO $$
