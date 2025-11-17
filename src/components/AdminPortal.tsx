@@ -39,6 +39,9 @@ interface AllCard {
   image_url: string | null;
   ungraded_market_price: number | null;
   date_updated: string;
+  // New DB fields (not strictly required by UI, but kept in sync)
+  live_singles?: boolean;
+  psa_10_price?: number | null;
 }
 
 interface PulledCard {
@@ -59,6 +62,10 @@ interface Stream {
   title: string;
   scheduled_date: string | null;
   created_at: string;
+  // New stream state fields from DB
+  status?: 'scheduled' | 'live' | 'ended' | null;
+  started_at?: string | null;
+  ended_at?: string | null;
   is_current?: boolean | null;
 }
 
@@ -91,6 +98,7 @@ interface LotteryEntry {
 interface LiveSingle {
   id: string;
   stream_id: string | null;
+  inventory_id: string; // NEW: link back to live_singles_inventory
   card_name: string;
   card_number: string | null;
   card_condition: string | null;
@@ -102,6 +110,7 @@ interface LiveSingle {
   ungraded_market_price: number | null;
   psa_10_price: number | null;
   is_active: boolean;
+  status: 'open' | 'sold' | 'cancelled'; // NEW status field from DB
   created_at: string;
 }
 
@@ -323,6 +332,7 @@ const AdminPortal: React.FC = () => {
         .select('*')
         .eq('stream_id', streamId)
         .eq('is_active', true)
+        .eq('status', 'open') // NEW: only show open singles
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -840,7 +850,7 @@ const AdminPortal: React.FC = () => {
     return (
       <div className="space-y-2">
         <p className="text-gray-600 text-xs font-pokemon">
-          Showing Live Singles (active) for this stream. Bidding is managed by
+          Showing Live Singles (active & open) for this stream. Bidding is managed by
           the <code>place_live_single_bid_immediate_refund</code> function.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
