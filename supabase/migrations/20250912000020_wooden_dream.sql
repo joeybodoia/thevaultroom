@@ -1,15 +1,51 @@
 /*
-  Migration #2 — Site Credits + Live Singles + Atomic Bid/Credit RPCs
+  Migration #2 — Site Credits + Live Singles Inventory + Atomic Bid/Credit RPCs
 
   Contents:
+    0) all_cards flags (live_singles + psa_10_price) + index
     1) Ensure users.site_credit precision/check
     2) New-user trigger: grant $10 to first 100 users
     3) RPC: enter_lottery_with_debit (atomic debit + insert)
-    4) Live Singles tables + leader view + RLS policies
+    4) Live Singles Inventory + Live Singles (+ bids) and leader view
     5) RPC: place_chase_bid_immediate_refund (immediate refund on outbid)
     6) RPC: place_live_single_bid_immediate_refund (immediate refund on outbid)
-    7) Grants for authenticated role (including set_current_stream)
+    7) create_live_singles_for_stream(p_stream_id)
+    8) Grants for authenticated role (including set_current_stream)
 */
+
+-- 0) all_cards: live_singles flag + psa_10_price + index
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'all_cards'
+  ) THEN
+    -- live_singles boolean flag
+    ALTER TABLE public.all_cards
+      ADD COLUMN IF NOT EXISTS live_singles boolean NOT NULL DEFAULT false;
+
+    -- psa_10_price column
+    ALTER TABLE public.all_cards
+      ADD COLUMN IF NOT EXISTS psa_10_price numeric;
+
+    -- psa_10_price non-negative check (named as in current DB)
+    IF NOT EXISTS (
+      SELECT 1
+      FROM pg_constraint
+      WHERE conname = 'all_cards_psa_10_price_check'
+        AND conrelid = 'public.all_cards'::regclass
+    ) THEN
+      ALTER TABLE public.all_cards
+        ADD CONSTRAINT all_cards_psa_10_price_check
+        CHECK (psa_10_price IS NULL OR psa_10_price >= 0);
+    END IF;
+  END IF;
+END$$;
+
+-- Index on live_singles flag for filtering
+CREATE INDEX IF NOT EXISTS idx_all_cards_live_singles
+  ON public.all_cards (live_singles);
+
 
 -- 1) Users: site_credit precision/check
 DO $$
@@ -31,6 +67,7 @@ BEGIN
 END$$;
 
 -- Note: no idx_users_credit index here, matching current DB state.
+
 
 -- 2) New-user trigger: credit on signup (first 100 users)
 CREATE OR REPLACE FUNCTION public.handle_new_user_with_credits()
@@ -66,6 +103,7 @@ CREATE TRIGGER on_auth_user_created
 AFTER INSERT ON auth.users
 FOR EACH ROW EXECUTE FUNCTION public.handle_new_user_with_credits();
 
+
 -- 3) RPC: enter_lottery_with_debit (atomic)
 CREATE OR REPLACE FUNCTION public.enter_lottery_with_debit(
   p_user_id uuid,
@@ -97,22 +135,66 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 4) Live Singles (+ bids) and leader view
+
+-- 4) Live Singles Inventory + Live Singles (+ bids) and leader view
+
+-- 4a) Live Singles Inventory (master inventory of cards that can be run as live singles)
+CREATE TABLE IF NOT EXISTS public.live_singles_inventory (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- Link to global card metadata
+  all_card_id uuid NOT NULL REFERENCES public.all_cards(id),
+
+  -- Static config / overrides for how you want to run it as a single
+  card_name text NOT NULL,
+  card_number text,
+  set_name text,
+  image_url text,
+
+  default_starting_bid numeric(12,2) NOT NULL DEFAULT 1,
+  default_min_increment numeric(12,2) NOT NULL DEFAULT 1,
+  default_buy_now numeric(12,2),
+
+  -- Inventory tracking
+  quantity_available integer NOT NULL DEFAULT 1,
+  quantity_sold integer NOT NULL DEFAULT 0,
+
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Index to quickly join to all_cards from inventory
+CREATE INDEX IF NOT EXISTS idx_live_singles_inventory_all_card_id
+  ON public.live_singles_inventory (all_card_id);
+
+
+-- 4b) Live Singles (per-stream instances, pointing into inventory)
 CREATE TABLE IF NOT EXISTS public.live_singles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   stream_id uuid REFERENCES public.streams(id) ON DELETE CASCADE,
+
+  -- Link back to inventory
+  inventory_id uuid NOT NULL REFERENCES public.live_singles_inventory(id),
+
+  -- Display / auction config
   card_name text NOT NULL,
-  card_number text,                                  -- NEW
-  card_condition text,                               -- NEW
+  card_number text,
+  card_condition text,
   set_name text,
   image_url text,
   starting_bid numeric(12,2) NOT NULL DEFAULT 1,
   min_increment numeric(12,2) NOT NULL DEFAULT 1,
   buy_now numeric(12,2),
   is_active boolean NOT NULL DEFAULT true,
+  status text NOT NULL DEFAULT 'open',
   created_at timestamptz NOT NULL DEFAULT now(),
+
+  -- Pricing metadata
   ungraded_market_price numeric(12,2) CHECK (ungraded_market_price IS NULL OR ungraded_market_price >= 0),
-  psa_10_price         numeric(12,2) CHECK (psa_10_price IS NULL OR psa_10_price >= 0)
+  psa_10_price         numeric(12,2) CHECK (psa_10_price IS NULL OR psa_10_price >= 0),
+
+  CONSTRAINT live_singles_status_check
+    CHECK (status IN ('open', 'sold', 'cancelled'))
 );
 
 -- match current DB index set
@@ -121,6 +203,11 @@ CREATE INDEX IF NOT EXISTS live_singles_stream_id_is_active_idx
 
 CREATE INDEX IF NOT EXISTS idx_live_singles_stream_active_psa10_price
   ON public.live_singles (stream_id, is_active, psa_10_price DESC, ungraded_market_price DESC);
+
+-- Index to quickly find all live_singles rows for a given inventory card
+CREATE INDEX IF NOT EXISTS idx_live_singles_inventory_id
+  ON public.live_singles (inventory_id);
+
 
 CREATE TABLE IF NOT EXISTS public.live_singles_bids (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -202,6 +289,7 @@ BEGIN
   END IF;
 END$$;
 
+
 -- 5) RPC: Chase Slots immediate-refund bidding
 DROP FUNCTION IF EXISTS public.place_chase_bid_with_hold(uuid, uuid, numeric);
 
@@ -275,6 +363,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+
 -- 6) RPC: Live Singles immediate-refund bidding
 DROP FUNCTION IF EXISTS public.place_live_single_bid_with_hold(uuid, uuid, numeric);
 
@@ -298,7 +387,7 @@ BEGIN
     RAISE EXCEPTION 'Live single not found';
   END IF;
 
-  IF NOT v_card.is_active THEN
+  IF NOT v_card.is_active OR v_card.status <> 'open' THEN
     RAISE EXCEPTION 'Bidding is closed for this live single';
   END IF;
 
@@ -343,10 +432,51 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 7) Grants for authenticated role
+
+-- 7) RPC: create_live_singles_for_stream(p_stream_id)
+CREATE OR REPLACE FUNCTION public.create_live_singles_for_stream(p_stream_id uuid)
+RETURNS void
+LANGUAGE sql
+AS $$
+  INSERT INTO public.live_singles (
+    stream_id,
+    inventory_id,
+    card_name,
+    card_number,
+    set_name,
+    image_url,
+    starting_bid,
+    min_increment,
+    buy_now,
+    ungraded_market_price,
+    psa_10_price,
+    card_condition
+  )
+  SELECT
+    p_stream_id,
+    inv.id,
+    inv.card_name,
+    ac.card_number,
+    ac.set_name,
+    ac.image_url,
+    inv.default_starting_bid,
+    inv.default_min_increment,
+    inv.default_buy_now,
+    ac.ungraded_market_price,
+    ac.psa_10_price,
+    NULL::text AS card_condition
+  FROM public.live_singles_inventory inv
+  JOIN public.all_cards ac ON ac.id = inv.all_card_id
+  WHERE inv.is_active = TRUE
+    AND inv.quantity_available > inv.quantity_sold;
+$$;
+
+
+-- 8) Grants for authenticated role
 GRANT USAGE ON SCHEMA public TO authenticated;
 
 GRANT EXECUTE ON FUNCTION public.enter_lottery_with_debit(uuid, uuid, text, int, numeric) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.place_chase_bid_immediate_refund(uuid, uuid, numeric) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.place_live_single_bid_immediate_refund(uuid, uuid, numeric) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.set_current_stream(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.create_live_singles_for_stream(uuid) TO authenticated;
