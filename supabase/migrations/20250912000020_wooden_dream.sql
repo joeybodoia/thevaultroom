@@ -480,3 +480,4 @@ GRANT EXECUTE ON FUNCTION public.place_chase_bid_immediate_refund(uuid, uuid, nu
 GRANT EXECUTE ON FUNCTION public.place_live_single_bid_immediate_refund(uuid, uuid, numeric) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.set_current_stream(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.create_live_singles_for_stream(uuid) TO authenticated;
+
