@@ -31,7 +31,7 @@ interface Round {
 }
 
 interface AllCard {
-  id: string; // uuid
+  id: string; // bigserial in DB, but treated as string in the client
   card_name: string;
   card_number: string | null;
   set_name: string | null;
@@ -98,7 +98,7 @@ interface LotteryEntry {
 interface LiveSingle {
   id: string;
   stream_id: string | null;
-  inventory_id: string; // NEW: link back to live_singles_inventory
+  inventory_id: string; // link back to live_singles_inventory
   card_name: string;
   card_number: string | null;
   card_condition: string | null;
@@ -110,7 +110,7 @@ interface LiveSingle {
   ungraded_market_price: number | null;
   psa_10_price: number | null;
   is_active: boolean;
-  status: 'open' | 'sold' | 'cancelled'; // NEW status field from DB
+  status: 'open' | 'sold' | 'cancelled';
   created_at: string;
 }
 
@@ -332,7 +332,7 @@ const AdminPortal: React.FC = () => {
         .select('*')
         .eq('stream_id', streamId)
         .eq('is_active', true)
-        .eq('status', 'open') // NEW: only show open singles
+        .eq('status', 'open') // only show open singles
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -413,6 +413,35 @@ const AdminPortal: React.FC = () => {
     } catch (err: any) {
       console.error('Failed to set current stream:', err);
       setError(err.message || 'Failed to set current stream');
+    }
+  };
+
+  /**
+   * Generate Live Singles for the selected stream by calling the DB function
+   * create_live_singles_for_stream(p_stream_id) and then refreshing Live Singles.
+   */
+  const handleGenerateLiveSinglesForStream = async () => {
+    if (!selectedStreamId) return;
+
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const { error } = await supabase.rpc('create_live_singles_for_stream', {
+        p_stream_id: selectedStreamId,
+      });
+      if (error) throw error;
+
+      // Refresh Live Singles for this stream so the UI reflects the new rows
+      await fetchLiveSinglesForStream(selectedStreamId);
+
+      const stream = streams.find((s) => s.id === selectedStreamId);
+      setSuccessMessage(
+        `Live Singles generated for stream "${stream?.title || 'Selected Stream'}" successfully.`
+      );
+    } catch (err: any) {
+      console.error('Failed to generate live singles for stream:', err);
+      setError(err.message || 'Failed to generate live singles for stream');
     }
   };
 
@@ -1065,7 +1094,7 @@ const AdminPortal: React.FC = () => {
                       ))}
                     </select>
                   </div>
-                  <div className="flex space-x-3 self-start">
+                  <div className="flex flex-wrap gap-3 self-start">
                     <button
                       type="button"
                       disabled={!selectedStreamId}
@@ -1074,6 +1103,15 @@ const AdminPortal: React.FC = () => {
                     >
                       <Star className="h-4 w-4" />
                       <span>Set as Current Stream</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!selectedStreamId}
+                      onClick={handleGenerateLiveSinglesForStream}
+                      className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-all font-pokemon inline-flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Edit className="h-4 w-4" />
+                      <span>Generate Live Singles</span>
                     </button>
                     <button
                       onClick={() => setShowCreateStreamForm(true)}

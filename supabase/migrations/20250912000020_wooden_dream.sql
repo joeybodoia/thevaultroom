@@ -435,9 +435,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 7) RPC: create_live_singles_for_stream(p_stream_id)
 CREATE OR REPLACE FUNCTION public.create_live_singles_for_stream(p_stream_id uuid)
-RETURNS void
-LANGUAGE sql
-AS $$
+RETURNS void AS $$
+BEGIN
   INSERT INTO public.live_singles (
     stream_id,
     inventory_id,
@@ -451,14 +450,15 @@ AS $$
     ungraded_market_price,
     psa_10_price,
     card_condition
+    -- optionally: is_active, status
   )
   SELECT
     p_stream_id,
     inv.id,
-    inv.card_name,
-    ac.card_number,
-    ac.set_name,
-    ac.image_url,
+    COALESCE(inv.card_name,  ac.card_name),
+    COALESCE(inv.card_number, ac.card_number),
+    COALESCE(inv.set_name,    ac.set_name),
+    COALESCE(inv.image_url,   ac.image_url),
     inv.default_starting_bid,
     inv.default_min_increment,
     inv.default_buy_now,
@@ -466,10 +466,20 @@ AS $$
     ac.psa_10_price,
     NULL::text AS card_condition
   FROM public.live_singles_inventory inv
-  JOIN public.all_cards ac ON ac.id = inv.all_card_id
+  JOIN public.all_cards ac
+    ON ac.id = inv.all_card_id
   WHERE inv.is_active = TRUE
-    AND inv.quantity_available > inv.quantity_sold;
-$$;
+    AND inv.quantity_available > inv.quantity_sold
+    AND (ac.live_singles IS TRUE)              -- 🔹 NEW: respect singles flag
+    -- don’t create duplicates for the same stream + inventory card
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.live_singles ls
+      WHERE ls.stream_id    = p_stream_id
+        AND ls.inventory_id = inv.id
+    );
+END;
+$$ LANGUAGE plpgsql;
 
 
 -- 8) Grants for authenticated role
