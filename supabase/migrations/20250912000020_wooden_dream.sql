@@ -482,7 +482,60 @@ END;
 $$ LANGUAGE plpgsql;
 
 
--- 8) Grants for authenticated role
+-- 8) RPC: snapshot of chase slots + leaders
+CREATE OR REPLACE FUNCTION public.get_chase_slot_snapshot(p_stream_id uuid DEFAULT NULL)
+RETURNS TABLE (
+  set_name text,
+  slot_id uuid,
+  all_card_id uuid,
+  top_bid numeric,
+  set_slot_count integer,
+  stream_id uuid,
+  starting_bid numeric,
+  min_increment numeric,
+  is_active boolean,
+  locked boolean,
+  winner_user_id uuid,
+  winning_bid_id uuid
+) AS $$
+  WITH slots AS (
+    SELECT
+      cs.set_name,
+      cs.id,
+      cs.all_card_id,
+      COALESCE(csl.top_bid, 0::numeric) AS top_bid,
+      COUNT(*) OVER (PARTITION BY cs.set_name) AS set_slot_count,
+      cs.stream_id,
+      cs.starting_bid,
+      cs.min_increment,
+      cs.is_active,
+      cs.locked,
+      cs.winner_user_id,
+      cs.winning_bid_id
+    FROM public.chase_slots cs
+    LEFT JOIN public.chase_slot_leaders csl
+      ON csl.slot_id = cs.id
+    WHERE cs.is_active = TRUE
+      AND (p_stream_id IS NULL OR cs.stream_id = p_stream_id)
+  )
+  SELECT
+    set_name,
+    id AS slot_id,
+    all_card_id,
+    top_bid,
+    set_slot_count,
+    stream_id,
+    starting_bid,
+    min_increment,
+    is_active,
+    locked,
+    winner_user_id,
+    winning_bid_id
+  FROM slots;
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
+
+
+-- 9) Grants for authenticated role
 GRANT USAGE ON SCHEMA public TO authenticated;
 
 GRANT EXECUTE ON FUNCTION public.enter_lottery_with_debit(uuid, uuid, text, int, numeric) TO authenticated;
@@ -490,4 +543,4 @@ GRANT EXECUTE ON FUNCTION public.place_chase_bid_immediate_refund(uuid, uuid, nu
 GRANT EXECUTE ON FUNCTION public.place_live_single_bid_immediate_refund(uuid, uuid, numeric) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.set_current_stream(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.create_live_singles_for_stream(uuid) TO authenticated;
-
+GRANT EXECUTE ON FUNCTION public.get_chase_slot_snapshot(uuid) TO authenticated;

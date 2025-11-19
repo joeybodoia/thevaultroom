@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Loader, AlertCircle, Sparkles, Search, Filter, ArrowUpDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { DirectBidCard, PokemonCard as PokemonCardType } from '../types/pokemon';
@@ -46,6 +46,17 @@ interface PokemonSectionProps {
   currentStreamId?: string | null;
 }
 
+interface ChaseSlotMeta {
+  slotId: string;
+  allCardId: string;
+  setName: string;
+  startingBid: number;
+  minIncrement: number;
+  isActive: boolean;
+  locked: boolean;
+  topBid: number;
+}
+
 /** ----------------- CONSTANTS / HELPERS ----------------- */
 
 const RARITIES = {
@@ -66,6 +77,15 @@ const SET_DB_NAME: Record<SetName, string> = {
   crown_zenith: 'Crown Zenith: Galarian Gallery',
   destined_rivals: 'SV10: Destined Rivals',
 };
+const DB_SET_TO_KEY: Record<string, SetName> = Object.entries(SET_DB_NAME).reduce(
+  (acc, [key, value]) => {
+    acc[value] = key as SetName;
+    return acc;
+  },
+  {} as Record<string, SetName>
+);
+
+const ROUND_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
 
 function rarityBg(rarity: string) {
   if (rarity.startsWith('SIR')) return 'bg-pink-600 hover:bg-pink-700';
@@ -135,6 +155,28 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [placingBidFor, setPlacingBidFor] = useState<string | null>(null);
   const [bidError, setBidError] = useState<string | null>(null);
   const [bidSuccess, setBidSuccess] = useState<string | null>(null);
+  const roundsCacheRef = useRef<
+    Map<string, Map<string, { round: Round; fetchedAt: number }>>
+  >(new Map());
+
+  const fetchUserCredit = useCallback(async (userId: string) => {
+    try {
+      setLoadingCredit(true);
+      const { data, error } = await supabase
+        .from('users')
+        .select('site_credit')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      setUserCredit(parseFloat(data.site_credit || '0'));
+    } catch (error) {
+      console.error('Error fetching user credit:', error);
+      setUserCredit(0);
+    } finally {
+      setLoadingCredit(false);
+    }
+  }, []);
 
   /** ----------------- CHASE SLOTS META (for counts & filtering) -------- */
   const [chaseCounts, setChaseCounts] = useState<Record<SetName, number>>({
@@ -145,6 +187,8 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [chaseCardIdsForActiveTab, setChaseCardIdsForActiveTab] = useState<Set<string>>(
     new Set()
   );
+  const [chaseSlotsByCardId, setChaseSlotsByCardId] = useState<Record<string, ChaseSlotMeta>>({});
+  const [chaseSnapshotLoading, setChaseSnapshotLoading] = useState(false);
   /** -------------------------------------------------------------------- */
 
   // Check user authentication status
@@ -175,7 +219,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchUserCredit]);
 
   // Auto-scroll to modal when it opens
   useEffect(() => {
@@ -188,25 +232,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       }
     }
   }, [showConfirmModal]);
-
-  const fetchUserCredit = async (userId: string) => {
-    try {
-      setLoadingCredit(true);
-      const { data, error } = await supabase
-        .from('users')
-        .select('site_credit')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-      setUserCredit(parseFloat(data.site_credit || '0'));
-    } catch (error) {
-      console.error('Error fetching user credit:', error);
-      setUserCredit(0);
-    } finally {
-      setLoadingCredit(false);
-    }
-  };
 
   // Initial pulls for Direct Bids gallery (using all_cards)
   useEffect(() => {
@@ -240,63 +265,130 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     }
   }, [biddingMode, currentStreamId]);
 
-  /** Fetch chase_slots counts + ids for active tab */
+  const refreshChaseSnapshot = useCallback(async () => {
+    if (biddingMode !== 'direct') {
+      setChaseCounts({ prismatic: 0, crown_zenith: 0, destined_rivals: 0 });
+      setChaseCardIdsForActiveTab(new Set());
+      setChaseSlotsByCardId({});
+      setChaseSnapshotLoading(false);
+      return;
+    }
+
+    setChaseSnapshotLoading(true);
+    try {
+      let query = supabase.from('active_chase_slot_status').select(
+        'slot_id, stream_id, set_name, all_card_id, top_bid, starting_bid, min_increment, is_active, locked'
+      );
+      if (currentStreamId) {
+        query = query.eq('stream_id', currentStreamId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const nextCounts: Record<SetName, number> = {
+        prismatic: 0,
+        crown_zenith: 0,
+        destined_rivals: 0,
+      };
+      const activeSetCardIds = new Set<string>();
+      const slotMap: Record<string, ChaseSlotMeta> = {};
+
+      (data ?? []).forEach((row: any) => {
+        const setKey = DB_SET_TO_KEY[row.set_name as string];
+        if (!setKey) return;
+
+        nextCounts[setKey] = (nextCounts[setKey] || 0) + 1;
+
+        if (row.all_card_id && row.slot_id) {
+          const cardId = String(row.all_card_id);
+          slotMap[cardId] = {
+            slotId: row.slot_id,
+            allCardId: cardId,
+            setName: row.set_name,
+            startingBid: Number(row.starting_bid ?? 0),
+            minIncrement: Number(row.min_increment ?? 1),
+            isActive: Boolean(row.is_active),
+            locked: Boolean(row.locked),
+            topBid:
+              row.top_bid != null
+                ? Number(row.top_bid)
+                : Number(row.starting_bid ?? 0),
+          };
+
+          if (setKey === activeTab) {
+            activeSetCardIds.add(cardId);
+          }
+        }
+      });
+
+      setChaseCounts(nextCounts);
+      setChaseCardIdsForActiveTab(activeSetCardIds);
+      setChaseSlotsByCardId(slotMap);
+    } catch (err) {
+      console.error('Error loading chase slot snapshot:', err);
+      setChaseCounts({ prismatic: 0, crown_zenith: 0, destined_rivals: 0 });
+      setChaseCardIdsForActiveTab(new Set());
+      setChaseSlotsByCardId({});
+    } finally {
+      setChaseSnapshotLoading(false);
+    }
+  }, [biddingMode, currentStreamId, activeTab]);
+
+  useEffect(() => {
+    void refreshChaseSnapshot();
+  }, [refreshChaseSnapshot]);
+
+  const userId = user?.id ?? null;
+
+  const handleChaseBidSuccess = useCallback(async () => {
+    await refreshChaseSnapshot();
+    if (userId) {
+      await fetchUserCredit(userId);
+    }
+  }, [refreshChaseSnapshot, userId, fetchUserCredit]);
+
   useEffect(() => {
     if (biddingMode !== 'direct') return;
 
-    const run = async () => {
-      try {
-        const countFor = async (setKey: SetName) => {
-          let q = supabase
-            .from('chase_slots')
-            .select('id', { count: 'exact', head: true })
-            .eq('is_active', true)
-            .eq('set_name', SET_DB_NAME[setKey]);
+    const channel = supabase
+      .channel('chase_bids_stream')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chase_bids' },
+        () => {
+          void refreshChaseSnapshot();
+        }
+      )
+      .subscribe();
 
-          if (currentStreamId) q = q.eq('stream_id', currentStreamId);
-
-          const { count, error } = await q;
-          if (error) throw error;
-          return count || 0;
-        };
-
-        const [c1, c2, c3] = await Promise.all([
-          countFor('prismatic'),
-          countFor('crown_zenith'),
-          countFor('destined_rivals'),
-        ]);
-        setChaseCounts({ prismatic: c1, crown_zenith: c2, destined_rivals: c3 });
-
-        let idsQuery = supabase
-          .from('chase_slots')
-          .select('all_card_id')
-          .eq('is_active', true)
-          .eq('set_name', SET_DB_NAME[activeTab]);
-
-        if (currentStreamId) idsQuery = idsQuery.eq('stream_id', currentStreamId);
-
-        const { data: idRows, error: idsErr } = await idsQuery;
-        if (idsErr) throw idsErr;
-        const idSet = new Set<string>((idRows || []).map((r: any) => String(r.all_card_id)));
-        setChaseCardIdsForActiveTab(idSet);
-      } catch {
-        setChaseCardIdsForActiveTab(new Set());
-      }
+    return () => {
+      supabase.removeChannel(channel);
     };
-
-    run();
-  }, [biddingMode, activeTab, currentStreamId]);
+  }, [biddingMode, refreshChaseSnapshot]);
 
   const fetchCurrentRound = async () => {
     if (!currentStreamId) {
       setCurrentRound(null);
+      setRoundLoading(false);
       return;
     }
 
-    setRoundLoading(true);
     try {
       const tabToCheck = biddingMode === 'lottery' ? lotteryActiveTab : activeTab;
       const setName = SET_DB_NAME[tabToCheck as SetName];
+
+      // Check cache first
+      const streamCache = roundsCacheRef.current.get(currentStreamId);
+      const cachedRound = streamCache?.get(setName);
+      const now = Date.now();
+      if (cachedRound && now - cachedRound.fetchedAt < ROUND_CACHE_TTL_MS) {
+        setCurrentRound(cachedRound.round);
+        setRoundLoading(false);
+        return;
+      }
+
+      setRoundLoading(true);
 
       const { data, error } = await supabase
         .from('rounds')
@@ -308,7 +400,16 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         .maybeSingle();
 
       if (error) throw error;
-      setCurrentRound(data ?? null);
+
+      if (data) {
+        setCurrentRound(data);
+        const cacheEntry = roundsCacheRef.current.get(currentStreamId) ?? new Map();
+        cacheEntry.set(setName, { round: data, fetchedAt: Date.now() });
+        roundsCacheRef.current.set(currentStreamId, cacheEntry);
+      } else {
+        setCurrentRound(null);
+        roundsCacheRef.current.get(currentStreamId)?.delete(setName);
+      }
     } catch (err: any) {
       console.error('Error fetching current round:', err);
       setCurrentRound(null);
@@ -1408,11 +1509,11 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                   key={poke.id}
                   pokemon={poke}
                   isPopular={index === 0}
-                  roundStreamId={currentRound?.stream_id ?? null}
-                  roundSetName={currentRound?.set_name ?? null}
-                  onBidSuccess={() =>
-                    console.log('Bid submitted for card:', poke.card_name)
-                  }
+                  slotInfo={chaseSlotsByCardId[String(poke.id)] ?? null}
+                  slotLoading={chaseSnapshotLoading}
+                  user={user}
+                  loadingUser={loadingUser}
+                  onBidSuccess={handleChaseBidSuccess}
                 />
               ))}
             </div>
