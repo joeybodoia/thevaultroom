@@ -538,6 +538,7 @@ BEGIN
     TRUE
   FROM public.all_cards ac
   WHERE ac.set_name = v_round.set_name
+    AND ac.ungraded_market_price >= COALESCE(v_round.chase_min_ungraded_price, 0)
     AND COALESCE(ac.live_singles, false) = false
     AND NOT EXISTS (
       SELECT 1
