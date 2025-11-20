@@ -872,7 +872,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         {/* PACK ROWS */}
         <div className="space-y-4">
           {packNumbers.map((packNum) => (
-            <div key={\`${setKey}-${packNum}\`} className="rounded-2xl p-4 border shadow-sm">
+            <div key={`${setKey}-${packNum}`} className="rounded-2xl p-4 border shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-lg font-semibold font-pokemon">Pack {packNum}</h4>
                 {!biddingOpen && <span className="text-sm">LOCKED</span>}
@@ -895,7 +895,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
                   return (
                     <div
-                      key={\`${packNum}-${rarity}\`}
+                      key={`${packNum}-${rarity}`}
                       className="
                         bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300
                         transition-all shadow-lg
@@ -903,7 +903,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       "
                     >
                       <div className="text-center flex-1 flex flex-col">
-                        <div className={\`${bg.split(' ')[0]} rounded-lg p-4 mb-4\`}>
+                        <div className={`${bg.split(' ')[0]} rounded-lg p-4 mb-4`}>
                           <span className="text-lg font-bold text-white font-pokemon">
                             {rarity}
                           </span>
@@ -922,7 +922,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                           <button
                             onClick={() => handleLotteryEntry(packNum, rarity)}
                             disabled={disabled}
-                            className={\`w-full ${bg} text-white font-bold py-3 rounded-lg transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed\`}
+                            className={`w-full ${bg} text-white font-bold py-3 rounded-lg transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed`}
                           >
                             {loadingUser
                               ? 'Loading...'

@@ -1902,7 +1902,8 @@ const AdminPortal: React.FC = () => {
                         </div>
                       )}
                     </div>
-                  ))
+                  );
+                })
               )}
             </div>
           </div>
