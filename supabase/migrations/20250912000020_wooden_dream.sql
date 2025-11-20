@@ -194,7 +194,7 @@ CREATE TABLE IF NOT EXISTS public.live_singles (
   psa_10_price         numeric(12,2) CHECK (psa_10_price IS NULL OR psa_10_price >= 0),
 
   CONSTRAINT live_singles_status_check
-    CHECK (status IN ('open', 'sold', 'cancelled'))
+    CHECK (status IN ('open', 'locked', 'sold', 'cancelled'))
 );
 
 -- match current DB index set
@@ -449,8 +449,9 @@ BEGIN
     buy_now,
     ungraded_market_price,
     psa_10_price,
-    card_condition
-    -- optionally: is_active, status
+    card_condition,
+    status
+    -- optionally: is_active
   )
   SELECT
     p_stream_id,
@@ -464,7 +465,8 @@ BEGIN
     inv.default_buy_now,
     ac.ungraded_market_price,
     ac.psa_10_price,
-    NULL::text AS card_condition
+    NULL::text AS card_condition,
+    'locked'::text AS status
   FROM public.live_singles_inventory inv
   JOIN public.all_cards ac
     ON ac.id = inv.all_card_id

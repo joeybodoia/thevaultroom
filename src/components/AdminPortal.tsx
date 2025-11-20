@@ -115,7 +115,7 @@ interface LiveSingle {
   ungraded_market_price: number | null;
   psa_10_price: number | null;
   is_active: boolean;
-  status: 'open' | 'sold' | 'cancelled';
+  status: 'open' | 'locked' | 'sold' | 'cancelled';
   created_at: string;
 }
 
