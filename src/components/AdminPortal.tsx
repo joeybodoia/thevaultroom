@@ -13,6 +13,7 @@ import {
   Ticket,
   Star,
   CheckCircle2,
+  Sparkles,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -28,6 +29,9 @@ interface Round {
   chase_min_ungraded_price: number | null;
   locked: boolean;
   created_at: string;
+  bidding_status?: 'not_started' | 'open' | 'closed' | null;
+  bidding_started_at?: string | null;
+  bidding_ends_at?: string | null;
 }
 
 interface AllCard {
@@ -72,6 +76,7 @@ interface Stream {
 interface ChaseSlot {
   id: string;
   stream_id: string | null;
+  round_id: string | null;
   set_name: string;
   all_card_id: string;
   starting_bid: number | null;
@@ -136,6 +141,15 @@ const SET_OPTIONS = [
   'SV10: Destined Rivals',
   'Crown Zenith: Galarian Gallery',
 ];
+
+const formatCountdownLabel = (endIso?: string | null) => {
+  if (!endIso) return null;
+  const diff = new Date(endIso).getTime() - Date.now();
+  const minutes = Math.max(0, Math.floor(diff / 60000));
+  const seconds = Math.max(0, Math.floor((diff % 60000) / 1000));
+  if (diff <= 0) return '00:00';
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+};
 
 /** ========= COMPONENT ========= */
 
@@ -290,13 +304,11 @@ const AdminPortal: React.FC = () => {
   };
 
   const fetchChaseSlotsForRound = async (round: Round) => {
-    if (!round.stream_id) return;
     try {
       const { data, error } = await supabase
         .from('chase_slots')
         .select('*')
-        .eq('stream_id', round.stream_id)
-        .eq('set_name', round.set_name)
+        .eq('round_id', round.id)
         .order('starting_bid', { ascending: false });
       if (error) throw error;
       setChaseSlots((prev) => ({ ...prev, [round.id]: (data || []) as ChaseSlot[] }));
@@ -535,6 +547,70 @@ const AdminPortal: React.FC = () => {
       );
     } catch (err: any) {
       setError(err.message || 'Failed to toggle round lock');
+    }
+  };
+
+  const handleGenerateChaseSlots = async (round: Round) => {
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const { error } = await supabase.rpc('generate_chase_slots_for_round', {
+        p_round_id: round.id,
+      });
+      if (error) throw error;
+      await fetchChaseSlotsForRound(round);
+      setSuccessMessage(`Chase slots generated for ${round.set_name}.`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate chase slots');
+    }
+  };
+
+  const handleOpenBidding = async (round: Round, durationMinutes = 7) => {
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const { error } = await supabase.rpc('open_round_bidding', {
+        p_round_id: round.id,
+        p_duration_minutes: durationMinutes,
+      });
+      if (error) throw error;
+      await fetchRounds();
+      await fetchChaseSlotsForRound(round);
+      setSuccessMessage(`Bidding opened for Round ${round.round_number}.`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to open bidding');
+    }
+  };
+
+  const handleCloseBidding = async (round: Round) => {
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const { error } = await supabase.rpc('close_round_bidding', {
+        p_round_id: round.id,
+      });
+      if (error) throw error;
+      await fetchRounds();
+      await fetchChaseSlotsForRound(round);
+      setSuccessMessage(`Bidding closed for Round ${round.round_number}.`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to close bidding');
+    }
+  };
+
+  const handleExtendBidding = async (round: Round, extraSeconds = 60) => {
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const { error } = await supabase.rpc('extend_round_bidding', {
+        p_round_id: round.id,
+        p_extra_seconds: extraSeconds,
+      });
+      if (error) throw error;
+      await fetchRounds();
+      setSuccessMessage(`Extended bidding by ${extraSeconds} seconds.`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to extend bidding');
     }
   };
 
@@ -1440,7 +1516,10 @@ const AdminPortal: React.FC = () => {
                       !selectedStreamId ||
                       r.stream_id === selectedStreamId
                   )
-                  .map((round) => (
+                  .map((round) => {
+                    const biddingOpen = round.bidding_status === 'open';
+                    const countdownLabel = formatCountdownLabel(round.bidding_ends_at);
+                    return (
                     <div
                       key={round.id}
                       className="border border-gray-200 rounded-lg p-4"
@@ -1477,8 +1556,31 @@ const AdminPortal: React.FC = () => {
                               round.created_at
                             ).toLocaleDateString()}
                           </p>
+                          <p className="text-gray-600 text-xs font-pokemon">
+                            Bidding Status:{' '}
+                            {(round.bidding_status || 'not_started').toUpperCase()}
+                            {round.bidding_ends_at && (
+                              <>
+                                {' '}• Ends{' '}
+                                {new Date(round.bidding_ends_at).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </>
+                            )}
+                            {countdownLabel && round.bidding_status === 'open' && (
+                              <> • Countdown: {countdownLabel}</>
+                            )}
+                          </p>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center flex-wrap gap-2">
+                          <button
+                            onClick={() => handleGenerateChaseSlots(round)}
+                            className="bg-purple-600 text-white px-3 py-1 rounded font-pokemon text-sm hover:bg-purple-700 transition-all inline-flex items-center space-x-1"
+                          >
+                            <Sparkles className="h-3 w-3" />
+                            <span>Generate Slots</span>
+                          </button>
                           <button
                             onClick={() =>
                               toggleExpandRound(round.id)
@@ -1526,6 +1628,32 @@ const AdminPortal: React.FC = () => {
                               </>
                             )}
                           </button>
+                          {biddingOpen ? (
+                            <>
+                              <button
+                                onClick={() => handleCloseBidding(round)}
+                                className="bg-red-500 text-white px-3 py-1 rounded font-pokemon text-sm hover:bg-red-600 transition-all inline-flex items-center space-x-1"
+                              >
+                                <Lock className="h-3 w-3" />
+                                <span>Close Bidding</span>
+                              </button>
+                              <button
+                                onClick={() => handleExtendBidding(round)}
+                                className="bg-yellow-500 text-white px-3 py-1 rounded font-pokemon text-sm hover:bg-yellow-600 transition-all inline-flex items-center space-x-1"
+                              >
+                                <Plus className="h-3 w-3" />
+                                <span>Extend +1m</span>
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => handleOpenBidding(round)}
+                              className="bg-green-600 text-white px-3 py-1 rounded font-pokemon text-sm hover:bg-green-700 transition-all inline-flex items-center space-x-1"
+                            >
+                              <Unlock className="h-3 w-3" />
+                              <span>Open Bidding</span>
+                            </button>
+                          )}
                         </div>
                       </div>
 

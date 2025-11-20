@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Loader, AlertCircle, Sparkles, Search, Filter, ArrowUpDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { DirectBidCard, PokemonCard as PokemonCardType } from '../types/pokemon';
@@ -18,6 +18,9 @@ interface Round {
   total_packs_planned: number | null;
   locked: boolean;
   created_at: string;
+  bidding_status?: 'not_started' | 'open' | 'closed' | null;
+  bidding_started_at?: string | null;
+  bidding_ends_at?: string | null;
 }
 
 interface LiveSingle {
@@ -85,7 +88,11 @@ const DB_SET_TO_KEY: Record<string, SetName> = Object.entries(SET_DB_NAME).reduc
   {} as Record<string, SetName>
 );
 
-const ROUND_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
+const INITIAL_ROUND_MAP: Record<SetName, Round | null> = {
+  prismatic: null,
+  crown_zenith: null,
+  destined_rivals: null,
+};
 
 function rarityBg(rarity: string) {
   if (rarity.startsWith('SIR')) return 'bg-pink-600 hover:bg-pink-700';
@@ -98,6 +105,27 @@ function rarityBg(rarity: string) {
   if (rarity.includes('Hyper Rare')) return 'bg-yellow-500 hover:bg-yellow-600';
   if (rarity.includes('Double Rare')) return 'bg-blue-600 hover:bg-blue-700';
   return 'bg-blue-600 hover:bg-blue-700';
+}
+
+function getCountdown(endIso?: string | null, nowTs?: number) {
+  if (!endIso || !nowTs) return null;
+  const target = new Date(endIso).getTime();
+  const diff = target - nowTs;
+  const minutes = Math.max(0, Math.floor(diff / 60000));
+  const seconds = Math.max(0, Math.floor((diff % 60000) / 1000));
+  return {
+    minutes,
+    seconds,
+    expired: diff <= 0,
+  };
+}
+
+function formatCountdownLabel(endIso?: string | null, nowTs?: number) {
+  const countdown = getCountdown(endIso, nowTs);
+  if (!countdown) return null;
+  const m = String(countdown.minutes).padStart(2, '0');
+  const s = String(countdown.seconds).padStart(2, '0');
+  return `${m}:${s}`;
 }
 /** -------------------------------------------------------- */
 
@@ -112,8 +140,10 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRarity, setSelectedRarity] = useState('');
   const [sortBy, setSortBy] = useState('price-high');
-  const [currentRound, setCurrentRound] = useState<Round | null>(null);
-  const [roundLoading, setRoundLoading] = useState(false);
+  const [roundsBySet, setRoundsBySet] = useState<Record<SetName, Round | null>>({
+    ...INITIAL_ROUND_MAP,
+  });
+  const [roundsLoading, setRoundsLoading] = useState(false);
 
   const [lotteryError, setLotteryError] = useState<string | null>(null);
   const [lotterySuccess, setLotterySuccess] = useState<string | null>(null);
@@ -155,10 +185,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [placingBidFor, setPlacingBidFor] = useState<string | null>(null);
   const [bidError, setBidError] = useState<string | null>(null);
   const [bidSuccess, setBidSuccess] = useState<string | null>(null);
-  const roundsCacheRef = useRef<
-    Map<string, Map<string, { round: Round; fetchedAt: number }>>
-  >(new Map());
-
   const fetchUserCredit = useCallback(async (userId: string) => {
     try {
       setLoadingCredit(true);
@@ -189,6 +215,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   );
   const [chaseSlotsByCardId, setChaseSlotsByCardId] = useState<Record<string, ChaseSlotMeta>>({});
   const [chaseSnapshotLoading, setChaseSnapshotLoading] = useState(false);
+  const [nowTs, setNowTs] = useState(() => Date.now());
   /** -------------------------------------------------------------------- */
 
   // Check user authentication status
@@ -233,20 +260,82 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     }
   }, [showConfirmModal]);
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowTs(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const loadRoundsForStream = useCallback(async () => {
+    if (!currentStreamId) {
+      setRoundsBySet({ ...INITIAL_ROUND_MAP });
+      setRoundsLoading(false);
+      return;
+    }
+
+    setRoundsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('rounds')
+        .select('*')
+        .eq('stream_id', currentStreamId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+
+      const next: Record<SetName, Round | null> = { ...INITIAL_ROUND_MAP };
+      (data || []).forEach((round: Round) => {
+        const key = DB_SET_TO_KEY[round.set_name as string];
+        if (key && !next[key]) {
+          next[key] = round;
+        }
+      });
+      setRoundsBySet(next);
+    } catch (err) {
+      console.error('Error loading rounds:', err);
+    } finally {
+      setRoundsLoading(false);
+    }
+  }, [currentStreamId]);
+
   // Initial pulls for Direct Bids gallery (using all_cards)
   useEffect(() => {
     fetchAllCards();
   }, []);
 
   useEffect(() => {
-    if (currentStreamId) fetchCurrentRound();
-    else setCurrentRound(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStreamId, activeTab, lotteryActiveTab, biddingMode]);
+    void loadRoundsForStream();
+  }, [loadRoundsForStream]);
 
   useEffect(() => {
-    fetchLotteryParticipants();
-  }, [currentRound]);
+    if (!currentStreamId) return;
+
+    const channel = supabase
+      .channel('rounds_bidding_stream')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'rounds', filter: `stream_id=eq.${currentStreamId}` },
+        () => {
+          void loadRoundsForStream();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentStreamId, loadRoundsForStream]);
+
+  const activeChaseRound = roundsBySet[activeTab];
+  const activeLotteryRound = roundsBySet[lotteryActiveTab as SetName];
+
+  useEffect(() => {
+    if (activeLotteryRound?.id) {
+      void fetchLotteryParticipants(activeLotteryRound.id);
+    } else {
+      setLotteryParticipantsByPack({});
+    }
+  }, [activeLotteryRound?.id]);
 
   useEffect(() => {
     // Reset filters when switching set tabs
@@ -274,14 +363,28 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       return;
     }
 
+    const roundIds = Object.values(roundsBySet)
+      .map((round) => round?.id)
+      .filter((id): id is string => Boolean(id));
+
+    if (!roundIds.length) {
+      setChaseCounts({ prismatic: 0, crown_zenith: 0, destined_rivals: 0 });
+      setChaseCardIdsForActiveTab(new Set());
+      setChaseSlotsByCardId({});
+      setChaseSnapshotLoading(false);
+      return;
+    }
+
+    const activeRoundId = activeChaseRound?.id ?? null;
+
     setChaseSnapshotLoading(true);
     try {
-      let query = supabase.from('active_chase_slot_status').select(
-        'slot_id, stream_id, set_name, all_card_id, top_bid, starting_bid, min_increment, is_active, locked'
-      );
-      if (currentStreamId) {
-        query = query.eq('stream_id', currentStreamId);
-      }
+      let query = supabase
+        .from('active_chase_slot_status')
+        .select(
+          'slot_id, round_id, stream_id, set_name, all_card_id, top_bid, starting_bid, min_increment, is_active, locked'
+        )
+        .in('round_id', roundIds);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -300,7 +403,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
         nextCounts[setKey] = (nextCounts[setKey] || 0) + 1;
 
-        if (row.all_card_id && row.slot_id) {
+        if (row.all_card_id && row.slot_id && row.round_id === activeRoundId) {
           const cardId = String(row.all_card_id);
           slotMap[cardId] = {
             slotId: row.slot_id,
@@ -315,10 +418,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                 ? Number(row.top_bid)
                 : Number(row.starting_bid ?? 0),
           };
-
-          if (setKey === activeTab) {
-            activeSetCardIds.add(cardId);
-          }
+          activeSetCardIds.add(cardId);
         }
       });
 
@@ -333,7 +433,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     } finally {
       setChaseSnapshotLoading(false);
     }
-  }, [biddingMode, currentStreamId, activeTab]);
+  }, [biddingMode, roundsBySet, activeChaseRound?.id, activeTab]);
 
   useEffect(() => {
     void refreshChaseSnapshot();
@@ -367,68 +467,13 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     };
   }, [biddingMode, refreshChaseSnapshot]);
 
-  const fetchCurrentRound = async () => {
-    if (!currentStreamId) {
-      setCurrentRound(null);
-      setRoundLoading(false);
-      return;
-    }
-
-    try {
-      const tabToCheck = biddingMode === 'lottery' ? lotteryActiveTab : activeTab;
-      const setName = SET_DB_NAME[tabToCheck as SetName];
-
-      // Check cache first
-      const streamCache = roundsCacheRef.current.get(currentStreamId);
-      const cachedRound = streamCache?.get(setName);
-      const now = Date.now();
-      if (cachedRound && now - cachedRound.fetchedAt < ROUND_CACHE_TTL_MS) {
-        setCurrentRound(cachedRound.round);
-        setRoundLoading(false);
-        return;
-      }
-
-      setRoundLoading(true);
-
-      const { data, error } = await supabase
-        .from('rounds')
-        .select('*')
-        .eq('stream_id', currentStreamId)
-        .eq('set_name', setName)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (data) {
-        setCurrentRound(data);
-        const cacheEntry = roundsCacheRef.current.get(currentStreamId) ?? new Map();
-        cacheEntry.set(setName, { round: data, fetchedAt: Date.now() });
-        roundsCacheRef.current.set(currentStreamId, cacheEntry);
-      } else {
-        setCurrentRound(null);
-        roundsCacheRef.current.get(currentStreamId)?.delete(setName);
-      }
-    } catch (err: any) {
-      console.error('Error fetching current round:', err);
-      setCurrentRound(null);
-    } finally {
-      setRoundLoading(false);
-    }
-  };
-
   /** fetch pack+rarity counts for current round */
-  const fetchLotteryParticipants = async () => {
-    if (!currentRound) {
-      setLotteryParticipantsByPack({});
-      return;
-    }
+  const fetchLotteryParticipants = async (roundId: string) => {
     try {
       const { data, error } = await supabase
         .from('lottery_entries')
         .select('pack_number, selected_rarity')
-        .eq('round_id', currentRound.id);
+        .eq('round_id', roundId);
 
       if (error) throw error;
 
@@ -522,8 +567,12 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
   /** include packNumber in selection */
   const handleLotteryEntry = (packNumber: number, rarity: string) => {
-    if (!currentRound) {
+    if (!activeLotteryRound) {
       setLotteryError('No active round found for this set');
+      return;
+    }
+    if (activeLotteryRound.bidding_status !== 'open') {
+      setLotteryError('Bidding is not open for this round.');
       return;
     }
     if (!user) {
@@ -531,9 +580,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       return;
     }
     setSelectedLotteryEntry({
-      roundId: currentRound.id,
+      roundId: activeLotteryRound.id,
       rarity,
-      setName: currentRound.set_name,
+      setName: activeLotteryRound.set_name,
       packNumber,
     });
     setShowConfirmModal(true);
@@ -543,11 +592,16 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const handleCreditLotteryEntry = async () => {
     if (
       !user?.id ||
-      !currentRound?.id ||
+      !activeLotteryRound?.id ||
       !selectedLotteryEntry?.rarity ||
       !selectedLotteryEntry?.packNumber
     ) {
       setEntryError('Missing required information for lottery entry');
+      return;
+    }
+
+    if (activeLotteryRound.bidding_status !== 'open') {
+      setEntryError('Bidding is not open for this round.');
       return;
     }
 
@@ -571,7 +625,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         .insert([
           {
             user_id: user.id,
-            round_id: currentRound.id,
+            round_id: activeLotteryRound.id,
             pack_number: selectedLotteryEntry.packNumber,
             selected_rarity: selectedLotteryEntry.rarity,
             created_at: new Date().toISOString(),
@@ -593,7 +647,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       setShowConfirmModal(false);
       setSelectedRarity('');
 
-      await fetchLotteryParticipants();
+      await fetchLotteryParticipants(activeLotteryRound.id);
 
       setEntrySuccess('Successfully entered the lottery! 5 credits deducted.');
       setLotterySuccess('Successfully entered the lottery! 5 credits deducted.');
@@ -767,13 +821,14 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
   /** ----------------- RENDERER FOR A SET (even spacing) ----------------- */
   function renderSetPacks(setKey: SetKey, title: string) {
-    const plannedPacks = currentRound?.total_packs_planned ?? 0;
+    const roundForSet = roundsBySet[setKey] ?? null;
+    const plannedPacks = roundForSet?.total_packs_planned ?? 0;
     const packNumbers =
-      currentRound && plannedPacks > 0
+      roundForSet && plannedPacks > 0
         ? Array.from({ length: plannedPacks }, (_, i) => i + 1)
         : [];
-
-    const plannedDisplay = currentRound?.total_packs_planned ?? 0;
+    const biddingOpen = roundForSet?.bidding_status === 'open';
+    const countdownLabel = formatCountdownLabel(roundForSet?.bidding_ends_at, nowTs);
 
     return (
       <div className="space-y-6">
@@ -787,21 +842,26 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
             <h4 className="font-semibold text-blue-800 font-pokemon mb-2">
               Current Round for {title}
             </h4>
-            {roundLoading ? (
+            {roundsLoading ? (
               <div className="flex items-center justify-center space-x-2">
                 <Loader className="h-4 w-4 animate-spin text-blue-600" />
                 <span className="text-blue-600 font-pokemon">Loading round...</span>
               </div>
-            ) : currentRound ? (
+            ) : roundForSet ? (
               <div className="space-y-1">
                 <p className="text-blue-700 font-bold font-pokemon">
-                  Round ID: {currentRound.id}
+                  Round ID: {roundForSet.id}
                 </p>
                 <p className="text-blue-600 text-sm font-pokemon">
-                  Round {currentRound.round_number} • {plannedDisplay} planned •{' '}
-                  {currentRound.packs_opened} opened •
-                  {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
+                  Round {roundForSet.round_number} • {plannedPacks} planned •{' '}
+                  {roundForSet.packs_opened} opened • Status:{' '}
+                  {(roundForSet.bidding_status || 'not_started').toUpperCase()}
                 </p>
+                {countdownLabel && (
+                  <p className="text-blue-600 text-sm font-pokemon">
+                    Bidding ends in: {countdownLabel}
+                  </p>
+                )}
               </div>
             ) : (
               <p className="text-blue-600 font-pokemon">No round found</p>
@@ -812,10 +872,10 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         {/* PACK ROWS */}
         <div className="space-y-4">
           {packNumbers.map((packNum) => (
-            <div key={`${setKey}-${packNum}`} className="rounded-2xl p-4 border shadow-sm">
+            <div key={\`${setKey}-${packNum}\`} className="rounded-2xl p-4 border shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-lg font-semibold font-pokemon">Pack {packNum}</h4>
-                {currentRound?.locked && <span className="text-sm">LOCKED</span>}
+                {!biddingOpen && <span className="text-sm">LOCKED</span>}
               </div>
 
               <div
@@ -828,15 +888,14 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                 "
               >
                 {RARITIES[setKey].map((rarity) => {
-                  const count =
-                    lotteryParticipantsByPack?.[packNum]?.[rarity] || 0;
+                  const count = lotteryParticipantsByPack?.[packNum]?.[rarity] || 0;
                   const disabled =
-                    !user || loadingUser || !!currentRound?.locked;
+                    !user || loadingUser || !biddingOpen || isProcessingEntry;
                   const bg = rarityBg(rarity);
 
                   return (
                     <div
-                      key={`${packNum}-${rarity}`}
+                      key={\`${packNum}-${rarity}\`}
                       className="
                         bg-white rounded-xl p-6 border border-gray-200 hover:border-gray-300
                         transition-all shadow-lg
@@ -844,7 +903,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                       "
                     >
                       <div className="text-center flex-1 flex flex-col">
-                        <div className={`${bg.split(' ')[0]} rounded-lg p-4 mb-4`}>
+                        <div className={\`${bg.split(' ')[0]} rounded-lg p-4 mb-4\`}>
                           <span className="text-lg font-bold text-white font-pokemon">
                             {rarity}
                           </span>
@@ -863,18 +922,25 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                           <button
                             onClick={() => handleLotteryEntry(packNum, rarity)}
                             disabled={disabled}
-                            className={`w-full ${bg} text-white font-bold py-3 rounded-lg transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed`}
+                            className={\`w-full ${bg} text-white font-bold py-3 rounded-lg transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed\`}
                           >
                             {loadingUser
                               ? 'Loading...'
                               : !user
                               ? 'Login to Enter'
+                              : !biddingOpen
+                              ? 'Bidding Closed'
                               : 'Enter for 5 Credits'}
                           </button>
                           {!loadingUser && !user && (
                             <div className="mt-2 text-orange-600 text-sm font-pokemon">
                               Please sign in to enter lottery
                             </div>
+                          )}
+                          {lotteryError && (
+                            <p className="text-red-600 text-sm font-pokemon mt-2">
+                              {lotteryError}
+                            </p>
                           )}
                         </div>
                       </div>
@@ -885,7 +951,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
             </div>
           ))}
 
-          {currentRound && packNumbers.length === 0 && (
+          {roundForSet && packNumbers.length === 0 && (
             <div className="text-center py-6 text-gray-600 font-pokemon">
               This round has 0 packs planned.
             </div>
@@ -1278,7 +1344,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     },
   ];
 
-  const plannedDisplayDirect = currentRound?.total_packs_planned ?? 0;
+  const plannedDisplayDirect = activeChaseRound?.total_packs_planned ?? 0;
+  const chaseCountdownLabel = formatCountdownLabel(activeChaseRound?.bidding_ends_at, nowTs);
+  const chaseBiddingOpen = activeChaseRound?.bidding_status === 'open';
 
   return (
     <section
@@ -1478,23 +1546,28 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                   Current Round for {tabs.find((t) => t.id === activeTab)?.name}
                 </h4>
 
-                {roundLoading ? (
+                {roundsLoading ? (
                   <div className="flex items-center justify-center space-x-2">
                     <Loader className="h-4 w-4 animate-spin text-blue-600" />
                     <span className="text-blue-600 font-pokemon">
                       Loading round...
                     </span>
                   </div>
-                ) : currentRound ? (
+                ) : activeChaseRound ? (
                   <div className="space-y-1">
                     <p className="text-blue-700 font-bold font-pokemon">
-                      Round ID: {currentRound.id}
+                      Round ID: {activeChaseRound.id}
                     </p>
                     <p className="text-blue-600 text-sm font-pokemon">
-                      Round {currentRound.round_number} •{' '}
-                      {plannedDisplayDirect} planned • {currentRound.packs_opened} opened •
-                      {currentRound.locked ? ' LOCKED' : ' UNLOCKED'}
+                      Round {activeChaseRound.round_number} •{' '}
+                      {plannedDisplayDirect} planned • {activeChaseRound.packs_opened} opened •
+                      Status: {(activeChaseRound.bidding_status || 'not_started').toUpperCase()}
                     </p>
+                    {chaseCountdownLabel && (
+                      <p className="text-blue-600 text-sm font-pokemon">
+                        Bidding ends in: {chaseCountdownLabel}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <p className="text-blue-600 font-pokemon">No round found</p>
@@ -1513,6 +1586,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                   slotLoading={chaseSnapshotLoading}
                   user={user}
                   loadingUser={loadingUser}
+                  isBiddingOpen={Boolean(chaseBiddingOpen)}
                   onBidSuccess={handleChaseBidSuccess}
                 />
               ))}

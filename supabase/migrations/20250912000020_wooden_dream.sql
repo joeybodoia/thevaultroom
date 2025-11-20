@@ -482,60 +482,195 @@ END;
 $$ LANGUAGE plpgsql;
 
 
--- 8) RPC: snapshot of chase slots + leaders
-CREATE OR REPLACE FUNCTION public.get_chase_slot_snapshot(p_stream_id uuid DEFAULT NULL)
-RETURNS TABLE (
-  set_name text,
-  slot_id uuid,
-  all_card_id uuid,
-  top_bid numeric,
-  set_slot_count integer,
-  stream_id uuid,
-  starting_bid numeric,
-  min_increment numeric,
-  is_active boolean,
-  locked boolean,
-  winner_user_id uuid,
-  winning_bid_id uuid
-) AS $$
-  WITH slots AS (
-    SELECT
-      cs.set_name,
-      cs.id,
-      cs.all_card_id,
-      COALESCE(csl.top_bid, 0::numeric) AS top_bid,
-      COUNT(*) OVER (PARTITION BY cs.set_name) AS set_slot_count,
-      cs.stream_id,
-      cs.starting_bid,
-      cs.min_increment,
-      cs.is_active,
-      cs.locked,
-      cs.winner_user_id,
-      cs.winning_bid_id
-    FROM public.chase_slots cs
-    LEFT JOIN public.chase_slot_leaders csl
-      ON csl.slot_id = cs.id
-    WHERE cs.is_active = TRUE
-      AND (p_stream_id IS NULL OR cs.stream_id = p_stream_id)
-  )
+-- 8) View: active chase slots with leaders
+CREATE OR REPLACE VIEW public.active_chase_slot_status AS
+SELECT
+  cs.id         AS slot_id,
+  cs.round_id,
+  cs.stream_id,
+  cs.set_name,
+  cs.all_card_id,
+  cs.starting_bid,
+  cs.min_increment,
+  cs.is_active,
+  cs.locked,
+  cs.winner_user_id,
+  cs.winning_bid_id,
+  COALESCE(csl.top_bid, 0::numeric) AS top_bid
+FROM public.chase_slots cs
+LEFT JOIN public.chase_slot_leaders csl
+  ON csl.slot_id = cs.id
+WHERE cs.is_active = TRUE;
+
+
+-- 9) RPC: generate chase slots for a round
+CREATE OR REPLACE FUNCTION public.generate_chase_slots_for_round(p_round_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER AS $$
+DECLARE
+  v_round public.rounds%ROWTYPE;
+  v_is_admin boolean;
+BEGIN
+  SELECT * INTO v_round FROM public.rounds WHERE id = p_round_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Round % not found', p_round_id;
+  END IF;
+
+  IF v_round.stream_id IS NULL THEN
+    RAISE EXCEPTION 'Round % is not attached to a stream', p_round_id;
+  END IF;
+
+  SELECT is_admin INTO v_is_admin
+  FROM public.users
+  WHERE id = auth.uid();
+
+  IF NOT COALESCE(v_is_admin, false) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  INSERT INTO public.chase_slots (round_id, stream_id, set_name, all_card_id, locked)
   SELECT
-    set_name,
-    id AS slot_id,
-    all_card_id,
-    top_bid,
-    set_slot_count,
-    stream_id,
-    starting_bid,
-    min_increment,
-    is_active,
-    locked,
-    winner_user_id,
-    winning_bid_id
-  FROM slots;
-$$ LANGUAGE sql STABLE SECURITY DEFINER;
+    v_round.id,
+    v_round.stream_id,
+    v_round.set_name,
+    ac.id,
+    TRUE
+  FROM public.all_cards ac
+  WHERE ac.set_name = v_round.set_name
+    AND COALESCE(ac.live_singles, false) = false
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.chase_slots cs
+      WHERE cs.round_id = v_round.id AND cs.all_card_id = ac.id
+    );
+END;
+$$;
 
 
--- 9) Grants for authenticated role
+-- 10) RPC: open bidding for a round
+CREATE OR REPLACE FUNCTION public.open_round_bidding(
+  p_round_id uuid,
+  p_duration_minutes integer DEFAULT 7
+) RETURNS public.rounds
+LANGUAGE plpgsql
+SECURITY DEFINER AS $$
+DECLARE
+  v_round public.rounds%ROWTYPE;
+  v_is_admin boolean;
+  v_new_expiry timestamptz;
+BEGIN
+  IF p_duration_minutes <= 0 THEN
+    RAISE EXCEPTION 'Duration must be positive';
+  END IF;
+
+  SELECT is_admin INTO v_is_admin FROM public.users WHERE id = auth.uid();
+  IF NOT COALESCE(v_is_admin, false) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  SELECT * INTO v_round FROM public.rounds WHERE id = p_round_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Round % not found', p_round_id;
+  END IF;
+
+  v_new_expiry := now() + make_interval(mins => p_duration_minutes);
+
+  UPDATE public.rounds
+  SET
+    bidding_status = 'open',
+    bidding_started_at = now(),
+    bidding_ends_at = v_new_expiry
+  WHERE id = p_round_id
+  RETURNING * INTO v_round;
+
+  UPDATE public.chase_slots
+  SET locked = FALSE
+  WHERE round_id = p_round_id;
+
+  RETURN v_round;
+END;
+$$;
+
+
+-- 11) RPC: close bidding for a round
+CREATE OR REPLACE FUNCTION public.close_round_bidding(p_round_id uuid)
+RETURNS public.rounds
+LANGUAGE plpgsql
+SECURITY DEFINER AS $$
+DECLARE
+  v_round public.rounds%ROWTYPE;
+  v_is_admin boolean;
+BEGIN
+  SELECT is_admin INTO v_is_admin FROM public.users WHERE id = auth.uid();
+  IF NOT COALESCE(v_is_admin, false) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  UPDATE public.rounds
+  SET
+    bidding_status = 'closed',
+    bidding_ends_at = COALESCE(bidding_ends_at, now())
+  WHERE id = p_round_id
+  RETURNING * INTO v_round;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Round % not found', p_round_id;
+  END IF;
+
+  UPDATE public.chase_slots
+  SET locked = TRUE
+  WHERE round_id = p_round_id;
+
+  RETURN v_round;
+END;
+$$;
+
+
+-- 12) RPC: extend bidding window
+CREATE OR REPLACE FUNCTION public.extend_round_bidding(
+  p_round_id uuid,
+  p_extra_seconds integer DEFAULT 60
+) RETURNS public.rounds
+LANGUAGE plpgsql
+SECURITY DEFINER AS $$
+DECLARE
+  v_round public.rounds%ROWTYPE;
+  v_is_admin boolean;
+BEGIN
+  IF p_extra_seconds <= 0 THEN
+    RAISE EXCEPTION 'Extra seconds must be positive';
+  END IF;
+
+  SELECT is_admin INTO v_is_admin FROM public.users WHERE id = auth.uid();
+  IF NOT COALESCE(v_is_admin, false) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  SELECT * INTO v_round FROM public.rounds WHERE id = p_round_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Round % not found', p_round_id;
+  END IF;
+
+  IF v_round.bidding_status <> 'open' THEN
+    RAISE EXCEPTION 'Cannot extend bidding when round is %', v_round.bidding_status;
+  END IF;
+
+  IF v_round.bidding_ends_at IS NULL THEN
+    v_round.bidding_ends_at := now();
+  END IF;
+
+  UPDATE public.rounds
+  SET bidding_ends_at = v_round.bidding_ends_at + make_interval(secs => p_extra_seconds)
+  WHERE id = p_round_id
+  RETURNING * INTO v_round;
+
+  RETURN v_round;
+END;
+$$;
+
+
+-- 13) Grants for authenticated role
 GRANT USAGE ON SCHEMA public TO authenticated;
 
 GRANT EXECUTE ON FUNCTION public.enter_lottery_with_debit(uuid, uuid, text, int, numeric) TO authenticated;
@@ -543,4 +678,9 @@ GRANT EXECUTE ON FUNCTION public.place_chase_bid_immediate_refund(uuid, uuid, nu
 GRANT EXECUTE ON FUNCTION public.place_live_single_bid_immediate_refund(uuid, uuid, numeric) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.set_current_stream(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.create_live_singles_for_stream(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.get_chase_slot_snapshot(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.generate_chase_slots_for_round(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.open_round_bidding(uuid, integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.close_round_bidding(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.extend_round_bidding(uuid, integer) TO authenticated;
+
+GRANT SELECT ON public.active_chase_slot_status TO authenticated;

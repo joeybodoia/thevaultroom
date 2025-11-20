@@ -20,6 +20,7 @@ interface PokemonCardProps {
   slotLoading?: boolean;
   user: User | null;
   loadingUser: boolean;
+  isBiddingOpen: boolean;
   onBidSuccess?: () => void;
 }
 
@@ -30,6 +31,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
   slotLoading = false,
   user,
   loadingUser,
+  isBiddingOpen,
   onBidSuccess,
 }) => {
   const [bidAmount, setBidAmount] = React.useState('');
@@ -95,7 +97,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
     rarity ? rarity.split(',')[0].trim() : 'Unknown Rarity';
 
   const showNotListedBanner = !slotLoading && !slotInfo;
-  const slotLocked = Boolean(slotInfo?.locked);
+  const slotLocked = Boolean(slotInfo?.locked) || !isBiddingOpen;
   const minBidRequirement = slotInfo
     ? Math.max(
         currentBid + (slotInfo.minIncrement || 1),
