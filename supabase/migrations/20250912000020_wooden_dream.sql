@@ -484,6 +484,95 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+-- 9) Stream lifecycle helpers
+CREATE OR REPLACE FUNCTION public.start_stream(p_stream_id uuid)
+RETURNS public.streams
+LANGUAGE plpgsql
+SECURITY DEFINER AS $$
+DECLARE
+  v_stream public.streams%ROWTYPE;
+  v_is_admin boolean;
+BEGIN
+  SELECT is_admin INTO v_is_admin FROM public.users WHERE id = auth.uid();
+  IF NOT COALESCE(v_is_admin, false) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  SELECT * INTO v_stream FROM public.streams WHERE id = p_stream_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Stream % not found', p_stream_id;
+  END IF;
+
+  IF v_stream.status = 'live' THEN
+    RAISE EXCEPTION 'Stream is already live';
+  END IF;
+
+  -- Demote other streams from current
+  UPDATE public.streams SET is_current = FALSE WHERE is_current = TRUE AND id <> p_stream_id;
+
+  UPDATE public.streams
+  SET
+    status = 'live',
+    started_at = now(),
+    ended_at = NULL,
+    is_current = TRUE
+  WHERE id = p_stream_id
+  RETURNING * INTO v_stream;
+
+  RETURN v_stream;
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION public.end_stream(p_stream_id uuid)
+RETURNS public.streams
+LANGUAGE plpgsql
+SECURITY DEFINER AS $$
+DECLARE
+  v_stream public.streams%ROWTYPE;
+  v_is_admin boolean;
+BEGIN
+  SELECT is_admin INTO v_is_admin FROM public.users WHERE id = auth.uid();
+  IF NOT COALESCE(v_is_admin, false) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  SELECT * INTO v_stream FROM public.streams WHERE id = p_stream_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Stream % not found', p_stream_id;
+  END IF;
+
+  UPDATE public.streams
+  SET
+    status = 'ended',
+    ended_at = now(),
+    is_current = FALSE
+  WHERE id = p_stream_id
+  RETURNING * INTO v_stream;
+
+  -- Lock related features
+  UPDATE public.chase_slots
+  SET locked = TRUE
+  WHERE stream_id = p_stream_id;
+
+  UPDATE public.rounds
+  SET
+    bidding_status = 'closed',
+    bidding_ends_at = COALESCE(bidding_ends_at, now())
+  WHERE stream_id = p_stream_id;
+
+  UPDATE public.live_singles
+  SET status = 'locked'
+  WHERE stream_id = p_stream_id;
+
+  -- Demote any other current flags just in case
+  UPDATE public.streams SET is_current = FALSE WHERE id <> p_stream_id AND is_current = TRUE;
+
+  RETURN v_stream;
+END;
+$$;
+
+
 -- 8) View: active chase slots with leaders
 CREATE OR REPLACE VIEW public.active_chase_slot_status AS
 SELECT
@@ -577,19 +666,32 @@ BEGIN
     RAISE EXCEPTION 'Round % not found', p_round_id;
   END IF;
 
+  IF v_round.bidding_status = 'open' THEN
+    RAISE EXCEPTION 'Round % is already open', p_round_id;
+  END IF;
+
   v_new_expiry := now() + make_interval(mins => p_duration_minutes);
 
   UPDATE public.rounds
   SET
     bidding_status = 'open',
     bidding_started_at = now(),
-    bidding_ends_at = v_new_expiry
+    bidding_ends_at = v_new_expiry,
+    locked = FALSE
   WHERE id = p_round_id
   RETURNING * INTO v_round;
 
   UPDATE public.chase_slots
   SET locked = FALSE
   WHERE round_id = p_round_id;
+
+  -- If this is Round 1, open live singles for the stream (leave sold/cancelled untouched)
+  IF v_round.round_number = 1 THEN
+    UPDATE public.live_singles
+    SET status = 'open'
+    WHERE stream_id = v_round.stream_id
+      AND status IN ('locked', 'open');
+  END IF;
 
   RETURN v_round;
 END;
@@ -613,7 +715,8 @@ BEGIN
   UPDATE public.rounds
   SET
     bidding_status = 'closed',
-    bidding_ends_at = COALESCE(bidding_ends_at, now())
+    bidding_ends_at = COALESCE(bidding_ends_at, now()),
+    locked = TRUE
   WHERE id = p_round_id
   RETURNING * INTO v_round;
 
@@ -624,6 +727,14 @@ BEGIN
   UPDATE public.chase_slots
   SET locked = TRUE
   WHERE round_id = p_round_id;
+
+  -- If this is Round 3, lock live singles for the stream (leave sold/cancelled untouched)
+  IF v_round.round_number = 3 THEN
+    UPDATE public.live_singles
+    SET status = 'locked'
+    WHERE stream_id = v_round.stream_id
+      AND status IN ('locked', 'open');
+  END IF;
 
   RETURN v_round;
 END;
@@ -685,5 +796,7 @@ GRANT EXECUTE ON FUNCTION public.generate_chase_slots_for_round(uuid) TO authent
 GRANT EXECUTE ON FUNCTION public.open_round_bidding(uuid, integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.close_round_bidding(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.extend_round_bidding(uuid, integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.start_stream(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.end_stream(uuid) TO authenticated;
 
 GRANT SELECT ON public.active_chase_slot_status TO authenticated;

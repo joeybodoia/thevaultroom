@@ -428,6 +428,50 @@ const AdminPortal: React.FC = () => {
     }
   };
 
+  const handleStartStream = async () => {
+    if (!selectedStreamId) return;
+
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const { data, error } = await supabase.rpc('start_stream', {
+        p_stream_id: selectedStreamId,
+      });
+      if (error) throw error;
+
+      await fetchStreams();
+      await fetchRounds();
+
+      setSuccessMessage(`Stream "${data?.title || 'Selected Stream'}" started.`);
+    } catch (err: any) {
+      console.error('Failed to start stream:', err);
+      setError(err.message || 'Failed to start stream');
+    }
+  };
+
+  const handleEndStream = async () => {
+    if (!selectedStreamId) return;
+
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const { data, error } = await supabase.rpc('end_stream', {
+        p_stream_id: selectedStreamId,
+      });
+      if (error) throw error;
+
+      await fetchStreams();
+      await fetchRounds();
+
+      setSuccessMessage(`Stream "${data?.title || 'Selected Stream'}" ended.`);
+    } catch (err: any) {
+      console.error('Failed to end stream:', err);
+      setError(err.message || 'Failed to end stream');
+    }
+  };
+
   /**
    * Generate Live Singles for the selected stream by calling the DB function
    * create_live_singles_for_stream(p_stream_id) and then refreshing Live Singles.
@@ -523,30 +567,6 @@ const AdminPortal: React.FC = () => {
       setError(err.message || 'Failed to update round');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const toggleRoundLock = async (round: Round) => {
-    setError(null);
-    setSuccessMessage(null);
-
-    try {
-      const { data, error } = await supabase
-        .from('rounds')
-        .update({ locked: !round.locked })
-        .eq('id', round.id)
-        .select()
-        .single();
-      if (error) throw error;
-      setRounds((prev) => prev.map((r) => (r.id === round.id ? data : r)));
-
-      setSuccessMessage(
-        `Round ${data.round_number} for "${data.set_name}" is now ${
-          data.locked ? 'LOCKED' : 'UNLOCKED'
-        }.`
-      );
-    } catch (err: any) {
-      setError(err.message || 'Failed to toggle round lock');
     }
   };
 
@@ -1146,33 +1166,29 @@ const AdminPortal: React.FC = () => {
               </div>
             ) : (
               <>
-                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-                  <div className="flex-1">
+                <div className="space-y-4">
+                  <div className="max-w-md">
                     <label className="block text-sm font-medium text-gray-700 mb-2 font-pokemon">
                       Select Active Stream
                     </label>
                     <select
                       value={selectedStreamId}
-                      onChange={(e) =>
-                        setSelectedStreamId(e.target.value)
-                      }
-                      className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none font-pokemon"
+                      onChange={(e) => setSelectedStreamId(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none font-pokemon"
                     >
                       <option value="">Select a stream</option>
                       {streams.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.title}
                           {s.scheduled_date
-                            ? ` - ${new Date(
-                                s.scheduled_date
-                              ).toLocaleString()}`
+                            ? ` - ${new Date(s.scheduled_date).toLocaleString()}`
                             : ''}
                           {s.is_current ? ' (Current)' : ''}
                         </option>
                       ))}
                     </select>
                   </div>
-                  <div className="flex flex-wrap gap-3 self-start">
+                  <div className="flex flex-wrap gap-3">
                     <button
                       type="button"
                       disabled={!selectedStreamId}
@@ -1185,6 +1201,20 @@ const AdminPortal: React.FC = () => {
                     <button
                       type="button"
                       disabled={!selectedStreamId}
+                      onClick={handleStartStream}
+                      className="bg-green-700 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-800 transition-all font-pokemon inline-flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Unlock className="h-4 w-4" />
+                      <span>
+                        Start Stream
+                        {selectedStreamId
+                          ? ` ${streams.find((s) => s.id === selectedStreamId)?.title || ''}`
+                          : ''}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!selectedStreamId}
                       onClick={handleGenerateLiveSinglesForStream}
                       className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-all font-pokemon inline-flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -1193,10 +1223,19 @@ const AdminPortal: React.FC = () => {
                     </button>
                     <button
                       onClick={() => setShowCreateStreamForm(true)}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-all font-pokemon inline-flex items-center space-x-2 self-start"
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-all font-pokemon inline-flex items-center space-x-2"
                     >
                       <Plus className="h-4 w-4" />
                       <span>Create New Stream</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!selectedStreamId}
+                      onClick={handleEndStream}
+                      className="bg-gray-800 text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-900 transition-all font-pokemon inline-flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Lock className="h-4 w-4" />
+                      <span>End Stream</span>
                     </button>
                   </div>
                 </div>
@@ -1607,28 +1646,6 @@ const AdminPortal: React.FC = () => {
                           >
                             <Edit className="h-3 w-3" />
                             <span>Edit</span>
-                          </button>
-                          <button
-                            onClick={() =>
-                              toggleRoundLock(round)
-                            }
-                            className={`px-3 py-1 rounded font-pokemon text-sm transition-all inline-flex items-center space-x-1 ${
-                              round.locked
-                                ? 'bg-green-600 text-white hover:bg-green-700'
-                                : 'bg-red-600 text-white hover:bg-red-700'
-                            }`}
-                          >
-                            {round.locked ? (
-                              <>
-                                <Unlock className="h-3 w-3" />
-                                <span>Unlock</span>
-                              </>
-                            ) : (
-                              <>
-                                <Lock className="h-3 w-3" />
-                                <span>Lock</span>
-                              </>
-                            )}
                           </button>
                           {biddingOpen ? (
                             <>
