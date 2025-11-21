@@ -379,12 +379,17 @@ const AdminPortal: React.FC = () => {
     setSuccessMessage(null);
 
     try {
+      const scheduledDateIso =
+        streamFormData.scheduled_date && !isNaN(Date.parse(streamFormData.scheduled_date))
+          ? new Date(streamFormData.scheduled_date).toISOString()
+          : null;
+
       const { data, error } = await supabase
         .from('streams')
         .insert([
           {
             title: streamFormData.title,
-            scheduled_date: streamFormData.scheduled_date || null,
+            scheduled_date: scheduledDateIso,
           },
         ])
         .select()
