@@ -484,6 +484,81 @@ END;
 $$ LANGUAGE plpgsql;
 
 
+-- Helper: normalize lottery rarity for matching entries to pulled cards
+CREATE OR REPLACE FUNCTION public.normalize_lottery_rarity(
+  p_set_name text,
+  p_raw_rarity text,
+  p_card_name text
+) RETURNS text
+LANGUAGE sql
+IMMUTABLE AS $$
+  WITH base AS (
+    SELECT trim(split_part(p_raw_rarity, ',', 1)) AS r
+  )
+  SELECT CASE
+    -- Prismatic Evolutions: card_name patterns
+    WHEN p_set_name = 'SV: Prismatic Evolutions' AND p_card_name ILIKE '%(Master Ball Pattern)%'
+      THEN 'Masterball Pattern'
+    WHEN p_set_name = 'SV: Prismatic Evolutions' AND p_card_name ILIKE '%(Poke Ball Pattern)%'
+      THEN 'Pokeball Pattern'
+
+    -- Crown Zenith mappings
+    WHEN p_set_name IN ('Crown Zenith', 'Crown Zenith: Galarian Gallery') AND (SELECT r FROM base) = 'Secret Rare'
+      THEN 'Secret Rare (includes Pikachu)'
+    WHEN p_set_name = 'Crown Zenith' AND (SELECT r FROM base) = 'Ultra Rare'
+      THEN 'Ultra Rare (Non Galarian Gallery)'
+    WHEN p_set_name = 'Crown Zenith: Galarian Gallery' AND (SELECT r FROM base) = 'Ultra Rare'
+      THEN 'Ultra Rare (Galarian Gallery)'
+
+    -- Destined Rivals mappings
+    WHEN p_set_name = 'SV10: Destined Rivals' AND (SELECT r FROM base) IN ('Special Illustration Rare', 'Hyper Rare')
+      THEN 'SIR / Hyper Rare'
+    WHEN p_set_name = 'SV10: Destined Rivals' AND (SELECT r FROM base) = 'Illustration Rare'
+      THEN 'IR'
+    WHEN p_set_name = 'SV10: Destined Rivals' AND (SELECT r FROM base) IN ('Ultra Rare', 'Double Rare')
+      THEN 'Ultra Rare / Double Rare'
+
+    -- Default: base rarity
+    ELSE (SELECT r FROM base)
+  END;
+$$;
+
+
+-- Tables for lottery prize pool and ordering
+CREATE TABLE IF NOT EXISTS public.lottery_prize_pool (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  round_id uuid NOT NULL REFERENCES public.rounds(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  email text,
+  selected_rarity text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.lottery_prize_pool_ordered (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  round_id uuid NOT NULL REFERENCES public.rounds(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  email text,
+  selected_rarity text,
+  seq integer NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+
+-- Chase-slot winner matches (optional persistence for reporting)
+CREATE TABLE IF NOT EXISTS public.chase_slot_winner_matches (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  round_id uuid NOT NULL REFERENCES public.rounds(id) ON DELETE CASCADE,
+  slot_id uuid NOT NULL REFERENCES public.chase_slots(id) ON DELETE CASCADE,
+  all_card_id uuid NOT NULL REFERENCES public.all_cards(id),
+  winner_user_id uuid,
+  top_bid numeric,
+  pulled_card_id uuid,
+  matched boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+
 -- 9) Stream lifecycle helpers
 CREATE OR REPLACE FUNCTION public.start_stream(p_stream_id uuid)
 RETURNS public.streams
@@ -640,163 +715,142 @@ END;
 $$;
 
 
--- 10) RPC: open bidding for a round
-CREATE OR REPLACE FUNCTION public.open_round_bidding(
-  p_round_id uuid,
-  p_duration_minutes integer DEFAULT 7
-) RETURNS public.rounds
+
+
+-- RPC: compute chase slot winners for a round
+CREATE OR REPLACE FUNCTION public.compute_chase_slot_winners(p_round_id uuid)
+RETURNS SETOF public.chase_slot_winner_matches
 LANGUAGE plpgsql
 SECURITY DEFINER AS $$
 DECLARE
-  v_round public.rounds%ROWTYPE;
   v_is_admin boolean;
-  v_new_expiry timestamptz;
-BEGIN
-  IF p_duration_minutes <= 0 THEN
-    RAISE EXCEPTION 'Duration must be positive';
-  END IF;
-
-  SELECT is_admin INTO v_is_admin FROM public.users WHERE id = auth.uid();
-  IF NOT COALESCE(v_is_admin, false) THEN
-    RAISE EXCEPTION 'Not authorized';
-  END IF;
-
-  SELECT * INTO v_round FROM public.rounds WHERE id = p_round_id FOR UPDATE;
-  IF NOT FOUND THEN
-    RAISE EXCEPTION 'Round % not found', p_round_id;
-  END IF;
-
-  IF v_round.bidding_status = 'open' THEN
-    RAISE EXCEPTION 'Round % is already open', p_round_id;
-  END IF;
-
-  v_new_expiry := now() + make_interval(mins => p_duration_minutes);
-
-  UPDATE public.rounds
-  SET
-    bidding_status = 'open',
-    bidding_started_at = now(),
-    bidding_ends_at = v_new_expiry,
-    locked = FALSE
-  WHERE id = p_round_id
-  RETURNING * INTO v_round;
-
-  UPDATE public.chase_slots
-  SET locked = FALSE
-  WHERE round_id = p_round_id;
-
-  -- If this is Round 1, open live singles for the stream (leave sold/cancelled untouched)
-  IF v_round.round_number = 1 THEN
-    UPDATE public.live_singles
-    SET status = 'open'
-    WHERE stream_id = v_round.stream_id
-      AND status IN ('locked', 'open');
-  END IF;
-
-  RETURN v_round;
-END;
-$$;
-
-
--- 11) RPC: close bidding for a round
-CREATE OR REPLACE FUNCTION public.close_round_bidding(p_round_id uuid)
-RETURNS public.rounds
-LANGUAGE plpgsql
-SECURITY DEFINER AS $$
-DECLARE
   v_round public.rounds%ROWTYPE;
-  v_is_admin boolean;
 BEGIN
   SELECT is_admin INTO v_is_admin FROM public.users WHERE id = auth.uid();
   IF NOT COALESCE(v_is_admin, false) THEN
     RAISE EXCEPTION 'Not authorized';
   END IF;
 
-  UPDATE public.rounds
-  SET
-    bidding_status = 'closed',
-    bidding_ends_at = COALESCE(bidding_ends_at, now()),
-    locked = TRUE
-  WHERE id = p_round_id
-  RETURNING * INTO v_round;
-
+  SELECT * INTO v_round FROM public.rounds WHERE id = p_round_id;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Round % not found', p_round_id;
   END IF;
-
-  UPDATE public.chase_slots
-  SET locked = TRUE
-  WHERE round_id = p_round_id;
-
-  -- If this is Round 3, lock live singles for the stream (leave sold/cancelled untouched)
-  IF v_round.round_number = 3 THEN
-    UPDATE public.live_singles
-    SET status = 'locked'
-    WHERE stream_id = v_round.stream_id
-      AND status IN ('locked', 'open');
+  IF v_round.bidding_status <> 'closed' THEN
+    RAISE EXCEPTION 'Round % must be closed to compute winners', p_round_id;
   END IF;
 
-  RETURN v_round;
+  DELETE FROM public.chase_slot_winner_matches WHERE round_id = p_round_id;
+
+  INSERT INTO public.chase_slot_winner_matches (
+    round_id, slot_id, all_card_id, winner_user_id, top_bid, pulled_card_id, matched
+  )
+  SELECT
+    cs.round_id,
+    cs.id AS slot_id,
+    cs.all_card_id,
+    cs.winner_user_id,
+    csl.top_bid,
+    pc.id AS pulled_card_id,
+    (pc.id IS NOT NULL) AS matched
+  FROM public.chase_slots cs
+  LEFT JOIN public.chase_slot_leaders csl ON csl.slot_id = cs.id
+  LEFT JOIN public.pulled_cards pc
+    ON pc.round_id = cs.round_id
+   AND pc.all_card_id = cs.all_card_id
+  WHERE cs.round_id = p_round_id;
+
+  RETURN QUERY
+    SELECT * FROM public.chase_slot_winner_matches
+    WHERE round_id = p_round_id;
 END;
 $$;
 
 
--- 12) RPC: extend bidding window
-CREATE OR REPLACE FUNCTION public.extend_round_bidding(
-  p_round_id uuid,
-  p_extra_seconds integer DEFAULT 60
-) RETURNS public.rounds
+-- RPC: compute lottery prize pool for a round
+CREATE OR REPLACE FUNCTION public.compute_lottery_prize_pool(p_round_id uuid)
+RETURNS SETOF public.lottery_prize_pool
 LANGUAGE plpgsql
 SECURITY DEFINER AS $$
 DECLARE
-  v_round public.rounds%ROWTYPE;
   v_is_admin boolean;
+  v_round public.rounds%ROWTYPE;
 BEGIN
-  IF p_extra_seconds <= 0 THEN
-    RAISE EXCEPTION 'Extra seconds must be positive';
-  END IF;
-
   SELECT is_admin INTO v_is_admin FROM public.users WHERE id = auth.uid();
   IF NOT COALESCE(v_is_admin, false) THEN
     RAISE EXCEPTION 'Not authorized';
   END IF;
 
-  SELECT * INTO v_round FROM public.rounds WHERE id = p_round_id FOR UPDATE;
+  SELECT * INTO v_round FROM public.rounds WHERE id = p_round_id;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Round % not found', p_round_id;
   END IF;
-
-  IF v_round.bidding_status <> 'open' THEN
-    RAISE EXCEPTION 'Cannot extend bidding when round is %', v_round.bidding_status;
+  IF v_round.bidding_status <> 'closed' THEN
+    RAISE EXCEPTION 'Round % must be closed to compute lottery prize pool', p_round_id;
   END IF;
 
-  IF v_round.bidding_ends_at IS NULL THEN
-    v_round.bidding_ends_at := now();
-  END IF;
+  DELETE FROM public.lottery_prize_pool WHERE round_id = p_round_id;
 
-  UPDATE public.rounds
-  SET bidding_ends_at = v_round.bidding_ends_at + make_interval(secs => p_extra_seconds)
-  WHERE id = p_round_id
-  RETURNING * INTO v_round;
+  WITH round_set AS (
+    SELECT set_name FROM public.rounds WHERE id = p_round_id
+  ), winning_rarities AS (
+    SELECT DISTINCT normalize_lottery_rarity(pc.set_name, pc.rarity, pc.card_name) AS norm_rarity
+    FROM public.pulled_cards pc
+    WHERE pc.round_id = p_round_id AND pc.rarity IS NOT NULL
+  )
+  INSERT INTO public.lottery_prize_pool (round_id, user_id, email, selected_rarity)
+  SELECT
+    le.round_id,
+    le.user_id,
+    u.email,
+    le.selected_rarity
+  FROM public.lottery_entries le
+  JOIN public.users u ON u.id = le.user_id
+  CROSS JOIN round_set rs
+  WHERE le.round_id = p_round_id
+    AND normalize_lottery_rarity(rs.set_name, le.selected_rarity, NULL) IN (SELECT norm_rarity FROM winning_rarities);
 
-  RETURN v_round;
+  RETURN QUERY
+    SELECT * FROM public.lottery_prize_pool
+    WHERE round_id = p_round_id;
 END;
 $$;
 
 
--- 13) Grants for authenticated role
-GRANT USAGE ON SCHEMA public TO authenticated;
+-- RPC: order lottery prize pool for a round
+CREATE OR REPLACE FUNCTION public.order_lottery_prize_pool(p_round_id uuid)
+RETURNS SETOF public.lottery_prize_pool_ordered
+LANGUAGE plpgsql
+SECURITY DEFINER AS $$
+DECLARE
+  v_is_admin boolean;
+BEGIN
+  SELECT is_admin INTO v_is_admin FROM public.users WHERE id = auth.uid();
+  IF NOT COALESCE(v_is_admin, false) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
 
-GRANT EXECUTE ON FUNCTION public.enter_lottery_with_debit(uuid, uuid, text, int, numeric) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.place_chase_bid_immediate_refund(uuid, uuid, numeric) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.place_live_single_bid_immediate_refund(uuid, uuid, numeric) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.set_current_stream(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.create_live_singles_for_stream(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.generate_chase_slots_for_round(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.open_round_bidding(uuid, integer) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.close_round_bidding(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.extend_round_bidding(uuid, integer) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.start_stream(uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.end_stream(uuid) TO authenticated;
+  DELETE FROM public.lottery_prize_pool_ordered WHERE round_id = p_round_id;
 
-GRANT SELECT ON public.active_chase_slot_status TO authenticated;
+  INSERT INTO public.lottery_prize_pool_ordered (round_id, user_id, email, selected_rarity, seq)
+  SELECT
+    p.round_id,
+    p.user_id,
+    p.email,
+    p.selected_rarity,
+    ROW_NUMBER() OVER (ORDER BY gen_random_uuid()) AS seq
+  FROM public.lottery_prize_pool p
+  WHERE p.round_id = p_round_id;
+
+  RETURN QUERY
+    SELECT * FROM public.lottery_prize_pool_ordered
+    WHERE round_id = p_round_id
+    ORDER BY seq;
+END;
+$$;
+
+
+
+-- Grants for new RPCs
+GRANT EXECUTE ON FUNCTION public.compute_chase_slot_winners(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.compute_lottery_prize_pool(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.order_lottery_prize_pool(uuid) TO authenticated;

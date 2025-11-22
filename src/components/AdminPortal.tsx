@@ -196,6 +196,8 @@ const AdminPortal: React.FC = () => {
 
   const [expandedRound, setExpandedRound] = useState<string | null>(null);
   const [trackingRound, setTrackingRound] = useState<string | null>(null);
+  const [lotteryPoolCounts, setLotteryPoolCounts] = useState<Record<string, number>>({});
+  const [chaseMatchCounts, setChaseMatchCounts] = useState<Record<string, number>>({});
 
   /** Search / filter for pulled-cards tool */
   const [searchTerm, setSearchTerm] = useState('');
@@ -638,6 +640,54 @@ const AdminPortal: React.FC = () => {
       setSuccessMessage(`Extended bidding by ${extraSeconds} seconds.`);
     } catch (err: any) {
       setError(err.message || 'Failed to extend bidding');
+    }
+  };
+
+  const handleComputeChaseWinners = async (round: Round) => {
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const { data, error } = await supabase.rpc('compute_chase_slot_winners', {
+        p_round_id: round.id,
+      });
+      if (error) throw error;
+      const count = Array.isArray(data) ? data.length : 0;
+      setChaseMatchCounts((prev) => ({ ...prev, [round.id]: count }));
+      setSuccessMessage(`Computed chase slot winners for Round ${round.round_number} (${count} rows).`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to compute chase slot winners');
+    }
+  };
+
+  const handleComputeLotteryPrizePool = async (round: Round) => {
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const { data, error } = await supabase.rpc('compute_lottery_prize_pool', {
+        p_round_id: round.id,
+      });
+      if (error) throw error;
+      const count = Array.isArray(data) ? data.length : 0;
+      setLotteryPoolCounts((prev) => ({ ...prev, [round.id]: count }));
+      setSuccessMessage(`Lottery prize pool computed for Round ${round.round_number} (${count} entries).`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to compute lottery prize pool');
+    }
+  };
+
+  const handleOrderLotteryPrizePool = async (round: Round) => {
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const { data, error } = await supabase.rpc('order_lottery_prize_pool', {
+        p_round_id: round.id,
+      });
+      if (error) throw error;
+      const count = Array.isArray(data) ? data.length : 0;
+      setLotteryPoolCounts((prev) => ({ ...prev, [round.id]: count }));
+      setSuccessMessage(`Lottery prize pool ordered for Round ${round.round_number} (${count} entries).`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to order lottery prize pool');
     }
   };
 
@@ -1670,13 +1720,40 @@ const AdminPortal: React.FC = () => {
                               </button>
                             </>
                           ) : (
-                            <button
-                              onClick={() => handleOpenBidding(round)}
-                              className="bg-green-600 text-white px-3 py-1 rounded font-pokemon text-sm hover:bg-green-700 transition-all inline-flex items-center space-x-1"
-                            >
-                              <Unlock className="h-3 w-3" />
+                            <>
+                              <button
+                                onClick={() => handleOpenBidding(round)}
+                                className="bg-green-600 text-white px-3 py-1 rounded font-pokemon text-sm hover:bg-green-700 transition-all inline-flex items-center space-x-1"
+                              >
+                                <Unlock className="h-3 w-3" />
                               <span>Open Bidding</span>
                             </button>
+                            </>
+                          )}
+                          {round.bidding_status === 'closed' && (
+                            <>
+                              <button
+                                onClick={() => handleComputeLotteryPrizePool(round)}
+                                className="bg-blue-700 text-white px-3 py-1 rounded font-pokemon text-sm hover:bg-blue-800 transition-all inline-flex items-center space-x-1"
+                              >
+                                <Star className="h-3 w-3" />
+                                <span>Compute Lottery Pool</span>
+                              </button>
+                              <button
+                                onClick={() => handleOrderLotteryPrizePool(round)}
+                                className="bg-indigo-700 text-white px-3 py-1 rounded font-pokemon text-sm hover:bg-indigo-800 transition-all inline-flex items-center space-x-1"
+                              >
+                                <Sparkles className="h-3 w-3" />
+                                <span>Order Prize Pool</span>
+                              </button>
+                              <button
+                                onClick={() => handleComputeChaseWinners(round)}
+                                className="bg-amber-600 text-white px-3 py-1 rounded font-pokemon text-sm hover:bg-amber-700 transition-all inline-flex items-center space-x-1"
+                              >
+                                <Ticket className="h-3 w-3" />
+                                <span>Compute Chase Winners</span>
+                              </button>
+                            </>
                           )}
                         </div>
                       </div>
