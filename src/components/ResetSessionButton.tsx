@@ -7,14 +7,17 @@ const ResetSessionButton: React.FC = () => {
   const { signOut } = useAuth();
 
   const handleReset = async () => {
+    console.log('[ui] ResetSessionButton clicked');
     try {
       await Promise.race([
-        signOut(),
+        signOut('reset-session-click'),
         new Promise((_, reject) => setTimeout(() => reject(new Error('signOut timeout')), 3000)),
       ]);
+      console.log('[ui] ResetSessionButton signOut resolved');
     } catch (e) {
       console.warn('Reset session fallback:', e);
       await forceSignOut();
+      console.log('[ui] forcing hard reload after reset session fallback');
       window.location.reload();
     }
   };

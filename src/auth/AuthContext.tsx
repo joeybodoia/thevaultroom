@@ -82,6 +82,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .then(({ data, error }) => {
         if (!mounted) return;
         if (error) console.warn('getSession error:', error);
+        console.log('[auth] initial session', {
+          hasSession: !!data.session,
+          userId: data.session?.user.id,
+          expiresAt: data.session?.expires_at,
+        });
         setSession(data.session ?? null);
         setLoading(false);
         scheduleRefresh(data.session ?? null);
@@ -97,6 +102,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes (SIGNED_IN, TOKEN_REFRESHED, SIGNED_OUT, etc.)
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       if (!mounted) return;
+      console.log('[auth] onAuthStateChange', {
+        event,
+        hasSession: !!s,
+        userId: s?.user?.id,
+        expiresAt: s?.expires_at,
+      });
       setSession(s ?? null);
       scheduleRefresh(s ?? null);
       if (event === 'SIGNED_OUT') {
@@ -121,29 +132,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const signOut = async () => {
+  const signOut = async (reason?: string) => {
+    console.log('[auth] signOut start', {
+      reason,
+      userId: session?.user?.id,
+    });
     clearTimers();
     try {
       await Promise.race([
         forceSignOut(),
         new Promise((_, reject) => setTimeout(() => reject(new Error('signOut timeout')), 3000)),
       ]);
+      console.log('[auth] signOut success');
     } catch (e) {
       console.warn('signOut fallback:', e);
       try {
         localStorage.clear();
         sessionStorage.clear();
       } catch (_) {}
+      console.log('[auth] storage cleared after signOut error');
     } finally {
       setSession(null);
+      setIdleWarning(false);
+      console.log('[auth] signOut finished, session cleared');
     }
   };
 
   const refreshNow = async () => {
+    console.log('[auth] refreshNow called');
     const fresh = await getFreshSession(300);
     if (!fresh) {
       await signOut();
     } else {
+      console.log('[auth] refreshNow got session', {
+        userId: fresh.user.id,
+        expiresAt: fresh.expires_at,
+      });
       setSession(fresh);
       scheduleRefresh(fresh);
       resetIdleTimers();
