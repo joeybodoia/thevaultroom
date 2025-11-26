@@ -10,7 +10,7 @@ const ResetSessionButton: React.FC = () => {
     console.log('[ui] ResetSessionButton clicked');
     try {
       await Promise.race([
-        signOut('reset-session-click'),
+        signOut('reset-session-click', { reload: true }),
         new Promise((_, reject) => setTimeout(() => reject(new Error('signOut timeout')), 3000)),
       ]);
       console.log('[ui] ResetSessionButton signOut resolved');

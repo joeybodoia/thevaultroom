@@ -7,7 +7,7 @@ type AuthCtx = {
   user: User | null;
   loading: boolean;
   idleWarning: boolean;
-  signOut: () => Promise<void>;
+  signOut: (reason?: string, options?: { reload?: boolean }) => Promise<void>;
   refreshNow: () => Promise<void>;
 };
 
@@ -75,6 +75,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    const loadTimeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('[auth] getSession timeout; clearing session and continuing');
+        setSession(null);
+        setLoading(false);
+      }
+    }, 6000);
 
     // Initial load
     supabase.auth
@@ -121,6 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false;
+      clearTimeout(loadTimeout);
       clearTimers();
       sub?.subscription.unsubscribe();
       if (typeof window !== 'undefined') {
@@ -132,7 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const signOut = async (reason?: string) => {
+  const signOut = async (reason?: string, options?: { reload?: boolean }) => {
     console.log('[auth] signOut start', {
       reason,
       userId: session?.user?.id,
@@ -154,7 +162,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setSession(null);
       setIdleWarning(false);
+      setLoading(false);
       console.log('[auth] signOut finished, session cleared');
+      if (options?.reload) {
+        console.log('[auth] reloading page after signOut');
+        try {
+          window.location.reload();
+        } catch (e) {
+          console.warn('[auth] reload failed:', e);
+        }
+      }
     }
   };
 
