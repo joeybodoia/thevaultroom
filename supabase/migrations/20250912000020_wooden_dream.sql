@@ -496,6 +496,8 @@ IMMUTABLE AS $$
     SELECT trim(split_part(p_raw_rarity, ',', 1)) AS r
   )
   SELECT CASE
+    WHEN p_set_name = 'SV: Prismatic Evolutions' AND (SELECT r FROM base) = 'Special Illustration Rare'
+      THEN 'SIR'
     -- Prismatic Evolutions: card_name patterns
     WHEN p_set_name = 'SV: Prismatic Evolutions' AND p_card_name ILIKE '%(Master Ball Pattern)%'
       THEN 'Masterball Pattern'

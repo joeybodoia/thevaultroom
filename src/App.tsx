@@ -14,7 +14,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
 
 function App() {
-  const { user, loading } = useAuth();
+  const { user, loading, signOut, idleWarning } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminPortal, setShowAdminPortal] = useState(false);
   const [showStreamDashboard, setShowStreamDashboard] = useState(false);
@@ -23,9 +23,9 @@ function App() {
 
   // Timeout for loading screen
   useEffect(() => {
-    const id = setTimeout(() => setTimedOut(true), 5000) // don't spin forever
-    return () => clearTimeout(id)
-  }, [])
+    const id = setTimeout(() => setTimedOut(true), 12000); // cap at ~12s
+    return () => clearTimeout(id);
+  }, []);
 
   // Check admin status when user changes
   useEffect(() => {
@@ -78,6 +78,9 @@ function App() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
           <p className="text-gray-600 font-pokemon">Loading...</p>
+          {idleWarning && (
+            <p className="text-xs text-red-600 font-pokemon mt-2">Session will expire soon due to inactivity.</p>
+          )}
           <div className="mt-4">
             <ResetSessionButton />
           </div>
@@ -90,8 +93,17 @@ function App() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600 font-pokemon mb-4">Loading is taking longer than expected...</p>
-          <ResetSessionButton />
+          <p className="text-gray-600 font-pokemon mb-2">Loading is taking longer than expected...</p>
+          <p className="text-gray-800 font-pokemon mb-4">Session may be expired. Please sign in again.</p>
+          <div className="flex items-center justify-center space-x-2">
+            <ResetSessionButton />
+            <button
+              onClick={() => signOut()}
+              className="bg-gray-200 text-black px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-all font-pokemon"
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
       </div>
     );
