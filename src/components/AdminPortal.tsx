@@ -352,12 +352,16 @@ const AdminPortal: React.FC = () => {
     }
   };
 
-  const fetchOrderedLotteryPrizePool = async (roundId: string) => {
+  const [orderedPackFilter, setOrderedPackFilter] = useState<Record<string, number>>({});
+
+  const fetchOrderedLotteryPrizePool = async (roundId: string, packNumber?: number) => {
     try {
+      const pack = packNumber ?? orderedPackFilter[roundId] ?? 1;
       const { data, error } = await supabase
         .from('lottery_prize_pool_ordered')
         .select('*')
         .eq('round_id', roundId)
+        .eq('pack_number', pack)
         .order('seq', { ascending: true });
       if (error) throw error;
       setOrderedLotteryPools((prev) => ({ ...prev, [roundId]: (data || []) as LotteryPrizeOrdered[] }));
@@ -686,36 +690,20 @@ const AdminPortal: React.FC = () => {
     }
   };
 
-  const handleComputeLotteryPrizePool = async (round: Round) => {
+  const handleComputeAndOrderLotteryPrizePool = async (round: Round) => {
     setError(null);
     setSuccessMessage(null);
     try {
-      const { data, error } = await supabase.rpc('compute_lottery_prize_pool', {
+      const { data, error } = await supabase.rpc('compute_and_order_lottery_prize_pool', {
         p_round_id: round.id,
       });
       if (error) throw error;
       const count = Array.isArray(data) ? data.length : 0;
       setLotteryPoolCounts((prev) => ({ ...prev, [round.id]: count }));
-      setSuccessMessage(`Lottery prize pool computed for Round ${round.round_number} (${count} entries).`);
+      setSuccessMessage(`Lottery prize pool computed & ordered for Round ${round.round_number} (${count} entries).`);
+      await fetchOrderedLotteryPrizePool(round.id, orderedPackFilter[round.id]);
     } catch (err: any) {
-      setError(err.message || 'Failed to compute lottery prize pool');
-    }
-  };
-
-  const handleOrderLotteryPrizePool = async (round: Round) => {
-    setError(null);
-    setSuccessMessage(null);
-    try {
-      const { data, error } = await supabase.rpc('order_lottery_prize_pool', {
-        p_round_id: round.id,
-      });
-      if (error) throw error;
-      const count = Array.isArray(data) ? data.length : 0;
-      setLotteryPoolCounts((prev) => ({ ...prev, [round.id]: count }));
-      setSuccessMessage(`Lottery prize pool ordered for Round ${round.round_number} (${count} entries).`);
-      await fetchOrderedLotteryPrizePool(round.id);
-    } catch (err: any) {
-      setError(err.message || 'Failed to order lottery prize pool');
+      setError(err.message || 'Failed to compute/order lottery prize pool');
     }
   };
 
@@ -800,10 +788,11 @@ const AdminPortal: React.FC = () => {
     setSelectedSetFilter(round?.set_name || '');
     setSelectedRarityFilter('');
     setPulledCardPackNumber(1);
+    setOrderedPackFilter((prev) => ({ ...prev, [roundId]: 1 }));
     if (!pulledCards[roundId]) {
       fetchPulledCards(roundId);
     }
-    fetchOrderedLotteryPrizePool(roundId);
+    fetchOrderedLotteryPrizePool(roundId, 1);
   };
 
   const stopTrackingCards = () => {
@@ -1765,18 +1754,11 @@ const AdminPortal: React.FC = () => {
                           {round.bidding_status === 'closed' && (
                             <>
                               <button
-                                onClick={() => handleComputeLotteryPrizePool(round)}
+                                onClick={() => handleComputeAndOrderLotteryPrizePool(round)}
                                 className="bg-blue-700 text-white px-3 py-1 rounded font-pokemon text-sm hover:bg-blue-800 transition-all inline-flex items-center space-x-1"
                               >
                                 <Star className="h-3 w-3" />
-                                <span>Compute Lottery Pool</span>
-                              </button>
-                              <button
-                                onClick={() => handleOrderLotteryPrizePool(round)}
-                                className="bg-indigo-700 text-white px-3 py-1 rounded font-pokemon text-sm hover:bg-indigo-800 transition-all inline-flex items-center space-x-1"
-                              >
-                                <Sparkles className="h-3 w-3" />
-                                <span>Order Prize Pool</span>
+                                <span>Compute & Order Prize Pool</span>
                               </button>
                               <button
                                 onClick={() => handleComputeChaseWinners(round)}
@@ -1841,8 +1823,7 @@ const AdminPortal: React.FC = () => {
                         <div className="mt-4 pt-4 border-t border-gray-200">
                           <div className="flex items-center justify-between mb-3">
                             <h4 className="font-semibold text-black font-pokemon">
-                              Track Pulled Cards (Round{' '}
-                              {round.round_number})
+                              Track Pulled Cards (Round {round.round_number})
                             </h4>
                             <button
                               onClick={stopTrackingCards}
@@ -2053,11 +2034,27 @@ const AdminPortal: React.FC = () => {
                                 Ordered Lottery Prize Pool
                               </h5>
                               <button
-                                onClick={() => fetchOrderedLotteryPrizePool(round.id)}
+                                onClick={() => fetchOrderedLotteryPrizePool(round.id, orderedPackFilter[round.id])}
                                 className="text-sm text-blue-600 font-pokemon underline"
                               >
                                 Refresh
                               </button>
+                            </div>
+                            <div className="mb-3">
+                              <label className="block text-sm font-medium text-gray-700 mb-1 font-pokemon">
+                                Pack Number
+                              </label>
+                              <input
+                                type="number"
+                                min={1}
+                                value={orderedPackFilter[round.id] ?? 1}
+                                onChange={(e) => {
+                                  const next = Math.max(1, Number(e.target.value) || 1);
+                                  setOrderedPackFilter((prev) => ({ ...prev, [round.id]: next }));
+                                  fetchOrderedLotteryPrizePool(round.id, next);
+                                }}
+                                className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none font-pokemon"
+                              />
                             </div>
                             {(orderedLotteryPools[round.id]?.length || 0) > 0 ? (
                               <div className="overflow-x-auto border border-gray-200 rounded-lg">

@@ -145,12 +145,16 @@ UPDATE public.rounds
 WHERE id = '00000000-0000-0000-0000-00000000l0b1';
 
 INSERT INTO public.pulled_cards (id, round_id, set_name, rarity, card_name, pack_number)
-VALUES ('00000000-0000-0000-0000-00000000pull2', '00000000-0000-0000-0000-00000000l0b1', 'Set Beta', 'Gold', 'Beta Card', 1)
+VALUES 
+  ('00000000-0000-0000-0000-00000000pull2', '00000000-0000-0000-0000-00000000l0b1', 'Set Beta', 'Gold', 'Beta Card', 1),
+  ('00000000-0000-0000-0000-00000000pull3', '00000000-0000-0000-0000-00000000l0b1', 'Set Beta', 'Silver', 'Beta Card 2', 2)
 ON CONFLICT (id) DO NOTHING;
 
 SELECT set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000aa01', true);
 INSERT INTO public.lottery_entries (id, round_id, user_id, selected_rarity, pack_number, credits_used)
-VALUES ('00000000-0000-0000-0000-00000000entry1', '00000000-0000-0000-0000-00000000l0b1', '00000000-0000-0000-0000-00000000aa01', 'Gold', 1, 5)
+VALUES 
+  ('00000000-0000-0000-0000-00000000entry1', '00000000-0000-0000-0000-00000000l0b1', '00000000-0000-0000-0000-00000000aa01', 'Gold', 1, 5),
+  ('00000000-0000-0000-0000-00000000entry3', '00000000-0000-0000-0000-00000000l0b1', '00000000-0000-0000-0000-00000000ad01', 'Gold', 2, 5)
 ON CONFLICT (id) DO NOTHING;
 
 SELECT set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000ad01', true);
@@ -169,9 +173,11 @@ SELECT set_eq(
     FROM public.compute_lottery_prize_pool('00000000-0000-0000-0000-00000000l0b1')
   $$,
   $$
-    VALUES ('00000000-0000-0000-0000-00000000aa01'::uuid, 'user@test.local', 'Gold', 1)
+    VALUES 
+      ('00000000-0000-0000-0000-00000000aa01'::uuid, 'user@test.local', 'Gold', 1),
+      ('00000000-0000-0000-0000-00000000ad01'::uuid, 'admin@test.local', 'Silver', 2)
   $$,
-  'compute_lottery_prize_pool keeps only entries matching pulled rarities and carries pack_number'
+  'compute_lottery_prize_pool keeps only entries matching pulled rarities per pack_number'
 );
 
 ----------------------------------------------------------------------------
@@ -206,28 +212,15 @@ ON CONFLICT DO NOTHING;
 
 SELECT set_eq(
   $$
-    SELECT user_id, selected_rarity, pack_number
-    FROM public.order_lottery_prize_pool('00000000-0000-0000-0000-00000000l0b2')
+    SELECT user_id, selected_rarity, pack_number, seq
+    FROM public.compute_and_order_lottery_prize_pool('00000000-0000-0000-0000-00000000l0b2')
   $$,
   $$
     VALUES
-      ('00000000-0000-0000-0000-00000000aa01'::uuid, 'Gold', 1),
-      ('00000000-0000-0000-0000-00000000ad01'::uuid, 'Silver', 2)
+      ('00000000-0000-0000-0000-00000000aa01'::uuid, 'Gold', 1, 1),
+      ('00000000-0000-0000-0000-00000000ad01'::uuid, 'Silver', 2, 1)
   $$,
-  'order_lottery_prize_pool retains exactly the pool members with pack_number'
-);
-
-SELECT ok(
-  EXISTS (
-    SELECT 1
-    FROM public.lottery_prize_pool_ordered
-    WHERE round_id = '00000000-0000-0000-0000-00000000l0b2'
-    GROUP BY round_id
-    HAVING COUNT(*) = 2
-       AND COUNT(DISTINCT seq) = 2
-       AND bool_and(seq BETWEEN 1 AND 2)
-  ),
-  'ordered prize pool rows have unique seq values starting at 1'
+  'compute_and_order_lottery_prize_pool retains members with pack_number and resets seq per pack'
 );
 
 SELECT * FROM finish();
