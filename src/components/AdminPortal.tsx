@@ -59,6 +59,7 @@ interface PulledCard {
   image_url: string | null;
   ungraded_market_price: number | null;
   date_updated: string;
+  pack_number?: number | null;
 }
 
 interface Stream {
@@ -98,6 +99,16 @@ interface LotteryEntry {
   users?: {
     username?: string | null;
   };
+}
+
+interface LotteryPrizeOrdered {
+  id: string;
+  round_id: string;
+  user_id: string;
+  email: string | null;
+  selected_rarity: string | null;
+  pack_number: number | null;
+  seq: number;
 }
 
 interface LiveSingle {
@@ -185,6 +196,7 @@ const AdminPortal: React.FC = () => {
   const [pulledCards, setPulledCards] = useState<{ [roundId: string]: PulledCard[] }>({});
   const [chaseSlots, setChaseSlots] = useState<{ [roundId: string]: ChaseSlot[] }>({});
   const [lotteryEntries, setLotteryEntries] = useState<{ [roundId: string]: LotteryEntry[] }>({});
+  const [orderedLotteryPools, setOrderedLotteryPools] = useState<{ [roundId: string]: LotteryPrizeOrdered[] }>({});
   const [liveSinglesByStream, setLiveSinglesByStream] = useState<{ [streamId: string]: LiveSingle[] }>({});
   const [liveSinglesLeaders, setLiveSinglesLeaders] = useState<Record<string, number>>({}); // card_id -> top_bid
 
@@ -205,6 +217,7 @@ const AdminPortal: React.FC = () => {
   const [selectedRarityFilter, setSelectedRarityFilter] = useState('');
   const [searchResults, setSearchResults] = useState<AllCard[]>([]);
   const [addingCard, setAddingCard] = useState(false);
+  const [pulledCardPackNumber, setPulledCardPackNumber] = useState<number>(1);
 
   /** ========= INITIAL LOAD ========= */
 
@@ -336,6 +349,20 @@ const AdminPortal: React.FC = () => {
       setLotteryEntries((prev) => ({ ...prev, [roundId]: (data || []) as LotteryEntry[] }));
     } catch (err) {
       console.error('Failed to fetch lottery entries:', err);
+    }
+  };
+
+  const fetchOrderedLotteryPrizePool = async (roundId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('lottery_prize_pool_ordered')
+        .select('*')
+        .eq('round_id', roundId)
+        .order('seq', { ascending: true });
+      if (error) throw error;
+      setOrderedLotteryPools((prev) => ({ ...prev, [roundId]: (data || []) as LotteryPrizeOrdered[] }));
+    } catch (err) {
+      console.error('Failed to fetch ordered lottery prize pool:', err);
     }
   };
 
@@ -686,6 +713,7 @@ const AdminPortal: React.FC = () => {
       const count = Array.isArray(data) ? data.length : 0;
       setLotteryPoolCounts((prev) => ({ ...prev, [round.id]: count }));
       setSuccessMessage(`Lottery prize pool ordered for Round ${round.round_number} (${count} entries).`);
+      await fetchOrderedLotteryPrizePool(round.id);
     } catch (err: any) {
       setError(err.message || 'Failed to order lottery prize pool');
     }
@@ -742,6 +770,7 @@ const AdminPortal: React.FC = () => {
             image_url: card.image_url,
             ungraded_market_price: card.ungraded_market_price,
             date_updated: card.date_updated,
+            pack_number: pulledCardPackNumber,
           },
         ])
         .select()
@@ -767,11 +796,14 @@ const AdminPortal: React.FC = () => {
     setTrackingRound(roundId);
     setSearchTerm('');
     setSearchResults([]);
-    setSelectedSetFilter('');
+    const round = rounds.find((r) => r.id === roundId);
+    setSelectedSetFilter(round?.set_name || '');
     setSelectedRarityFilter('');
+    setPulledCardPackNumber(1);
     if (!pulledCards[roundId]) {
       fetchPulledCards(roundId);
     }
+    fetchOrderedLotteryPrizePool(roundId);
   };
 
   const stopTrackingCards = () => {
@@ -1887,6 +1919,18 @@ const AdminPortal: React.FC = () => {
                                   )}
                                 </select>
                               </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1 font-pokemon">
+                                  Pack Number
+                                </label>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={pulledCardPackNumber}
+                                  onChange={(e) => setPulledCardPackNumber(Math.max(1, Number(e.target.value) || 1))}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-green-600 focus:outline-none font-pokemon"
+                                />
+                              </div>
                             </div>
                           </div>
 
@@ -1922,11 +1966,11 @@ const AdminPortal: React.FC = () => {
                                       }
                                       disabled={
                                         addingCard
-                                      }
-                                      className="bg-green-600 text-white px-3 py-1 rounded font-pokemon text-xs hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center space-x-1"
-                                    >
-                                      {addingCard ? (
-                                        <Loader className="h-3 w-3 animate-spin" />
+                                  }
+                                  className="bg-green-600 text-white px-3 py-1 rounded font-pokemon text-xs hover:bg-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center space-x-1"
+                                >
+                                  {addingCard ? (
+                                    <Loader className="h-3 w-3 animate-spin" />
                                       ) : (
                                         <Plus className="h-3 w-3" />
                                       )}
@@ -1977,6 +2021,7 @@ const AdminPortal: React.FC = () => {
                                         {
                                           card.rarity
                                         }
+                                        {card.pack_number ? ` • Pack ${card.pack_number}` : ''}
                                       </p>
                                       <p className="text-green-700 font-semibold text-xs font-pokemon">
                                         $
@@ -1997,6 +2042,63 @@ const AdminPortal: React.FC = () => {
                               <p className="text-gray-500 text-sm font-pokemon">
                                 No cards pulled yet
                                 for this round.
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Ordered lottery prize pool display */}
+                          <div className="mt-6">
+                            <div className="flex items-center justify-between mb-2">
+                              <h5 className="font-semibold text-black font-pokemon">
+                                Ordered Lottery Prize Pool
+                              </h5>
+                              <button
+                                onClick={() => fetchOrderedLotteryPrizePool(round.id)}
+                                className="text-sm text-blue-600 font-pokemon underline"
+                              >
+                                Refresh
+                              </button>
+                            </div>
+                            {(orderedLotteryPools[round.id]?.length || 0) > 0 ? (
+                              <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                  <thead className="bg-gray-50">
+                                    <tr>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Seq
+                                      </th>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Email
+                                      </th>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Rarity
+                                      </th>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Pack #
+                                      </th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="bg-white divide-y divide-gray-200">
+                                    {orderedLotteryPools[round.id]?.map((row) => (
+                                      <tr key={row.id}>
+                                        <td className="px-3 py-2 text-sm text-gray-700 font-pokemon">{row.seq}</td>
+                                        <td className="px-3 py-2 text-sm text-gray-700 font-pokemon">
+                                          {row.email || '—'}
+                                        </td>
+                                        <td className="px-3 py-2 text-sm text-gray-700 font-pokemon">
+                                          {row.selected_rarity || '—'}
+                                        </td>
+                                        <td className="px-3 py-2 text-sm text-gray-700 font-pokemon">
+                                          {row.pack_number ?? '—'}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <p className="text-gray-500 text-sm font-pokemon">
+                                No ordered prize pool generated yet for this round.
                               </p>
                             )}
                           </div>

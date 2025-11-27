@@ -84,9 +84,9 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 SELECT set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000ad01', true);
 
-INSERT INTO public.pulled_cards (id, round_id, all_card_id, rarity, card_name)
+INSERT INTO public.pulled_cards (id, round_id, all_card_id, rarity, card_name, pack_number)
 VALUES
-  ('00000000-0000-0000-0000-00000000pull1', '00000000-0000-0000-0000-00000000c0b2', '00000000-0000-0000-0000-00000000card1', 'Gold', 'Card One')
+  ('00000000-0000-0000-0000-00000000pull1', '00000000-0000-0000-0000-00000000c0b2', '00000000-0000-0000-0000-00000000card1', 'Gold', 'Card One', 1)
 ON CONFLICT (id) DO NOTHING;
 
 -- Pre-existing stale matches should be replaced
@@ -144,8 +144,8 @@ UPDATE public.rounds
   SET bidding_status = 'closed'
 WHERE id = '00000000-0000-0000-0000-00000000l0b1';
 
-INSERT INTO public.pulled_cards (id, round_id, set_name, rarity, card_name)
-VALUES ('00000000-0000-0000-0000-00000000pull2', '00000000-0000-0000-0000-00000000l0b1', 'Set Beta', 'Gold', 'Beta Card')
+INSERT INTO public.pulled_cards (id, round_id, set_name, rarity, card_name, pack_number)
+VALUES ('00000000-0000-0000-0000-00000000pull2', '00000000-0000-0000-0000-00000000l0b1', 'Set Beta', 'Gold', 'Beta Card', 1)
 ON CONFLICT (id) DO NOTHING;
 
 SELECT set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000aa01', true);
@@ -165,13 +165,13 @@ ON CONFLICT DO NOTHING;
 
 SELECT set_eq(
   $$
-    SELECT user_id, email, selected_rarity
+    SELECT user_id, email, selected_rarity, pack_number
     FROM public.compute_lottery_prize_pool('00000000-0000-0000-0000-00000000l0b1')
   $$,
   $$
-    VALUES ('00000000-0000-0000-0000-00000000aa01'::uuid, 'user@test.local', 'Gold')
+    VALUES ('00000000-0000-0000-0000-00000000aa01'::uuid, 'user@test.local', 'Gold', 1)
   $$,
-  'compute_lottery_prize_pool keeps only entries matching pulled rarities'
+  'compute_lottery_prize_pool keeps only entries matching pulled rarities and carries pack_number'
 );
 
 ----------------------------------------------------------------------------
@@ -193,10 +193,10 @@ INSERT INTO public.rounds (id, bidding_status, set_name, stream_id, round_number
 VALUES ('00000000-0000-0000-0000-00000000l0b2', 'closed', 'Set Gamma', '00000000-0000-0000-0000-00000000s003', 1)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO public.lottery_prize_pool (round_id, user_id, email, selected_rarity)
+INSERT INTO public.lottery_prize_pool (round_id, user_id, email, selected_rarity, pack_number)
 VALUES
-  ('00000000-0000-0000-0000-00000000l0b2', '00000000-0000-0000-0000-00000000aa01', 'user@test.local', 'Gold'),
-  ('00000000-0000-0000-0000-00000000l0b2', '00000000-0000-0000-0000-00000000ad01', 'admin@test.local', 'Silver')
+  ('00000000-0000-0000-0000-00000000l0b2', '00000000-0000-0000-0000-00000000aa01', 'user@test.local', 'Gold', 1),
+  ('00000000-0000-0000-0000-00000000l0b2', '00000000-0000-0000-0000-00000000ad01', 'admin@test.local', 'Silver', 2)
 ON CONFLICT DO NOTHING;
 
 -- Stale ordered row to ensure wipe
@@ -206,15 +206,15 @@ ON CONFLICT DO NOTHING;
 
 SELECT set_eq(
   $$
-    SELECT user_id, selected_rarity
+    SELECT user_id, selected_rarity, pack_number
     FROM public.order_lottery_prize_pool('00000000-0000-0000-0000-00000000l0b2')
   $$,
   $$
     VALUES
-      ('00000000-0000-0000-0000-00000000aa01'::uuid, 'Gold'),
-      ('00000000-0000-0000-0000-00000000ad01'::uuid, 'Silver')
+      ('00000000-0000-0000-0000-00000000aa01'::uuid, 'Gold', 1),
+      ('00000000-0000-0000-0000-00000000ad01'::uuid, 'Silver', 2)
   $$,
-  'order_lottery_prize_pool retains exactly the pool members'
+  'order_lottery_prize_pool retains exactly the pool members with pack_number'
 );
 
 SELECT ok(
