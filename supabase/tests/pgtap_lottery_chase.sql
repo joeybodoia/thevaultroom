@@ -96,16 +96,16 @@ ON CONFLICT DO NOTHING;
 
 SELECT results_eq(
   $$
-    SELECT slot_id, matched, pulled_card_id IS NOT NULL AS has_pulled, top_bid
+    SELECT slot_id, card_name, matched, pulled_card_id IS NOT NULL AS has_pulled, top_bid, winner_email
     FROM public.compute_chase_slot_winners('00000000-0000-0000-0000-00000000c0b2')
     ORDER BY slot_id
   $$,
   $$
     VALUES
-      ('00000000-0000-0000-0000-00000000slot1'::uuid, true,  true,  75.00::numeric),
-      ('00000000-0000-0000-0000-00000000slot2'::uuid, false, false, 60.00::numeric)
+      ('00000000-0000-0000-0000-00000000slot1'::uuid, 'Card One', true,  true,  75.00::numeric, 'user@test.local'),
+      ('00000000-0000-0000-0000-00000000slot2'::uuid, 'Card Two', false, false, 60.00::numeric, 'user@test.local')
   $$,
-  'compute_chase_slot_winners populates matches and replaces stale rows'
+  'compute_chase_slot_winners populates matches with email + card name and replaces stale rows'
 );
 
 SELECT is(

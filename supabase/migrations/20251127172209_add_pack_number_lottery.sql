@@ -146,3 +146,52 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.compute_and_order_lottery_prize_pool(uuid) TO authenticated;
+
+-- 7) Narrow chase winner computation to slots with a winner_user_id
+CREATE OR REPLACE FUNCTION public.compute_chase_slot_winners(p_round_id uuid)
+RETURNS SETOF public.chase_slot_winner_matches
+LANGUAGE plpgsql
+SECURITY DEFINER AS $$
+DECLARE
+  v_is_admin boolean;
+  v_round public.rounds%ROWTYPE;
+BEGIN
+  SELECT is_admin INTO v_is_admin FROM public.users WHERE id = auth.uid();
+  IF NOT COALESCE(v_is_admin, false) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  SELECT * INTO v_round FROM public.rounds WHERE id = p_round_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Round % not found', p_round_id;
+  END IF;
+  IF v_round.bidding_status <> 'closed' THEN
+    RAISE EXCEPTION 'Round % must be closed to compute winners', p_round_id;
+  END IF;
+
+  DELETE FROM public.chase_slot_winner_matches WHERE round_id = p_round_id;
+
+  INSERT INTO public.chase_slot_winner_matches (
+    round_id, slot_id, all_card_id, winner_user_id, top_bid, pulled_card_id, matched
+  )
+  SELECT
+    cs.round_id,
+    cs.id AS slot_id,
+    cs.all_card_id,
+    cs.winner_user_id,
+    csl.top_bid,
+    pc.id AS pulled_card_id,
+    (pc.id IS NOT NULL) AS matched
+  FROM public.chase_slots cs
+  LEFT JOIN public.chase_slot_leaders csl ON csl.slot_id = cs.id
+  LEFT JOIN public.pulled_cards pc
+    ON pc.round_id = cs.round_id
+   AND pc.all_card_id = cs.all_card_id
+  WHERE cs.round_id = p_round_id
+    AND cs.winner_user_id IS NOT NULL;
+
+  RETURN QUERY
+    SELECT * FROM public.chase_slot_winner_matches
+    WHERE round_id = p_round_id;
+END;
+$$;

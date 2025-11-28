@@ -111,6 +111,19 @@ interface LotteryPrizeOrdered {
   seq: number;
 }
 
+interface ChaseSlotWinnerMatch {
+  id: string;
+  round_id: string;
+  slot_id: string;
+  all_card_id: string;
+  card_name?: string | null;
+  winner_user_id: string | null;
+  winner_email?: string | null;
+  top_bid: number | null;
+  pulled_card_id: string | null;
+  matched: boolean;
+}
+
 interface LiveSingle {
   id: string;
   stream_id: string | null;
@@ -197,6 +210,7 @@ const AdminPortal: React.FC = () => {
   const [chaseSlots, setChaseSlots] = useState<{ [roundId: string]: ChaseSlot[] }>({});
   const [lotteryEntries, setLotteryEntries] = useState<{ [roundId: string]: LotteryEntry[] }>({});
   const [orderedLotteryPools, setOrderedLotteryPools] = useState<{ [roundId: string]: LotteryPrizeOrdered[] }>({});
+  const [chaseWinnerMatches, setChaseWinnerMatches] = useState<{ [roundId: string]: ChaseSlotWinnerMatch[] }>({});
   const [liveSinglesByStream, setLiveSinglesByStream] = useState<{ [streamId: string]: LiveSingle[] }>({});
   const [liveSinglesLeaders, setLiveSinglesLeaders] = useState<Record<string, number>>({}); // card_id -> top_bid
 
@@ -367,6 +381,21 @@ const AdminPortal: React.FC = () => {
       setOrderedLotteryPools((prev) => ({ ...prev, [roundId]: (data || []) as LotteryPrizeOrdered[] }));
     } catch (err) {
       console.error('Failed to fetch ordered lottery prize pool:', err);
+    }
+  };
+
+  const fetchChaseWinnerMatches = async (roundId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('chase_slot_winner_matches')
+        .select('*')
+        .eq('round_id', roundId)
+        .order('matched', { ascending: true })
+        .order('top_bid', { ascending: false, nullsFirst: false });
+      if (error) throw error;
+      setChaseWinnerMatches((prev) => ({ ...prev, [roundId]: (data || []) as ChaseSlotWinnerMatch[] }));
+    } catch (err) {
+      console.error('Failed to fetch chase winner matches:', err);
     }
   };
 
@@ -685,6 +714,7 @@ const AdminPortal: React.FC = () => {
       const count = Array.isArray(data) ? data.length : 0;
       setChaseMatchCounts((prev) => ({ ...prev, [round.id]: count }));
       setSuccessMessage(`Computed chase slot winners for Round ${round.round_number} (${count} rows).`);
+      await fetchChaseWinnerMatches(round.id);
     } catch (err: any) {
       setError(err.message || 'Failed to compute chase slot winners');
     }
@@ -2096,6 +2126,71 @@ const AdminPortal: React.FC = () => {
                             ) : (
                               <p className="text-gray-500 text-sm font-pokemon">
                                 No ordered prize pool generated yet for this round.
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Chase slot winner matches */}
+                          <div className="mt-6">
+                            <div className="flex items-center justify-between mb-2">
+                              <h5 className="font-semibold text-black font-pokemon">
+                                Chase Slot Winner Matches
+                              </h5>
+                              <button
+                                onClick={() => fetchChaseWinnerMatches(round.id)}
+                                className="text-sm text-blue-600 font-pokemon underline"
+                              >
+                                Refresh
+                              </button>
+                            </div>
+                            {(chaseWinnerMatches[round.id]?.length || 0) > 0 ? (
+                              <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                  <thead className="bg-gray-50">
+                                    <tr>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Slot
+                                      </th>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Winner User
+                                      </th>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Top Bid
+                                      </th>
+                                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Matched
+                                      </th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="bg-white divide-y divide-gray-200">
+                                    {chaseWinnerMatches[round.id]?.map((row) => (
+                                      <tr key={row.id}>
+                                        <td className="px-3 py-2 text-sm text-gray-700 font-pokemon truncate max-w-[160px]">
+                                          {row.card_name || row.slot_id}
+                                        </td>
+                                        <td className="px-3 py-2 text-sm text-gray-700 font-pokemon truncate max-w-[160px]">
+                                          {row.winner_email || row.winner_user_id || '—'}
+                                        </td>
+                                        <td className="px-3 py-2 text-sm text-gray-700 font-pokemon">
+                                          {row.top_bid != null ? `$${Number(row.top_bid).toFixed(2)}` : '—'}
+                                        </td>
+                                        <td className="px-3 py-2 text-sm font-pokemon">
+                                          <span
+                                            className={`inline-flex px-2 py-1 rounded-full text-xs ${
+                                              row.matched ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
+                                            }`}
+                                          >
+                                            {row.matched ? 'Matched' : 'Not Matched'}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <p className="text-gray-500 text-sm font-pokemon">
+                                No chase slot winner matches yet for this round.
                               </p>
                             )}
                           </div>
