@@ -158,7 +158,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
   const [user, setUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmingLotteryKey, setConfirmingLotteryKey] = useState<string | null>(null);
   const [isProcessingEntry, setIsProcessingEntry] = useState(false);
   const [entryError, setEntryError] = useState<string | null>(null);
   const [entrySuccess, setEntrySuccess] = useState(false);
@@ -186,6 +186,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [placingBidFor, setPlacingBidFor] = useState<string | null>(null);
   const [bidError, setBidError] = useState<string | null>(null);
   const [bidSuccess, setBidSuccess] = useState<string | null>(null);
+  const [confirmingLiveSingle, setConfirmingLiveSingle] = useState<string | null>(null);
   const fetchUserCredit = useCallback(async (userId: string) => {
     try {
       setLoadingCredit(true);
@@ -249,17 +250,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     return () => subscription.unsubscribe();
   }, [fetchUserCredit]);
 
-  // Auto-scroll to modal when it opens
-  useEffect(() => {
-    if (showConfirmModal) {
-      const modal = document.getElementById('lottery-confirm-modal');
-      if (modal) {
-        setTimeout(() => {
-          modal.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
-      }
-    }
-  }, [showConfirmModal]);
+  // Inline confirmation replaces modal, so no scroll handling needed
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -586,7 +577,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       setName: activeLotteryRound.set_name,
       packNumber,
     });
-    setShowConfirmModal(true);
+    setConfirmingLotteryKey(`${packNumber}-${rarity}`);
   };
 
   /** insert with pack_number, then refresh counts */
@@ -645,7 +636,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       }
 
       setUserCredit(newCreditBalance);
-      setShowConfirmModal(false);
+      setConfirmingLotteryKey(null);
       setSelectedRarity('');
 
       await fetchLotteryParticipants(activeLotteryRound.id);
@@ -777,6 +768,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     setPlacingBidFor(card.id);
     setBidError(null);
     setBidSuccess(null);
+    setConfirmingLiveSingle(null);
 
     try {
       const { error } = await supabase.rpc(
@@ -920,19 +912,47 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         </div>
 
                         <div className="mt-auto">
-                          <button
-                            onClick={() => handleLotteryEntry(packNum, rarity)}
-                            disabled={disabled}
-                            className={`w-full ${bg} text-white font-bold py-3 rounded-lg transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed`}
-                          >
-                            {loadingUser
-                              ? 'Loading...'
-                              : !user
-                              ? 'Login to Enter'
-                              : !biddingOpen
-                              ? 'Bidding Closed'
-                              : 'Enter for 5 Credits'}
-                          </button>
+                          <div className="relative">
+                            {confirmingLotteryKey === `${packNum}-${rarity}` ? (
+                              <div className="absolute inset-0 z-10">
+                                <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 space-y-3">
+                                  <p className="text-sm text-gray-800 font-pokemon text-center">
+                                    Confirm entry for Pack {packNum} • {rarity} (5 credits)?
+                                  </p>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={handleCreditLotteryEntry}
+                                      disabled={isProcessingEntry}
+                                      className="flex-1 bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700 transition-all text-sm font-pokemon disabled:opacity-50"
+                                    >
+                                      {isProcessingEntry ? 'Submitting...' : 'Confirm'}
+                                    </button>
+                                    <button
+                                      onClick={() => setConfirmingLotteryKey(null)}
+                                      disabled={isProcessingEntry}
+                                      className="flex-1 bg-gray-200 text-gray-800 font-bold py-2 rounded-lg hover:bg-gray-300 transition-all text-sm font-pokemon disabled:opacity-50"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleLotteryEntry(packNum, rarity)}
+                                disabled={disabled}
+                                className={`w-full ${bg} text-white font-bold py-3 rounded-lg transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed`}
+                              >
+                                {loadingUser
+                                  ? 'Loading...'
+                                  : !user
+                                  ? 'Login to Enter'
+                                  : !biddingOpen
+                                  ? 'Bidding Closed'
+                                  : 'Enter for 5 Credits'}
+                              </button>
+                            )}
+                          </div>
                           {!loadingUser && !user && (
                             <div className="mt-2 text-orange-600 text-sm font-pokemon">
                               Please sign in to enter lottery
@@ -1236,19 +1256,52 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                         className="col-span-3 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-600 font-pokemon disabled:bg-gray-100 disabled:text-gray-500"
                         disabled={!biddingOpenForCard}
                       />
-                      <button
-                        onClick={() => handlePlaceLiveSingleBid(card)}
-                        disabled={!user || isPlacing || !biddingOpenForCard}
-                        className="col-span-2 bg-red-600 text-white font-bold py-2 rounded-lg hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon"
-                      >
-                        {isPlacing
-                          ? 'Bidding...'
-                          : !biddingOpenForCard
-                          ? 'Locked'
-                          : user
-                          ? 'Place Bid'
-                          : 'Login'}
-                      </button>
+                      <div className="col-span-2 relative">
+                        {confirmingLiveSingle === card.id ? (
+                          <div className="absolute inset-0 z-10">
+                            <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-2 space-y-2">
+                              <p className="text-xs text-gray-700 font-pokemon">
+                                Confirm bid of ${Number(bidInputs[card.id] || 0).toFixed(2)}?
+                              </p>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handlePlaceLiveSingleBid(card)}
+                                  disabled={isPlacing}
+                                  className="flex-1 bg-red-600 text-white font-bold py-1.5 rounded-md hover:bg-red-700 transition-all text-xs font-pokemon"
+                                >
+                                  Confirm
+                                </button>
+                                <button
+                                  onClick={() => setConfirmingLiveSingle(null)}
+                                  disabled={isPlacing}
+                                  className="flex-1 bg-gray-200 text-gray-800 font-bold py-1.5 rounded-md hover:bg-gray-300 transition-all text-xs font-pokemon"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmingLiveSingle(card.id)}
+                            disabled={
+                              !user ||
+                              isPlacing ||
+                              !biddingOpenForCard ||
+                              !bidInputs[card.id]
+                            }
+                            className="w-full bg-red-600 text-white font-bold py-2 rounded-lg hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon"
+                          >
+                            {isPlacing
+                              ? 'Bidding...'
+                              : !biddingOpenForCard
+                              ? 'Locked'
+                              : user
+                              ? 'Place Bid'
+                              : 'Login'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1679,88 +1732,6 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         ) : (
           // Live Singles
           renderLiveSingles()
-        )}
-
-        {/* Confirmation Modal (Lottery) */}
-        {showConfirmModal && selectedLotteryEntry && (
-          <div
-            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
-            style={{ zIndex: 9999 }}
-          >
-            <div
-              id="lottery-confirm-modal"
-              className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
-            >
-              <h3 className="text-xl font-bold text-black font-pokemon mb-4 text-center">
-                Confirm Lottery Entry
-              </h3>
-
-              <div className="space-y-4">
-                <p className="text-gray-700 font-pokemon text-center">
-                  Apply 5 credits to enter{' '}
-                  <span className="font-bold">
-                    {selectedLotteryEntry.rarity}
-                  </span>{' '}
-                  for{' '}
-                  <span className="font-bold">
-                    Pack {selectedLotteryEntry.packNumber}
-                  </span>
-                  ?
-                </p>
-
-                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 font-pokemon">
-                      Cost:
-                    </span>
-                    <span className="font-bold text-black font-pokemon">
-                      5 credits
-                    </span>
-                  </div>
-                </div>
-
-                {entryError && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <p className="text-red-600 text-sm font-pokemon">
-                      {entryError}
-                    </p>
-                  </div>
-                )}
-
-                {entrySuccess && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <p className="text-green-600 text-sm font-pokemon">
-                      Lottery entry successful! Good luck!
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex space-x-3">
-                  <button
-                    onClick={handleCreditLotteryEntry}
-                    disabled={isProcessingEntry || userCredit < 5}
-                    className="flex-1 bg-yellow-400 text-black font-bold py-2 rounded-lg hover:bg-yellow-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon"
-                  >
-                    {isProcessingEntry
-                      ? 'Processing...'
-                      : 'Yes, Enter Lottery'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowConfirmModal(false);
-                      setEntryError(null);
-                      setEntrySuccess(false);
-                      setSelectedLotteryEntry(null);
-                    }}
-                    disabled={isProcessingEntry}
-                    className="flex-1 bg-gray-600 text-white font-bold py-2 rounded-lg hover:bg-gray-700 transition-all disabled:opacity-50 font-pokemon"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
         )}
       </div>
     </section>

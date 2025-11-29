@@ -41,6 +41,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
   const [isSubmittingBid, setIsSubmittingBid] = React.useState(false);
   const [bidError, setBidError] = React.useState<string | null>(null);
   const [bidSuccess, setBidSuccess] = React.useState(false);
+  const [confirmingBid, setConfirmingBid] = React.useState(false);
 
   React.useEffect(() => {
     if (slotInfo) {
@@ -84,6 +85,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
       setCurrentBid(amount);
       setBidAmount('');
       setBidSuccess(true);
+      setConfirmingBid(false);
       onBidSuccess?.();
       setTimeout(() => setBidSuccess(false), 2500);
     } catch (err: any) {
@@ -184,22 +186,50 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
               min={slotInfo ? minBidRequirement : 0}
               disabled={isSubmittingBid || showNotListedBanner || slotLoading || slotLocked}
             />
-            <button
-              onClick={placeBid}
-              disabled={
-                !slotInfo ||
-                !user ||
-                !bidAmount ||
-                parseFloat(bidAmount) <= (currentBid || 0) ||
-                isSubmittingBid ||
-                loadingUser ||
-                slotLoading ||
-                slotLocked
-              }
-              className="w-full bg-black text-white px-2 py-1.5 rounded-md font-semibold hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon text-xs"
-            >
-              {loadingUser ? 'Loading...' : !user ? 'Login to Bid' : isSubmittingBid ? 'Bidding...' : 'Bid'}
-            </button>
+            <div className="relative">
+              {!confirmingBid ? (
+                <button
+                  onClick={() => setConfirmingBid(true)}
+                  disabled={
+                    !slotInfo ||
+                    !user ||
+                    !bidAmount ||
+                    parseFloat(bidAmount) <= (currentBid || 0) ||
+                    isSubmittingBid ||
+                    loadingUser ||
+                    slotLoading ||
+                    slotLocked
+                  }
+                  className="w-full bg-black text-white px-2 py-1.5 rounded-md font-semibold hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-pokemon text-xs"
+                >
+                  {loadingUser ? 'Loading...' : !user ? 'Login to Bid' : isSubmittingBid ? 'Bidding...' : 'Bid'}
+                </button>
+              ) : (
+                <div className="absolute inset-0 z-10">
+                  <div className="bg-white border border-gray-300 rounded-md shadow-lg p-2 flex flex-col space-y-2">
+                    <div className="text-xs text-gray-700 font-pokemon">
+                      Confirm bid of ${parseFloat(bidAmount || '0').toFixed(2)}?
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={placeBid}
+                        className="flex-1 bg-black text-white px-2 py-1 rounded-md text-xs font-semibold font-pokemon hover:bg-gray-800"
+                        disabled={isSubmittingBid}
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        onClick={() => setConfirmingBid(false)}
+                        className="flex-1 bg-gray-200 text-gray-800 px-2 py-1 rounded-md text-xs font-semibold font-pokemon hover:bg-gray-300"
+                        disabled={isSubmittingBid}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {showNotListedBanner && (

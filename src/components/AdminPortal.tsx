@@ -298,6 +298,10 @@ const AdminPortal: React.FC = () => {
         .order('created_at', { ascending: false });
       if (error) throw error;
       setStreams(data || []);
+      if (!selectedStreamId) {
+        const current = (data || []).find((s) => s.is_current);
+        if (current?.id) setSelectedStreamId(current.id);
+      }
     } catch (err: any) {
       console.error('Error fetching streams:', err);
       setError(err.message || 'Failed to fetch streams');
