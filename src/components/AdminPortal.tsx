@@ -145,7 +145,12 @@ interface LiveSingle {
 
 interface LiveSingleLeader {
   card_id: string;
+  stream_id: string | null;
+  card_name: string | null;
+  user_id: string | null;
+  email: string | null;
   top_bid: number | null;
+  created_at: string | null;
 }
 
 /** ========= CONSTANTS ========= */
@@ -213,12 +218,16 @@ const AdminPortal: React.FC = () => {
   const [chaseWinnerMatches, setChaseWinnerMatches] = useState<{ [roundId: string]: ChaseSlotWinnerMatch[] }>({});
   const [liveSinglesByStream, setLiveSinglesByStream] = useState<{ [streamId: string]: LiveSingle[] }>({});
   const [liveSinglesLeaders, setLiveSinglesLeaders] = useState<Record<string, number>>({}); // card_id -> top_bid
+  const [liveSinglesLeadersByStream, setLiveSinglesLeadersByStream] = useState<
+    Record<string, LiveSingleLeader[]>
+  >({});
 
   /** UI helpers */
   const [loading, setLoading] = useState(true);
   const [loadingCards, setLoadingCards] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [updatingLiveSinglesStatus, setUpdatingLiveSinglesStatus] = useState(false);
 
   const [expandedRound, setExpandedRound] = useState<string | null>(null);
   const [trackingRound, setTrackingRound] = useState<string | null>(null);
@@ -270,6 +279,14 @@ const AdminPortal: React.FC = () => {
 
     setSearchResults(filtered.slice(0, 40));
   }, [searchTerm, selectedSetFilter, selectedRarityFilter, allCards]);
+
+  // Refresh live singles data when switching streams so management panel stays up to date
+  useEffect(() => {
+    if (selectedStreamId) {
+      fetchLiveSinglesForStream(selectedStreamId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStreamId]);
 
   /** ========= FETCH HELPERS ========= */
 
@@ -406,7 +423,7 @@ const AdminPortal: React.FC = () => {
         .select('*')
         .eq('stream_id', streamId)
         .eq('is_active', true)
-        .eq('status', 'open') // only show open singles
+        .in('status', ['open', 'locked']) // show open and locked so admins can see them when bidding is closed
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -418,14 +435,23 @@ const AdminPortal: React.FC = () => {
 
       const { data: leaders, error: leadersErr } = await supabase
         .from('live_singles_leaders')
-        .select('card_id, top_bid');
+        .select('*')
+        .eq('stream_id', streamId)
+        .order('card_name', { ascending: true });
 
       if (!leadersErr && leaders) {
-        const map: Record<string, number> = {};
-        (leaders as LiveSingleLeader[]).forEach((row) => {
-          if (row.card_id) map[row.card_id] = row.top_bid || 0;
+        const rows = leaders as LiveSingleLeader[];
+        setLiveSinglesLeaders((prev) => {
+          const next = { ...prev };
+          rows.forEach((row) => {
+            if (row.card_id) next[row.card_id] = row.top_bid || 0;
+          });
+          return next;
         });
-        setLiveSinglesLeaders(map);
+        setLiveSinglesLeadersByStream((prev) => ({
+          ...prev,
+          [streamId]: rows,
+        }));
       }
     } catch (err) {
       console.error('Failed to fetch live singles:', err);
@@ -565,6 +591,42 @@ const AdminPortal: React.FC = () => {
     } catch (err: any) {
       console.error('Failed to generate live singles for stream:', err);
       setError(err.message || 'Failed to generate live singles for stream');
+    }
+  };
+
+  const handleLiveSinglesBiddingOverride = async (shouldOpen: boolean) => {
+    if (!selectedStreamId) {
+      setError('Please select a stream first');
+      return;
+    }
+
+    setError(null);
+    setSuccessMessage(null);
+    setUpdatingLiveSinglesStatus(true);
+
+    try {
+      const { error } = await supabase
+        .from('live_singles')
+        .update(
+          shouldOpen
+            ? { status: 'open', is_active: true }
+            : { status: 'locked', is_active: true } // keep rows visible but lock bidding
+        )
+        .eq('stream_id', selectedStreamId);
+      if (error) throw error;
+
+      await fetchLiveSinglesForStream(selectedStreamId);
+
+      setSuccessMessage(
+        shouldOpen
+          ? 'Live Singles bidding opened for this stream.'
+          : 'Live Singles bidding closed for this stream.'
+      );
+    } catch (err: any) {
+      console.error('Failed to update live singles bidding state:', err);
+      setError(err.message || 'Failed to update live singles bidding state');
+    } finally {
+      setUpdatingLiveSinglesStatus(false);
     }
   };
 
@@ -1083,7 +1145,7 @@ const AdminPortal: React.FC = () => {
     return (
       <div className="space-y-2">
         <p className="text-gray-600 text-xs font-pokemon">
-          Showing Live Singles (active & open) for this stream. Bidding is managed by
+          Showing Live Singles (active & open/locked) for this stream. Bidding is managed by
           the <code>place_live_single_bid_immediate_refund</code> function.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1098,11 +1160,19 @@ const AdminPortal: React.FC = () => {
                   <h5 className="font-semibold text-black text-sm font-pokemon">
                     {card.card_name}
                   </h5>
-                  {card.card_condition && (
-                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-pokemon">
-                      {card.card_condition}
-                    </span>
-                  )}
+                  <div className="flex items-center space-x-2">
+                    {card.card_condition && (
+                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-pokemon">
+                        {card.card_condition}
+                      </span>
+                    )}
+                    {card.status === 'locked' && (
+                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 font-pokemon inline-flex items-center space-x-1">
+                        <Lock className="h-3 w-3" />
+                        <span>Locked</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <p className="text-gray-600 text-xs font-pokemon">
                   {card.set_name || 'Unknown Set'}{' '}
@@ -2201,6 +2271,107 @@ const AdminPortal: React.FC = () => {
                 })
               )}
             </div>
+          </div>
+        </div>
+
+        {/* LIVE SINGLES MANAGEMENT */}
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-8">
+          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-black font-pokemon">Live Singles Management</h2>
+              <p className="text-gray-500 text-sm mt-1 font-pokemon">
+                View top bids and manually open/close bidding for the selected stream.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                disabled={!selectedStreamId || updatingLiveSinglesStatus}
+                onClick={() => handleLiveSinglesBiddingOverride(true)}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-all font-pokemon inline-flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Unlock className="h-4 w-4" />
+                <span>Open Bidding</span>
+              </button>
+              <button
+                type="button"
+                disabled={!selectedStreamId || updatingLiveSinglesStatus}
+                onClick={() => handleLiveSinglesBiddingOverride(false)}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-all font-pokemon inline-flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Lock className="h-4 w-4" />
+                <span>Close Bidding</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="p-6">
+            {!selectedStreamId ? (
+              <p className="text-gray-500 text-sm font-pokemon">
+                Select a stream above to manage Live Singles bidding and see leaders.
+              </p>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-gray-600 text-sm font-pokemon">
+                    Showing leaders from the <code>live_singles_leaders</code> view for this stream.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => fetchLiveSinglesForStream(selectedStreamId)}
+                    className="text-sm text-blue-600 font-pokemon underline"
+                  >
+                    Refresh
+                  </button>
+                </div>
+                {(liveSinglesLeadersByStream[selectedStreamId]?.length || 0) > 0 ? (
+                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Card
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Top Bid
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Bidder
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Bid Time
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {liveSinglesLeadersByStream[selectedStreamId]?.map((row) => (
+                          <tr key={`${row.card_id}-${row.user_id || row.email || ''}`}>
+                            <td className="px-3 py-2 text-sm text-gray-700 font-pokemon">
+                              {row.card_name || '—'}
+                            </td>
+                            <td className="px-3 py-2 text-sm text-gray-700 font-pokemon">
+                              {row.top_bid != null ? `$${Number(row.top_bid).toFixed(2)}` : '—'}
+                            </td>
+                            <td className="px-3 py-2 text-sm text-gray-700 font-pokemon">
+                              {row.email || row.user_id || '—'}
+                            </td>
+                            <td className="px-3 py-2 text-sm text-gray-500 font-pokemon">
+                              {row.created_at
+                                ? new Date(row.created_at).toLocaleString()
+                                : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm font-pokemon">
+                    No bidding activity yet for Live Singles on this stream.
+                  </p>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
