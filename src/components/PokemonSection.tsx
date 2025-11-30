@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Loader, AlertCircle, Sparkles, Search, Filter, ArrowUpDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { DirectBidCard, PokemonCard as PokemonCardType } from '../types/pokemon';
@@ -163,6 +163,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [entryError, setEntryError] = useState<string | null>(null);
   const [entrySuccess, setEntrySuccess] = useState(false);
   const [duplicatePackError, setDuplicatePackError] = useState<number | null>(null);
+  const closingRoundIdsRef = useRef<Set<string>>(new Set());
 
   /** include packNumber in the selection */
   const [selectedLotteryEntry, setSelectedLotteryEntry] = useState<{
@@ -293,6 +294,24 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     }
   }, [currentStreamId]);
 
+  const closeRoundById = useCallback(
+    async (roundId: string) => {
+      try {
+        const { error } = await supabase
+          .from('rounds')
+          .update({ bidding_status: 'closed', locked: true })
+          .eq('id', roundId);
+        if (error) throw error;
+        closingRoundIdsRef.current.delete(roundId);
+        await loadRoundsForStream();
+      } catch (err) {
+        console.error('Error auto-closing round:', err);
+        closingRoundIdsRef.current.delete(roundId);
+      }
+    },
+    [loadRoundsForStream]
+  );
+
   // Initial pulls for Direct Bids gallery (using all_cards)
   useEffect(() => {
     fetchAllCards();
@@ -301,6 +320,18 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   useEffect(() => {
     void loadRoundsForStream();
   }, [loadRoundsForStream]);
+
+  // Auto-close bidding when countdown expires
+  useEffect(() => {
+    Object.values(roundsBySet).forEach((round) => {
+      if (!round?.id || round.bidding_status !== 'open' || !round.bidding_ends_at) return;
+      const endTs = new Date(round.bidding_ends_at).getTime();
+      if (nowTs >= endTs && !closingRoundIdsRef.current.has(round.id)) {
+        closingRoundIdsRef.current.add(round.id);
+        void closeRoundById(round.id);
+      }
+    });
+  }, [roundsBySet, nowTs, closeRoundById]);
 
   useEffect(() => {
     if (!currentStreamId) return;
@@ -827,6 +858,9 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         : [];
     const biddingOpen = roundForSet?.bidding_status === 'open';
     const countdownLabel = formatCountdownLabel(roundForSet?.bidding_ends_at, nowTs);
+    const endsAtLabel = roundForSet?.bidding_ends_at
+      ? new Date(roundForSet.bidding_ends_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : null;
 
     return (
       <div className="space-y-6">
@@ -835,35 +869,51 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         </h3>
 
         {/* Round ID Display */}
-        <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
-          <div className="text-center">
-            <h4 className="font-semibold text-blue-800 font-pokemon mb-2">
-              Current Round for {title}
-            </h4>
-            {roundsLoading ? (
-              <div className="flex items-center justify-center space-x-2">
-                <Loader className="h-4 w-4 animate-spin text-blue-600" />
-                <span className="text-blue-600 font-pokemon">Loading round...</span>
-              </div>
-            ) : roundForSet ? (
-              <div className="space-y-1">
-                <p className="text-blue-700 font-bold font-pokemon">
-                  Round ID: {roundForSet.id}
-                </p>
-                <p className="text-blue-600 text-sm font-pokemon">
-                  Round {roundForSet.round_number} • {plannedPacks} planned •{' '}
-                  {roundForSet.packs_opened} opened • Status:{' '}
-                  {(roundForSet.bidding_status || 'not_started').toUpperCase()}
-                </p>
-                {countdownLabel && (
-                  <p className="text-blue-600 text-sm font-pokemon">
-                    Bidding ends in: {countdownLabel}
+        <div className="grid md:grid-cols-2 gap-4 mb-6">
+          <div className="bg-blue-50 rounded-xl p-4 md:p-6 border border-blue-200 h-full">
+            <div className="text-center h-full flex flex-col justify-center">
+              <h4 className="text-lg font-semibold text-blue-800 font-pokemon mb-3">
+                Current Round for {title}
+              </h4>
+              {roundsLoading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <Loader className="h-4 w-4 animate-spin text-blue-600" />
+                  <span className="text-blue-600 font-pokemon">Loading round...</span>
+                </div>
+              ) : roundForSet ? (
+                <div className="space-y-1">
+                  <p className="text-blue-700 font-bold font-pokemon break-all">
+                    Round ID: {roundForSet.id}
                   </p>
-                )}
+                  <p className="text-blue-600 text-sm font-pokemon">
+                    Round {roundForSet.round_number} • {plannedPacks} planned •{' '}
+                    {roundForSet.packs_opened} opened • Status:{' '}
+                    {(roundForSet.bidding_status || 'not_started').toUpperCase()}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-blue-600 font-pokemon">No round found</p>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-red-50 rounded-xl p-4 md:p-6 border border-red-200 h-full flex items-center justify-between gap-4">
+            <p className="text-red-700 text-sm font-pokemon uppercase tracking-wide">
+              Bidding Ends In:
+            </p>
+            <div className="flex flex-col items-end text-right">
+              <div className="text-4xl md:text-5xl font-bold text-red-700 font-pokemon leading-tight">
+                {countdownLabel || '00:00'}
               </div>
-            ) : (
-              <p className="text-blue-600 font-pokemon">No round found</p>
-            )}
+              {endsAtLabel && (
+                <p className="text-red-600 text-xs font-pokemon mt-1">
+                  Ends at {endsAtLabel}
+                </p>
+              )}
+              {!countdownLabel && !endsAtLabel && (
+                <p className="text-red-600 text-xs font-pokemon mt-1">No end time set</p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1627,39 +1677,59 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
               </div>
             </div>
 
-            {/* Round Info (Direct / Chase Slots) */}
-            <div className="bg-blue-50 rounded-xl p-4 mb-6 border border-blue-200">
-              <div className="text-center">
-                <h4 className="font-semibold text-blue-800 font-pokemon mb-2">
-                  Current Round for {tabs.find((t) => t.id === activeTab)?.name}
-                </h4>
+            {/* Round Info + Countdown (Direct / Chase Slots) */}
+            <div className="grid md:grid-cols-2 gap-4 mb-6">
+              <div className="bg-blue-50 rounded-xl p-4 md:p-6 border border-blue-200 h-full">
+                <div className="text-center h-full flex flex-col justify-center">
+                  <h4 className="font-semibold text-blue-800 font-pokemon mb-3">
+                    Current Round for {tabs.find((t) => t.id === activeTab)?.name}
+                  </h4>
 
-                {roundsLoading ? (
-                  <div className="flex items-center justify-center space-x-2">
-                    <Loader className="h-4 w-4 animate-spin text-blue-600" />
-                    <span className="text-blue-600 font-pokemon">
-                      Loading round...
-                    </span>
-                  </div>
-                ) : activeChaseRound ? (
-                  <div className="space-y-1">
-                    <p className="text-blue-700 font-bold font-pokemon">
-                      Round ID: {activeChaseRound.id}
-                    </p>
-                    <p className="text-blue-600 text-sm font-pokemon">
-                      Round {activeChaseRound.round_number} •{' '}
-                      {plannedDisplayDirect} planned • {activeChaseRound.packs_opened} opened •
-                      Status: {(activeChaseRound.bidding_status || 'not_started').toUpperCase()}
-                    </p>
-                    {chaseCountdownLabel && (
-                      <p className="text-blue-600 text-sm font-pokemon">
-                        Bidding ends in: {chaseCountdownLabel}
+                  {roundsLoading ? (
+                    <div className="flex items-center justify-center space-x-2">
+                      <Loader className="h-4 w-4 animate-spin text-blue-600" />
+                      <span className="text-blue-600 font-pokemon">
+                        Loading round...
+                      </span>
+                    </div>
+                  ) : activeChaseRound ? (
+                    <div className="space-y-1">
+                      <p className="text-blue-700 font-bold font-pokemon break-all">
+                        Round ID: {activeChaseRound.id}
                       </p>
-                    )}
+                      <p className="text-blue-600 text-sm font-pokemon">
+                        Round {activeChaseRound.round_number} • {plannedDisplayDirect} planned •{' '}
+                        {activeChaseRound.packs_opened} opened • Status:{' '}
+                        {(activeChaseRound.bidding_status || 'not_started').toUpperCase()}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-blue-600 font-pokemon">No round found</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-red-50 rounded-xl p-4 md:p-6 border border-red-200 h-full flex items-center justify-between gap-4">
+                <p className="text-red-700 text-sm font-pokemon uppercase tracking-wide">
+                  Bidding Ends In:
+                </p>
+                <div className="flex flex-col items-end text-right">
+                  <div className="text-4xl md:text-5xl font-bold text-red-700 font-pokemon leading-tight">
+                    {chaseCountdownLabel || '00:00'}
                   </div>
-                ) : (
-                  <p className="text-blue-600 font-pokemon">No round found</p>
-                )}
+                  {activeChaseRound?.bidding_ends_at && (
+                    <p className="text-red-600 text-xs font-pokemon mt-1">
+                      Ends at{' '}
+                      {new Date(activeChaseRound.bidding_ends_at).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  )}
+                  {!chaseCountdownLabel && !activeChaseRound?.bidding_ends_at && (
+                    <p className="text-red-600 text-xs font-pokemon mt-1">No end time set</p>
+                  )}
+                </div>
               </div>
             </div>
 
