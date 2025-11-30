@@ -162,6 +162,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const [isProcessingEntry, setIsProcessingEntry] = useState(false);
   const [entryError, setEntryError] = useState<string | null>(null);
   const [entrySuccess, setEntrySuccess] = useState(false);
+  const [duplicatePackError, setDuplicatePackError] = useState<number | null>(null);
 
   /** include packNumber in the selection */
   const [selectedLotteryEntry, setSelectedLotteryEntry] = useState<{
@@ -229,6 +230,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         } = await supabase.auth.getUser();
         setUser(user);
         if (user?.id) await fetchUserCredit(user.id);
+        setDuplicatePackError(null);
       } catch (error) {
         console.error('Error checking user:', error);
         setUser(null);
@@ -243,6 +245,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setDuplicatePackError(null);
       setUser(session?.user || null);
       if (session?.user) await fetchUserCredit(session.user.id);
     });
@@ -654,8 +657,10 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
         msg.includes('duplicate key value') ||
         msg.includes('unique constraint')
       ) {
+        setDuplicatePackError(selectedLotteryEntry?.packNumber ?? null);
         setEntryError('You already entered this pack for this round.');
-        setLotteryError('You already entered this pack for this round.');
+        // Keep top-level error clear for duplicates so it doesn't show across all cards
+        setLotteryError(null);
       } else {
         setEntryError(err.message || 'Failed to enter lottery');
         setLotteryError(err.message || 'Failed to enter lottery');
@@ -956,6 +961,19 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
                           {!loadingUser && !user && (
                             <div className="mt-2 text-orange-600 text-sm font-pokemon">
                               Please sign in to enter lottery
+                            </div>
+                          )}
+                          {duplicatePackError === packNum && (
+                            <div className="mt-2 bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm font-pokemon text-yellow-800">
+                              <div className="flex items-start justify-between space-x-3">
+                                <span>You already entered this pack for this round.</span>
+                                <button
+                                  onClick={() => setDuplicatePackError(null)}
+                                  className="text-yellow-700 font-semibold underline text-xs"
+                                >
+                                  Okay
+                                </button>
+                              </div>
                             </div>
                           )}
                           {lotteryError && (
