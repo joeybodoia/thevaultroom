@@ -169,7 +169,10 @@ const SET_OPTIONS = [
   'SV: Prismatic Evolutions',
   'SV10: Destined Rivals',
   'Crown Zenith: Galarian Gallery',
+  'Crown Zenith',
 ];
+
+const CROWN_ALL_OPTION = 'Crown Zenith (All)';
 
 const formatCountdownLabel = (endIso?: string | null) => {
   if (!endIso) return null;
@@ -271,7 +274,15 @@ const AdminPortal: React.FC = () => {
     );
 
     if (selectedSetFilter) {
-      filtered = filtered.filter((card) => card.set_name === selectedSetFilter);
+      if (selectedSetFilter === CROWN_ALL_OPTION) {
+        filtered = filtered.filter(
+          (card) =>
+            card.set_name === 'Crown Zenith' ||
+            card.set_name === 'Crown Zenith: Galarian Gallery'
+        );
+      } else {
+        filtered = filtered.filter((card) => card.set_name === selectedSetFilter);
+      }
     }
     if (selectedRarityFilter) {
       filtered = filtered.filter((card) => card.rarity === selectedRarityFilter);
@@ -881,7 +892,11 @@ const AdminPortal: React.FC = () => {
     setSearchTerm('');
     setSearchResults([]);
     const round = rounds.find((r) => r.id === roundId);
-    setSelectedSetFilter(round?.set_name || '');
+    if (round?.set_name === 'Crown Zenith' || round?.set_name === 'Crown Zenith: Galarian Gallery') {
+      setSelectedSetFilter(CROWN_ALL_OPTION);
+    } else {
+      setSelectedSetFilter(round?.set_name || '');
+    }
     setSelectedRarityFilter('');
     setPulledCardPackNumber(1);
     setOrderedPackFilter((prev) => ({ ...prev, [roundId]: 1 }));
@@ -1966,6 +1981,10 @@ const AdminPortal: React.FC = () => {
                                   <option value="">
                                     All Sets
                                   </option>
+                                  {(uniqueSets.includes('Crown Zenith') ||
+                                    uniqueSets.includes('Crown Zenith: Galarian Gallery')) && (
+                                    <option value={CROWN_ALL_OPTION}>{CROWN_ALL_OPTION}</option>
+                                  )}
                                   {uniqueSets.map((set) => (
                                     <option
                                       key={set}
