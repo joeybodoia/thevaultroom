@@ -1,5 +1,5 @@
-import React, { useState /*, useRef */ } from 'react';
-import { X, /* Upload, User, */ Loader, /* CheckCircle, */ AlertCircle, LogOut, Trash2 } from 'lucide-react';
+import React, { useEffect, useRef, useState /*, useRef */ } from 'react';
+import { X, /* Upload, User, */ Loader, /* CheckCircle, */ AlertCircle, LogOut, Trash2, Pencil } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -10,6 +10,19 @@ interface ProfileModalProps {
   currentAvatarUrl?: string | null;
   onAvatarUpdate: (newAvatarUrl: string | null) => void;
 }
+
+type EditableField = 'username' | 'ship_address';
+type UserProfile = {
+  email: string | null;
+  username: string | null;
+  ship_address: string | null;
+};
+
+const googlePlacesKey =
+  import.meta.env.VITE_GOOGLE_PLACES_KEY ||
+  import.meta.env.VITE_GOOGLE_MAPS_KEY ||
+  import.meta.env.VITE_GOOGLE_API_KEY ||
+  undefined;
 
 const ProfileModal: React.FC<ProfileModalProps> = ({
   isOpen,
@@ -24,9 +37,69 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isRemovingAvatar, setIsRemovingAvatar] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [editingField, setEditingField] = useState<EditableField | null>(null);
+  const [savingField, setSavingField] = useState<EditableField | null>(null);
+  const [pendingValue, setPendingValue] = useState('');
+  const [addressSuggestions, setAddressSuggestions] = useState<string[]>([]);
+  const [searchingAddress, setSearchingAddress] = useState(false);
+  const addressAbortRef = useRef<AbortController | null>(null);
+  const [placesSessionToken, setPlacesSessionToken] = useState<string | null>(null);
   // const [debugInfo, setDebugInfo] = useState<string | null>(null);
   // const [selectedFile, setSelectedFile] = useState<File | null>(null);
   // const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isOpen || !user?.id) return;
+
+    let isMounted = true;
+    setLoadingProfile(true);
+    setError(null);
+
+    supabase
+      .from('users')
+      .select('email, username, ship_address')
+      .eq('id', user.id)
+      .single()
+      .then(({ data, error: fetchError }) => {
+        if (!isMounted) return;
+        if (fetchError) throw fetchError;
+
+        setProfile({
+          email: data?.email ?? user.email ?? null,
+          username: data?.username ?? null,
+          ship_address: data?.ship_address ?? null,
+        });
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        setError(err?.message || 'Failed to load profile');
+        setProfile({
+          email: user.email ?? null,
+          username: null,
+          ship_address: null,
+        });
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setLoadingProfile(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, user]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setEditingField(null);
+      setPendingValue('');
+      setSavingField(null);
+      setError(null);
+      setPlacesSessionToken(null);
+    }
+  }, [isOpen]);
 
   /* ========= Avatar upload handlers (disabled for now) ========= */
 
@@ -159,6 +232,136 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
     }
   };
 
+  const startEditingField = (field: EditableField) => {
+    if (loadingProfile) return;
+    setEditingField(field);
+    setPendingValue(profile?.[field] ?? '');
+    setError(null);
+    if (field === 'ship_address' && !placesSessionToken) {
+      const token =
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2);
+      setPlacesSessionToken(token);
+    }
+  };
+
+  const cancelEditing = () => {
+    setEditingField(null);
+    setPendingValue('');
+    setAddressSuggestions([]);
+    setPlacesSessionToken(null);
+  };
+
+  const saveField = async (field: EditableField) => {
+    if (!user?.id) return;
+
+    setSavingField(field);
+    setError(null);
+    const nextValue = pendingValue.trim();
+
+    try {
+      const { data, error: updateError } = await supabase
+        .from('users')
+        .update({ [field]: nextValue || null })
+        .eq('id', user.id)
+        .select('email, username, ship_address')
+        .single();
+
+      if (updateError) throw updateError;
+
+      setProfile({
+        email: data?.email ?? profile?.email ?? user.email ?? null,
+        username: data?.username ?? null,
+        ship_address: data?.ship_address ?? null,
+      });
+      setEditingField(null);
+      setPendingValue('');
+      setAddressSuggestions([]);
+      setPlacesSessionToken(null);
+    } catch (err: any) {
+      setError(err.message || 'Failed to update profile');
+    } finally {
+      setSavingField(null);
+    }
+  };
+
+  // Address autocomplete (Google Places)
+  useEffect(() => {
+    if (editingField !== 'ship_address' || !googlePlacesKey) {
+      setAddressSuggestions([]);
+      setSearchingAddress(false);
+      addressAbortRef.current?.abort();
+      return;
+    }
+
+    const query = pendingValue.trim();
+    if (query.length < 3) {
+      setAddressSuggestions([]);
+      setSearchingAddress(false);
+      addressAbortRef.current?.abort();
+      return;
+    }
+
+    const controller = new AbortController();
+    addressAbortRef.current?.abort();
+    addressAbortRef.current = controller;
+    setSearchingAddress(true);
+
+    const handle = setTimeout(async () => {
+      try {
+        const res = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
+          method: 'POST',
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': googlePlacesKey,
+            'X-Goog-FieldMask':
+              'suggestions.placePrediction.placeId,suggestions.placePrediction.structuredFormat',
+          },
+          body: JSON.stringify({
+            input: query,
+            // Filter to address-like predictions; optional but helps relevance.
+            includedPrimaryTypes: ['street_address', 'premise', 'subpremise', 'route'],
+            sessionToken: placesSessionToken,
+          }),
+        });
+        if (!res.ok) throw new Error('Address lookup failed');
+        const json = await res.json();
+          const suggestions = Array.isArray(json?.suggestions)
+            ? json.suggestions
+                .map((s: any) => {
+                  const pred = s?.placePrediction;
+                  if (!pred) return null;
+                  const main = pred?.structuredFormat?.mainText?.text;
+                  const secondary = pred?.structuredFormat?.secondaryText?.text;
+                  const label = [main, secondary].filter(Boolean).join(', ');
+                  return label || null;
+                })
+                .filter(Boolean)
+                .slice(0, 5)
+            : [];
+        setAddressSuggestions(suggestions);
+      } catch (err: any) {
+        if (controller.signal.aborted) return;
+        console.warn('Address search failed:', err?.message || err);
+        setAddressSuggestions([]);
+      } finally {
+        if (!controller.signal.aborted) setSearchingAddress(false);
+      }
+    }, 250);
+
+    return () => {
+      clearTimeout(handle);
+      controller.abort();
+    };
+  }, [editingField, pendingValue, placesSessionToken]);
+
+  const applySuggestion = (value: string) => {
+    setPendingValue(value);
+    setAddressSuggestions([]);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -208,6 +411,143 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
               )}
             </div>
             <p className="text-gray-600 font-pokemon">{user.email}</p>
+          </div>
+
+          {/* User information */}
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold text-black font-pokemon">User information</h4>
+              {loadingProfile && <Loader className="h-4 w-4 animate-spin text-gray-500" />}
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-gray-500 font-pokemon">Email</p>
+                <p className="text-black font-semibold font-pokemon break-all">
+                  {profile?.email ?? user.email ?? '—'}
+                </p>
+              </div>
+
+              <div className="flex items-start justify-between space-x-3">
+                <div className="flex-1">
+                  <p className="text-xs uppercase tracking-wide text-gray-500 font-pokemon">Username</p>
+                  {editingField === 'username' ? (
+                    <input
+                      type="text"
+                      value={pendingValue}
+                      onChange={(e) => setPendingValue(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 font-pokemon focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                      placeholder="Enter username"
+                      disabled={savingField === 'username'}
+                    />
+                  ) : (
+                    <p className="text-black font-semibold font-pokemon break-all">
+                      {profile?.username || 'Not set'}
+                    </p>
+                  )}
+                </div>
+                <div className="flex-shrink-0 pt-5">
+                  {editingField === 'username' ? (
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => saveField('username')}
+                        disabled={savingField === 'username'}
+                        className="bg-yellow-400 text-black px-3 py-2 rounded-lg font-semibold hover:bg-yellow-500 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {savingField === 'username' ? 'Saving...' : 'Save'}
+                      </button>
+                      <button
+                        onClick={cancelEditing}
+                        className="text-gray-600 px-2 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-all font-pokemon"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => startEditingField('username')}
+                      className="flex items-center space-x-1 text-gray-700 hover:text-black font-semibold font-pokemon"
+                    >
+                      <Pencil className="h-4 w-4" />
+                      <span>Edit</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-start justify-between space-x-3">
+                <div className="flex-1">
+                  <p className="text-xs uppercase tracking-wide text-gray-500 font-pokemon">Address</p>
+                  {editingField === 'ship_address' ? (
+                    <div className="space-y-2">
+                      <textarea
+                        value={pendingValue}
+                        onChange={(e) => setPendingValue(e.target.value)}
+                        rows={3}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 font-pokemon focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                        placeholder="Street, City, State, Zip"
+                        disabled={savingField === 'ship_address'}
+                      />
+                      {googlePlacesKey ? (
+                        <div className="flex items-center justify-between text-xs text-gray-500 font-pokemon">
+                          <span>Start typing to search addresses</span>
+                          {searchingAddress && <Loader className="h-4 w-4 animate-spin" />}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500 font-pokemon">
+                          Add VITE_GOOGLE_PLACES_KEY to enable address suggestions.
+                        </p>
+                      )}
+                      {addressSuggestions.length > 0 && (
+                        <div className="border border-gray-200 rounded-lg divide-y divide-gray-200 max-h-40 overflow-y-auto shadow-sm">
+                          {addressSuggestions.map((addr) => (
+                            <button
+                              key={addr}
+                              type="button"
+                              onClick={() => applySuggestion(addr)}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-yellow-50 font-pokemon"
+                            >
+                              {addr}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-black font-semibold font-pokemon whitespace-pre-line break-words">
+                      {profile?.ship_address || 'Not set'}
+                    </p>
+                  )}
+                </div>
+                <div className="flex-shrink-0 pt-5">
+                  {editingField === 'ship_address' ? (
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => saveField('ship_address')}
+                        disabled={savingField === 'ship_address'}
+                        className="bg-yellow-400 text-black px-3 py-2 rounded-lg font-semibold hover:bg-yellow-500 transition-all font-pokemon disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {savingField === 'ship_address' ? 'Saving...' : 'Save'}
+                      </button>
+                      <button
+                        onClick={cancelEditing}
+                        className="text-gray-600 px-2 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-all font-pokemon"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => startEditingField('ship_address')}
+                      className="flex items-center space-x-1 text-gray-700 hover:text-black font-semibold font-pokemon"
+                    >
+                      <Pencil className="h-4 w-4" />
+                      <span>Edit</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Avatar upload UI disabled for now */}
