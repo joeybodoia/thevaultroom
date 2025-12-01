@@ -204,11 +204,11 @@ const Footer: React.FC = () => {
               <div className="flex items-center space-x-2 mb-3 sm:mb-4">
                 <img
                   src="https://i.imgur.com/5ke3mJw.png"
-                  alt="Dread's Vault Logo"
+                  alt="dread's vault logo"
                   className="h-8 sm:h-10 w-auto"
                 />
                 <span className="text-lg sm:text-xl font-bold text-white font-pokemon">
-                  Dread&apos;s Vault
+                  dread&apos;s vault
                 </span>
               </div>
 
@@ -326,6 +326,5 @@ const Footer: React.FC = () => {
 };
 
 export default Footer;
-
 
 

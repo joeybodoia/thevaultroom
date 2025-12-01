@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Pokemon';
+  src: url('/fonts/more_chill_pokemon.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Brand-only usage */
+.font-brand {
+  font-family: 'Pokemon', 'Fredoka', 'Exo 2', 'Roboto', 'Arial', sans-serif;
+}
+
 @layer base {
   body {
     font-family: 'Fredoka', 'Exo 2', 'Roboto', 'Arial', sans-serif;

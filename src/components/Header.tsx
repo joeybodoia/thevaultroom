@@ -177,11 +177,11 @@ const Header: React.FC = () => {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="https://i.imgur.com/5ke3mJw.png"
-                alt="Dread's Vault Logo"
+                alt="dread's vault logo"
                 className="h-8 sm:h-12 w-auto"
               />
-              <span className="text-lg sm:text-xl font-bold text-white font-pokemon">
-                Dread&apos;s Vault
+              <span className="text-lg sm:text-xl font-bold text-white font-brand">
+                dread&apos;s vault
               </span>
             </div>
 
