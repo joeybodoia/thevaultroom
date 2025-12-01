@@ -75,19 +75,36 @@ const RARITIES = {
 
 type SetKey = keyof typeof RARITIES;
 
-/** Map UI tabs -> DB set_name used for rounds/chase_slots */
-const SET_DB_NAME: Record<SetName, string> = {
-  prismatic: 'SV: Prismatic Evolutions',
-  crown_zenith: 'Crown Zenith: Galarian Gallery',
-  destined_rivals: 'SV10: Destined Rivals',
+/** Map UI tabs -> DB set_name used for rounds/chase_slots.
+ * Crown Zenith combines base + Galarian Gallery under one UI key. */
+const SET_DB_NAME: Record<SetName, string[]> = {
+  prismatic: ['SV: Prismatic Evolutions'],
+  crown_zenith: ['Crown Zenith', 'Crown Zenith: Galarian Gallery'],
+  destined_rivals: ['SV10: Destined Rivals'],
 };
+
 const DB_SET_TO_KEY: Record<string, SetName> = Object.entries(SET_DB_NAME).reduce(
-  (acc, [key, value]) => {
-    acc[value] = key as SetName;
+  (acc, [key, values]) => {
+    values.forEach((value) => {
+      acc[value] = key as SetName;
+    });
     return acc;
   },
   {} as Record<string, SetName>
 );
+
+const resolveSetKey = (name?: string | null): SetName | null => {
+  if (!name) return null;
+  const trimmed = name.trim();
+  if (SET_DB_NAME.prismatic.includes(trimmed)) return 'prismatic';
+  if (
+    SET_DB_NAME.crown_zenith.includes(trimmed) ||
+    trimmed.toLowerCase().startsWith('crown zenith')
+  )
+    return 'crown_zenith';
+  if (SET_DB_NAME.destined_rivals.includes(trimmed)) return 'destined_rivals';
+  return (DB_SET_TO_KEY[trimmed] as SetName | undefined) ?? null;
+};
 
 const INITIAL_ROUND_MAP: Record<SetName, Round | null> = {
   prismatic: null,
@@ -281,7 +298,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
 
       const next: Record<SetName, Round | null> = { ...INITIAL_ROUND_MAP };
       (data || []).forEach((round: Round) => {
-        const key = DB_SET_TO_KEY[round.set_name as string];
+        const key = resolveSetKey(round.set_name);
         if (key && !next[key]) {
           next[key] = round;
         }
@@ -424,7 +441,7 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
       const slotMap: Record<string, ChaseSlotMeta> = {};
 
       (data ?? []).forEach((row: any) => {
-        const setKey = DB_SET_TO_KEY[row.set_name as string];
+        const setKey = resolveSetKey(row.set_name as string);
         if (!setKey) return;
 
         nextCounts[setKey] = (nextCounts[setKey] || 0) + 1;
@@ -541,16 +558,11 @@ const PokemonSection: React.FC<PokemonSectionProps> = ({ currentStreamId }) => {
   const filterAndSortPokemon = () => {
     let currentCards: DirectBidCard[] = [];
     if (activeTab === 'prismatic') {
-      currentCards = allCards.filter((card) => card.set_name === SET_DB_NAME.prismatic);
+      currentCards = allCards.filter((card) => SET_DB_NAME.prismatic.includes(card.set_name));
     } else if (activeTab === 'crown_zenith') {
-      currentCards = allCards.filter(
-        (card) =>
-          card.set_name === SET_DB_NAME.crown_zenith || card.set_name === 'Crown Zenith'
-      );
+      currentCards = allCards.filter((card) => SET_DB_NAME.crown_zenith.includes(card.set_name));
     } else if (activeTab === 'destined_rivals') {
-      currentCards = allCards.filter(
-        (card) => card.set_name === SET_DB_NAME.destined_rivals
-      );
+      currentCards = allCards.filter((card) => SET_DB_NAME.destined_rivals.includes(card.set_name));
     }
 
     // Only include cards that have an active chase_slot for the current tab

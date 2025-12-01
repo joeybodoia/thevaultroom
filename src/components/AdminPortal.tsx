@@ -165,12 +165,7 @@ const LOTTERY_RARITIES_BY_SET: Record<string, string[]> = {
   'SV10: Destined Rivals': ['SIR / Hyper Rare', 'IR', 'Ultra Rare / Double Rare'],
 };
 
-const SET_OPTIONS = [
-  'SV: Prismatic Evolutions',
-  'SV10: Destined Rivals',
-  'Crown Zenith: Galarian Gallery',
-  'Crown Zenith',
-];
+const SET_OPTIONS = ['SV: Prismatic Evolutions', 'SV10: Destined Rivals', 'Crown Zenith'];
 
 const CROWN_ALL_OPTION = 'Crown Zenith (All)';
 
