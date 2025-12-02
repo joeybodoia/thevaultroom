@@ -7,6 +7,11 @@ interface TermsOfServiceModalProps {
   onClose: () => void;
 }
 
+interface PrivacyPolicyModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
 const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({ isOpen, onClose }) => {
   const [mounted, setMounted] = useState(false);
 
@@ -178,8 +183,221 @@ const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({ isOpen, onClo
   );
 };
 
+const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({ isOpen, onClose }) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen || typeof document === 'undefined') return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !mounted || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="bg-black border border-yellow-400 max-w-4xl w-full mx-4 rounded-2xl shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <div>
+            <p className="text-[10px] sm:text-xs text-white/60 font-pokemon uppercase tracking-[0.1em]">
+              Privacy Policy
+            </p>
+            <h2 className="text-white font-pokemon text-base sm:text-lg font-semibold">
+              Dread’s Vault — Privacy Policy
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white/70 hover:text-white transition-colors p-1"
+            aria-label="Close Privacy Policy"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-5 sm:p-6 max-h-[70vh] overflow-y-auto text-white/80 text-[11px] sm:text-sm font-pokemon space-y-5 leading-relaxed">
+          <div className="space-y-2 text-white">
+            <span className="block text-xs sm:text-sm text-white/70">Business Name: Dread’s Vault</span>
+            <span className="inline-flex items-center px-2 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/40 text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-yellow-300">
+              Last Updated: December 2, 2025
+            </span>
+          </div>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">1. Introduction</h3>
+            <p>
+              Dread’s Vault ("Company," "we," "our," or "us") provides a livestream event platform and related
+              services accessible to registered users. This Privacy Policy explains how we collect, use, disclose,
+              and safeguard personal information when users access or use our website, platform, or create an account.
+            </p>
+            <p>By using Dread’s Vault, you acknowledge and agree to the practices described in this Privacy Policy.</p>
+          </section>
+
+          <section className="space-y-3">
+            <h3 className="text-white font-semibold text-sm sm:text-base">2. Information We Collect</h3>
+
+            <div className="space-y-2">
+              <h4 className="text-white font-semibold text-xs sm:text-sm">A. Information You Provide to Us</h4>
+              <p>We collect personal data when you create an account, make payments, or participate in livestream events, including:</p>
+              <ul className="list-disc list-inside space-y-1 pl-1">
+                <li>Email address</li>
+                <li>Shipping address</li>
+                <li>Username and login credentials</li>
+                <li>Payment information (processed securely by third-party providers)</li>
+              </ul>
+              <p className="text-white/70 text-xs sm:text-sm">We do not store full credit card numbers or sensitive payment credentials.</p>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="text-white font-semibold text-xs sm:text-sm">B. Information Collected Automatically</h4>
+              <p>We may automatically collect non-identifying technical data for operational and security purposes, including:</p>
+              <ul className="list-disc list-inside space-y-1 pl-1">
+                <li>IP address</li>
+                <li>Browser type</li>
+                <li>Device information</li>
+              </ul>
+              <p className="text-white/70 text-xs sm:text-sm">This information is not used for analytics or marketing purposes.</p>
+            </div>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">3. How We Use Personal Information</h3>
+            <p>We may use personal information for the following purposes:</p>
+            <ul className="list-disc list-inside space-y-1 pl-1">
+              <li>To create, maintain, and secure user accounts</li>
+              <li>To process entry fees and validate participation in livestream events</li>
+              <li>To ship items, prizes, or products to participants</li>
+              <li>To support operational needs, including fraud prevention and service security</li>
+              <li>To respond to customer inquiries or support requests</li>
+            </ul>
+            <p>We do not use personal information for advertising, remarketing, or promotional outreach.</p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">4. Payment Processing</h3>
+            <p>
+              Payments made through Dread’s Vault are processed by trusted third-party payment services such as PayPal,
+              Stripe, or similar providers. These companies may collect and store personal and financial information
+              needed to complete transactions. We do not store or access full payment card details.
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h3 className="text-white font-semibold text-sm sm:text-base">5. Sharing and Disclosure of Information</h3>
+            <p>We do not sell or rent personal information. We may share information only with trusted entities necessary to operate the service, including:</p>
+            <div className="overflow-hidden rounded-xl border border-white/10">
+              <div className="grid grid-cols-2 bg-white/5 text-white text-xs sm:text-sm font-semibold font-pokemon">
+                <div className="px-3 py-2 border-r border-white/10">Third-Party Type</div>
+                <div className="px-3 py-2">Purpose</div>
+              </div>
+              <div className="divide-y divide-white/10 text-white/80 text-xs sm:text-sm">
+                <div className="grid grid-cols-2">
+                  <div className="px-3 py-2 border-r border-white/10">Payment processors</div>
+                  <div className="px-3 py-2">Payment verification and transactions</div>
+                </div>
+                <div className="grid grid-cols-2">
+                  <div className="px-3 py-2 border-r border-white/10">Shipping providers</div>
+                  <div className="px-3 py-2">Order fulfillment and delivery</div>
+                </div>
+                <div className="grid grid-cols-2">
+                  <div className="px-3 py-2 border-r border-white/10">Cloud hosting and database providers</div>
+                  <div className="px-3 py-2">Secure data storage</div>
+                </div>
+              </div>
+            </div>
+            <p>We may also disclose information if required by law, legal process, or to protect the rights and safety of users or the platform.</p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">6. Cookies and Tracking Technologies</h3>
+            <p>We use essential cookies only, for purposes such as:</p>
+            <ul className="list-disc list-inside space-y-1 pl-1">
+              <li>Keeping users logged into their accounts</li>
+              <li>Securing user sessions</li>
+            </ul>
+            <p className="mt-1">We do not use:</p>
+            <ul className="list-disc list-inside space-y-1 pl-1">
+              <li>Advertising cookies</li>
+              <li>Analytics tracking</li>
+              <li>Behavioral tracking tools</li>
+            </ul>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">7. Data Retention</h3>
+            <p>We retain personal information only as long as necessary to:</p>
+            <ul className="list-disc list-inside space-y-1 pl-1">
+              <li>Maintain an active user account</li>
+              <li>Fulfill operational, shipping, or transaction requirements</li>
+              <li>Meet legal, tax, or administrative obligations</li>
+            </ul>
+            <p>Users may request deletion of their account and associated information, subject to legal retention requirements.</p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">8. Data Security</h3>
+            <p>
+              We implement reasonable and industry-standard administrative, physical, and technical measures to protect stored personal
+              information. However, no transmission of data online can be guaranteed to be 100% secure, and users acknowledge this risk.
+            </p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">9. User Rights</h3>
+            <p>Users have the right to:</p>
+            <ul className="list-disc list-inside space-y-1 pl-1">
+              <li>Request access to their personal information</li>
+              <li>Request correction or updates to stored information</li>
+              <li>Request deletion of their account and personal data (unless retention is legally required)</li>
+            </ul>
+            <p className="text-white/80">Requests may be submitted to: 📧 dpr@dreadsvault.com</p>
+            <p className="text-white/70 text-xs sm:text-sm">We may verify identity before fulfilling requests.</p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">10. Children’s Privacy</h3>
+            <p>
+              Dread’s Vault is not intended for children under 13 years of age. We do not knowingly collect personal information from
+              children under 13. If such information is discovered, it will be deleted.
+            </p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">11. Changes to This Privacy Policy</h3>
+            <p>
+              We may update this Privacy Policy from time to time. When changes occur, the “Last Updated” date at the top of this document
+              will be updated. Continued use of the platform indicates acceptance of the updated terms.
+            </p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">12. Contact Information</h3>
+            <p>If you have any questions, concerns, or privacy requests, you may contact us at:</p>
+            <p className="font-semibold text-white">Email: dpr@dreadsvault.com</p>
+          </section>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
 const Footer: React.FC = () => {
   const [isTosOpen, setIsTosOpen] = useState(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
 
   /** Smooth scroll helper (matches Header.tsx) */
   const scrollToSection = (id: string) => {
@@ -292,12 +510,13 @@ const Footer: React.FC = () => {
                   </button>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon"
+                  <button
+                    type="button"
+                    onClick={() => setIsPrivacyOpen(true)}
+                    className="w-full text-left text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon underline-offset-2 hover:underline"
                   >
                     Privacy Policy
-                  </a>
+                  </button>
                 </li>
                 <li>
                   <a
@@ -321,10 +540,9 @@ const Footer: React.FC = () => {
       </footer>
 
       <TermsOfServiceModal isOpen={isTosOpen} onClose={() => setIsTosOpen(false)} />
+      <PrivacyPolicyModal isOpen={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
     </>
   );
 };
 
 export default Footer;
-
-
