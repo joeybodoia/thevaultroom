@@ -280,7 +280,15 @@ const ProfileModal: React.FC<ProfileModalProps> = ({
       setAddressSuggestions([]);
       setPlacesSessionToken(null);
     } catch (err: any) {
-      setError(err.message || 'Failed to update profile');
+      if (
+        field === 'username' &&
+        (err?.code === '23505' ||
+          (typeof err?.message === 'string' && err.message.toLowerCase().includes('duplicate')))
+      ) {
+        setError('That username is already taken. Please choose another.');
+      } else {
+        setError(err?.message || 'Failed to update profile');
+      }
     } finally {
       setSavingField(null);
     }
