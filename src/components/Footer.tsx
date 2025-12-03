@@ -27,6 +27,11 @@ interface ReturnsPolicyModalProps {
   onClose: () => void;
 }
 
+interface ProductExperienceModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
 const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({ isOpen, onClose }) => {
   const [mounted, setMounted] = useState(false);
 
@@ -680,12 +685,273 @@ const ReturnsPolicyModal: React.FC<ReturnsPolicyModalProps> = ({ isOpen, onClose
   );
 };
 
+const ProductExperienceModal: React.FC<ProductExperienceModalProps> = ({ isOpen, onClose }) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen || typeof document === 'undefined') return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !mounted || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="bg-black border border-yellow-400 max-w-4xl w-full mx-4 rounded-2xl shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <div>
+            <p className="text-[10px] sm:text-xs text-white/60 font-pokemon uppercase tracking-[0.1em]">
+              Product Experience
+            </p>
+            <h2 className="text-white font-pokemon text-base sm:text-lg font-semibold">
+              Product Experience Overview
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white/70 hover:text-white transition-colors p-1"
+            aria-label="Close Product Experience"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-5 sm:p-6 max-h-[70vh] overflow-y-auto text-white/80 text-[11px] sm:text-sm font-pokemon space-y-5 leading-relaxed">
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">Scheduling &amp; Communication</h3>
+            <p>
+              All scheduling updates, announcements, and community communication take place in the Dread’s Vault Discord
+              Community. This community hub serves as the central location for:
+            </p>
+            <ul className="list-disc list-inside space-y-1 pl-1">
+              <li>Official upcoming stream dates &amp; times</li>
+              <li>Event announcements and reminders</li>
+              <li>User questions, feedback, and suggestions</li>
+              <li>General support and communication from the Dread’s Vault team</li>
+            </ul>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">Community Driven Approach</h3>
+            <p>
+              Dread’s Vault is designed to be a truly community-driven project. We actively welcome and encourage user
+              feedback, ideas, and suggestions to help shape and continuously improve the platform. Our goal is to deliver
+              the best possible experience for our users, and we are committed to adapting and making changes based on the
+              consensus and input of the community. Your voice directly influences how the platform evolves.
+            </p>
+            <p>Joining the Discord community ensures users remain fully informed and up-to-date with all product and event timelines.</p>
+          </section>
+
+          <section className="space-y-3">
+            <div>
+              <h3 className="text-white font-semibold text-sm sm:text-base">Streaming Event Format &amp; Rules</h3>
+            </div>
+
+            <div className="space-y-1">
+              <h4 className="text-white font-semibold text-xs sm:text-sm">Scheduling</h4>
+              <p>
+                As noted above, all upcoming stream dates and times are announced within the Discord community. On the day of an
+                event, users may join the live stream up to 15 minutes before the official start time. This window allows users to
+                prepare, ask questions and get familiar with the event interface before bidding periods begin.
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <h4 className="text-white font-semibold text-xs sm:text-sm">Entry Fee</h4>
+              <p>Access to the interactive features of the stream requires a $5 entry fee.</p>
+              <p>
+                Upon entry, each user receives 100 site credits. These credits may be strategically allocated across any of the
+                three event mechanics:
+              </p>
+              <ol className="list-decimal list-inside space-y-1 pl-1">
+                <li>Chase Slot Bidding</li>
+                <li>Lottery Entries</li>
+                <li>Live Singles Bidding</li>
+              </ol>
+              <p>Users may choose how to allocate their credits throughout the event based on their preferred strategies.</p>
+            </div>
+
+            <div className="space-y-1">
+              <h4 className="text-white font-semibold text-xs sm:text-sm">Event Structure</h4>
+              <p>Each streaming event consists of three rounds, and each round follows the same structure:</p>
+              <ol className="list-decimal list-inside space-y-2 pl-1">
+                <li>
+                  <strong>Bidding Period</strong>
+                  <p className="mt-1">
+                    Before the round begins, users may spend their site credits to place bids for any of the three event mechanics.
+                    Once bidding closes, no additional entries for that round will be accepted.
+                  </p>
+                </li>
+                <li>
+                  <strong>Pack Opening</strong>
+                  <p className="mt-1">
+                    Each round features the opening of 10 sealed Pokémon booster packs from a predetermined set (e.g., Prismatic
+                    Evolutions).
+                  </p>
+                </li>
+                <li>
+                  <strong>Winner Announcements</strong>
+                  <p className="mt-1">
+                    After all packs are opened, winners for the round—across all three mechanics—are determined and announced based
+                    on outcomes of the pulls.
+                  </p>
+                </li>
+              </ol>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="text-white font-semibold text-xs sm:text-sm">Event Features / Mechanics</h4>
+
+              <div className="space-y-2">
+                <p className="font-semibold text-white">1. Chase Slots</p>
+                <p>Chase slots represent high-value or highly desirable cards from the round’s selected set.</p>
+                <ul className="list-disc list-inside space-y-1 pl-1">
+                  <li>Users bid credits against each other for the rights to a specific chase slot.</li>
+                  <li>The highest bidder wins the slot and obtains exclusive rights to that card if it appears in any pack opened during the round.</li>
+                </ul>
+                <p className="text-white/80">Example:</p>
+                <p>
+                  A user wins the chase slot for Umbreon ex in a Prismatic Evolutions round. If Umbreon ex appears in any of the 10
+                  packs opened during the round, that user receives the card—no matter what other mechanics occur.
+                </p>
+                <p className="font-semibold text-white">Priority Rule:</p>
+                <p>
+                  Chase slot winners always have priority over lottery winners. If a lottery winner wins a pack that contains a chase
+                  slot card, the chase slot card is removed from the pack and awarded to the chase slot winner. The remaining contents
+                  of that pack are awarded to the lottery winner.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="font-semibold text-white">2. Lottery</p>
+                <p>
+                  Each individual pack within a round offers a separate lottery opportunity. Users may allocate credits to enter a
+                  pack-specific lottery by selecting a rarity type (e.g., SIR, IR, Ultra Rare, etc.).
+                </p>
+                <p>When the pack is opened:</p>
+                <ul className="list-disc list-inside space-y-1 pl-1">
+                  <li>If a card matching the user’s selected rarity type is pulled, all users who selected that rarity enter the prize pool for that pack.</li>
+                  <li>A winner is then selected at random from this prize pool.</li>
+                  <li>The winner receives all cards from that pack, excluding any chase slot cards, which always go to their respective chase slot winners.</li>
+                </ul>
+                <p className="font-semibold text-white">Tie-Breakers (Multiple Rarity Hits in a Single Pack)</p>
+                <p>
+                  If a pack contains more than one qualifying rarity type, a rarity precedence rule determines which rarity sets the
+                  prize pool. The rarity with the lowest odds (i.e., the rarest hit) always takes precedence. This ensures consistency
+                  and prevents multiple overlapping prize pools.
+                </p>
+                <p className="font-semibold text-white">Rarity Precedence Tables</p>
+                <div className="space-y-2">
+                  <div>
+                    <p className="font-semibold text-white">Prismatic Evolutions</p>
+                    <ol className="list-decimal list-inside pl-1 space-y-1">
+                      <li>SIR</li>
+                      <li>Masterball</li>
+                      <li>Ultra Rare</li>
+                      <li>Pokeball</li>
+                    </ol>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white">Crown Zenith</p>
+                    <ol className="list-decimal list-inside pl-1 space-y-1">
+                      <li>Secret Rare</li>
+                      <li>Ultra Rare (Non GG)</li>
+                      <li>Ultra Rare (GG)</li>
+                    </ol>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white">Destined Rivals</p>
+                    <ol className="list-decimal list-inside pl-1 space-y-1">
+                      <li>SIR / Hyper Rare</li>
+                      <li>IR</li>
+                      <li>Ultra Rare / Double Rare</li>
+                    </ol>
+                  </div>
+                </div>
+                <p className="font-semibold text-white">Tie-Breaker Example</p>
+                <p>
+                  If a pack from Prismatic Evolutions contains both an SIR card and a Masterball card: SIR is the rarest hit. Therefore,
+                  SIR sets the prize pool for that pack. Only users who entered the lottery for SIR are included in the random drawing.
+                  The selected winner receives all cards in the pack (minus any chase slot cards). This tie-breaker system ensures
+                  fairness and rewards users who choose the rarest—yet highest-risk—rarity types.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="font-semibold text-white">3. Live Singles</p>
+                <p>Live Singles are individual cards from the host’s personal collection.</p>
+                <p>Key characteristics:</p>
+                <ul className="list-disc list-inside space-y-1 pl-1">
+                  <li>Bidding for Live Singles is open for the entire duration of the stream.</li>
+                  <li>Users may place bids at any time up until the closing window.</li>
+                  <li>A final 5-minute countdown will be announced before bidding closes.</li>
+                  <li>During the countdown, a visible timer will appear within the site interface.</li>
+                </ul>
+                <p>The highest bidder at closing wins the selected single.</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">Caveats &amp; Important Nuances</h3>
+            <div className="space-y-2">
+              <p className="font-semibold text-white">1. Chase Slot Priority:</p>
+              <p>
+                Chase slot winners always receive the chase slot card, even if the pack is won by a lottery participant. This ensures
+                clarity, fairness, and consistency.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <p className="font-semibold text-white">2. Credit Allocation Strategy:</p>
+              <p>
+                Credits must be allocated carefully. Unused credits at the end of a round do not backdate entries or affect previous
+                outcomes. Users may distribute their 100 credits across mechanics in any way that best supports their strategy.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <p className="font-semibold text-white">3. Transparency of Odds:</p>
+              <p>Lottery outcomes are determined strictly by the rarity pulled within each pack and the number of users who selected that rarity type.</p>
+            </div>
+            <div className="space-y-2">
+              <p className="font-semibold text-white">4. Fair Play &amp; System Integrity:</p>
+              <p>
+                All randomizations (e.g., lottery winner selection) are handled programmatically to maintain fairness and consistency.
+                All bids and entries are final once the bidding periods close.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <p className="font-semibold text-white">5. Communication &amp; Support:</p>
+              <p>Any event clarifications, technical issues, or concerns can be addressed directly through the Dread’s Vault Discord community.</p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
 const Footer: React.FC = () => {
   const [isTosOpen, setIsTosOpen] = useState(false);
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [isShippingOpen, setIsShippingOpen] = useState(false);
   const [isReturnsOpen, setIsReturnsOpen] = useState(false);
+  const [isProductOpen, setIsProductOpen] = useState(false);
 
   /** Smooth scroll helper (matches Header.tsx) */
   const scrollToSection = (id: string) => {
@@ -830,12 +1096,13 @@ const Footer: React.FC = () => {
                   </button>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon"
+                  <button
+                    type="button"
+                    onClick={() => setIsProductOpen(true)}
+                    className="w-full text-left text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon underline-offset-2 hover:underline"
                   >
                     Product Experience
-                  </a>
+                  </button>
                 </li>
               </ul>
             </div>
@@ -855,6 +1122,7 @@ const Footer: React.FC = () => {
       <ContactModal isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
       <ShippingPolicyModal isOpen={isShippingOpen} onClose={() => setIsShippingOpen(false)} />
       <ReturnsPolicyModal isOpen={isReturnsOpen} onClose={() => setIsReturnsOpen(false)} />
+      <ProductExperienceModal isOpen={isProductOpen} onClose={() => setIsProductOpen(false)} />
     </>
   );
 };
