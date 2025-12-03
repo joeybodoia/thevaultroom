@@ -32,6 +32,16 @@ interface ProductExperienceModalProps {
   onClose: () => void;
 }
 
+interface FaqModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+interface ProductExperienceModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
 const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({ isOpen, onClose }) => {
   const [mounted, setMounted] = useState(false);
 
@@ -945,6 +955,176 @@ const ProductExperienceModal: React.FC<ProductExperienceModalProps> = ({ isOpen,
   );
 };
 
+const FaqModal: React.FC<FaqModalProps> = ({ isOpen, onClose }) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen || typeof document === 'undefined') return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !mounted || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="bg-black border border-yellow-400 max-w-4xl w-full mx-4 rounded-2xl shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <div>
+            <p className="text-[10px] sm:text-xs text-white/60 font-pokemon uppercase tracking-[0.1em]">
+              FAQ
+            </p>
+            <h2 className="text-white font-pokemon text-base sm:text-lg font-semibold">
+              Frequently Asked Questions (FAQ)
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white/70 hover:text-white transition-colors p-1"
+            aria-label="Close FAQ"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-5 sm:p-6 max-h-[70vh] overflow-y-auto text-white/80 text-[11px] sm:text-sm font-pokemon space-y-4 leading-relaxed">
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">
+              1. How do I know when the next stream is happening?
+            </h3>
+            <p>
+              All scheduling announcements, including upcoming stream dates and times, are posted in the Dread’s Vault
+              Discord Community. Joining the Discord ensures you receive real-time updates, reminders, and notifications
+              about event start times, early-access windows, and any changes to the schedule.
+            </p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">
+              2. When can I join the live stream on the day of the event?
+            </h3>
+            <p>
+              You can join the stream up to 15 minutes before the official start time. This early window allows you to
+              get familiar with the interface, ask questions, and strategize your bidding approach.
+            </p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">
+              3. What do I get when I pay the $5 entry fee?
+            </h3>
+            <p>
+              The $5 entry fee grants full access to the live event’s interactive features and provides you with 100 site
+              credits. These credits can be allocated across any of the three event mechanics: Chase Slots, Lottery, or
+              Live Singles. Users have complete flexibility in how they choose to distribute their credits based on personal
+              strategy.
+            </p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">
+              4. Do unused credits carry over to future rounds or streams?
+            </h3>
+            <p>
+              No. Credits are tied to the specific streaming event. Any unused credits expire at the end of that event and
+              do not carry over to future sessions.
+            </p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">
+              5. How do Chase Slots work, and what happens if the card doesn’t get pulled?
+            </h3>
+            <p>
+              A Chase Slot represents a high-value card from the featured set (e.g., an Umbreon ex from Prismatic Evolutions).
+              Users bid credits for the exclusive right to a specific chase slot. If the card is pulled during that round,
+              the chase slot winner automatically receives it, regardless of any lottery outcome. If the card is not pulled,
+              the chase slot simply goes unclaimed—there is no loss beyond the credits you spent bidding.
+            </p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">
+              6. What happens if I win a Chase Slot and the same card appears multiple times?
+            </h3>
+            <p>If multiple copies of your chase slot card are pulled, you receive all copies, with no extra cost or credit expenditure.</p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">7. How does the Lottery system work?</h3>
+            <p>
+              Every pack in the round has its own lottery. Users spend credits to enter a lottery by selecting a rarity type
+              (e.g., SIR, IR, Ultra Rare). If a card of the selected rarity is pulled, all users who chose that rarity enter
+              a prize pool, and a winner is chosen at random. The winner receives the entire contents of that pack, excluding
+              chase slot cards.
+            </p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">
+              8. What happens if multiple rarity types appear in the same pack?
+            </h3>
+            <p>A rarity precedence rule is used. The rarest rarity sets the prize pool. Examples:</p>
+            <ul className="list-disc list-inside space-y-1 pl-1">
+              <li>Prismatic Evolutions: SIR &gt; Masterball &gt; Ultra Rare &gt; Pokeball</li>
+              <li>Crown Zenith: Secret Rare &gt; Ultra Rare (Non GG) &gt; Ultra Rare (GG)</li>
+              <li>Destined Rivals: SIR/Hyper Rare &gt; IR &gt; Ultra Rare/Double Rare</li>
+            </ul>
+            <p>Only users who selected the rarest rarity hit enter the lottery for that pack.</p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">
+              9. What if I win a Lottery pack but it contains a Chase Slot card?
+            </h3>
+            <p>
+              Chase Slot winners always take precedence. The chase slot card is removed and awarded to its winner, and you
+              receive all remaining cards from the pack.
+            </p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">
+              10. What are Live Singles and how do I bid on them?
+            </h3>
+            <p>
+              Live Singles are cards from the host’s personal collection. Bidding is open for the entire duration of the event.
+              A 5-minute countdown is announced before closing, and the highest bidder at timer end wins the card.
+            </p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">11. Can I change my bids after submitting them?</h3>
+            <p>No, bids are finalized after submitting. However, credits are immediately returned if you are outbid by another user.</p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="text-white font-semibold text-sm sm:text-base">12. Do I get to keep the cards I win?</h3>
+            <p>
+              Yes. Any cards you win through Chase Slots, Lottery, or Live Singles will be shipped to you. Physical items are
+              carefully packaged and shipped within 5 business days as outlined in the Shipping Policy.
+            </p>
+          </section>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
 const Footer: React.FC = () => {
   const [isTosOpen, setIsTosOpen] = useState(false);
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
@@ -952,6 +1132,7 @@ const Footer: React.FC = () => {
   const [isShippingOpen, setIsShippingOpen] = useState(false);
   const [isReturnsOpen, setIsReturnsOpen] = useState(false);
   const [isProductOpen, setIsProductOpen] = useState(false);
+  const [isFaqOpen, setIsFaqOpen] = useState(false);
 
   /** Smooth scroll helper (matches Header.tsx) */
   const scrollToSection = (id: string) => {
@@ -1025,12 +1206,13 @@ const Footer: React.FC = () => {
                   </button>
                 </li>
                 <li>
-                  <a
-                    href="#"
-                    className="text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon"
+                  <button
+                    type="button"
+                    onClick={() => setIsFaqOpen(true)}
+                    className="w-full text-left text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon underline-offset-2 hover:underline"
                   >
                     FAQ
-                  </a>
+                  </button>
                 </li>
               </ul>
             </div>
@@ -1123,6 +1305,7 @@ const Footer: React.FC = () => {
       <ShippingPolicyModal isOpen={isShippingOpen} onClose={() => setIsShippingOpen(false)} />
       <ReturnsPolicyModal isOpen={isReturnsOpen} onClose={() => setIsReturnsOpen(false)} />
       <ProductExperienceModal isOpen={isProductOpen} onClose={() => setIsProductOpen(false)} />
+      <FaqModal isOpen={isFaqOpen} onClose={() => setIsFaqOpen(false)} />
     </>
   );
 };
