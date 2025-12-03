@@ -12,6 +12,21 @@ interface PrivacyPolicyModalProps {
   onClose: () => void;
 }
 
+interface ContactModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+interface ShippingPolicyModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+interface ReturnsPolicyModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
 const TermsOfServiceModal: React.FC<TermsOfServiceModalProps> = ({ isOpen, onClose }) => {
   const [mounted, setMounted] = useState(false);
 
@@ -395,9 +410,282 @@ const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({ isOpen, onClose
   );
 };
 
+const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen || typeof document === 'undefined') return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !mounted || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="bg-black border border-yellow-400 max-w-md w-full mx-4 rounded-2xl shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <div>
+            <p className="text-[10px] sm:text-xs text-white/60 font-pokemon uppercase tracking-[0.1em]">
+              Contact Us
+            </p>
+            <h2 className="text-white font-pokemon text-base sm:text-lg font-semibold">
+              We&apos;re here to help
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white/70 hover:text-white transition-colors p-1"
+            aria-label="Close Contact modal"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-5 sm:p-6 max-h-[60vh] overflow-y-auto text-white/80 text-[11px] sm:text-sm font-pokemon space-y-3 leading-relaxed">
+          <p>
+            Questions, requests, or feedback? Email us anytime and we&apos;ll get back as soon as we can.
+          </p>
+          <div className="inline-flex items-center space-x-2 px-3 py-2 rounded-lg bg-yellow-400/10 border border-yellow-400/40 text-yellow-200 font-semibold">
+            <Mail className="h-4 w-4" />
+            <span>dpr@dreadsvault.com</span>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+const ShippingPolicyModal: React.FC<ShippingPolicyModalProps> = ({ isOpen, onClose }) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen || typeof document === 'undefined') return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !mounted || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="bg-black border border-yellow-400 max-w-3xl w-full mx-4 rounded-2xl shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <div>
+            <p className="text-[10px] sm:text-xs text-white/60 font-pokemon uppercase tracking-[0.1em]">
+              Shipping Policy
+            </p>
+            <h2 className="text-white font-pokemon text-base sm:text-lg font-semibold">Shipping Policy</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white/70 hover:text-white transition-colors p-1"
+            aria-label="Close Shipping Policy"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-5 sm:p-6 max-h-[70vh] overflow-y-auto text-white/80 text-[11px] sm:text-sm font-pokemon space-y-4 leading-relaxed">
+          <p>
+            All items won or purchased through Dread’s Vault live events are processed and shipped within 5 business
+            days unless otherwise stated. Processing time refers to the period required to prepare items for shipment
+            and does not include carrier transit time.
+          </p>
+
+          <section className="space-y-1">
+            <h3 className="text-white font-semibold text-sm sm:text-base">Packaging</h3>
+            <p>
+              We understand the importance of protecting collectible and trading card products. All shipments are packed
+              with care using protective materials to help ensure items arrive in the same condition they were received
+              during the live event.
+            </p>
+          </section>
+
+          <section className="space-y-1">
+            <h3 className="text-white font-semibold text-sm sm:text-base">Shipping Methods</h3>
+            <p>
+              Orders are shipped using USPS, UPS, or other commonly used carriers depending on package requirements and
+              destination. Carrier transit time is separate from our internal processing period and may vary.
+            </p>
+          </section>
+
+          <section className="space-y-1">
+            <h3 className="text-white font-semibold text-sm sm:text-base">Tracking</h3>
+            <p>
+              Tracking information will be provided whenever applicable and available. Some small items may be shipped
+              without tracking depending on shipping method and packaging requirements.
+            </p>
+          </section>
+
+          <section className="space-y-1">
+            <h3 className="text-white font-semibold text-sm sm:text-base">Address Accuracy</h3>
+            <p>
+              Customers are responsible for providing a complete and accurate shipping address at checkout or during
+              account setup. Dread’s Vault is not responsible for packages shipped to an incorrect or incomplete address
+              provided by the customer.
+            </p>
+            <p>
+              If a shipment is returned to us due to an invalid address or delivery failure, the customer may be charged
+              additional shipping fees to resend the package.
+            </p>
+          </section>
+
+          <section className="space-y-1">
+            <h3 className="text-white font-semibold text-sm sm:text-base">Lost, Stolen, or Delayed Packages</h3>
+            <p>
+              Once a shipment has been transferred to the carrier, responsibility for delivery rests with the carrier.
+              Dread’s Vault is not liable for packages lost, stolen, delayed, or damaged while in transit.
+            </p>
+            <p>
+              If a package appears lost or delayed, we encourage customers to open a claim with the carrier. We will
+              assist where reasonable but cannot guarantee refunds, replacements, or compensation.
+            </p>
+          </section>
+
+          <section className="space-y-1">
+            <h3 className="text-white font-semibold text-sm sm:text-base">International Shipping</h3>
+            <p>
+              At this time, we do not support international shipping. Orders are only shipped to locations within the
+              United States and Puerto Rico. Any order placed with an address outside these supported regions may be
+              canceled or require a valid U.S. forwarding address before fulfillment.
+            </p>
+            <p>By participating in events or making a purchase through Dread’s Vault, you acknowledge and agree to this Shipping Policy.</p>
+          </section>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+const ReturnsPolicyModal: React.FC<ReturnsPolicyModalProps> = ({ isOpen, onClose }) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen || typeof document === 'undefined') return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !mounted || typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="bg-black border border-yellow-400 max-w-3xl w-full mx-4 rounded-2xl shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <div>
+            <p className="text-[10px] sm:text-xs text-white/60 font-pokemon uppercase tracking-[0.1em]">
+              Returns Policy
+            </p>
+            <h2 className="text-white font-pokemon text-base sm:text-lg font-semibold">
+              Return &amp; Issue Resolution Policy
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white/70 hover:text-white transition-colors p-1"
+            aria-label="Close Returns Policy"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="p-5 sm:p-6 max-h-[70vh] overflow-y-auto text-white/80 text-[11px] sm:text-sm font-pokemon space-y-4 leading-relaxed">
+          <p>
+            Given that participation in our live events involves a paid entry fee and the potential to win items such as
+            trading cards, collectibles, or other rewards based on event outcomes, all sales and winnings are considered
+            final and non-refundable.
+          </p>
+          <p>
+            Once an entry is confirmed or an event concludes, we are unable to offer returns, refunds, or exchanges for
+            participation fees or any item(s) awarded during the event.
+          </p>
+          <p>
+            However, we take customer experience seriously. If you believe there is an issue with an item you received—such as
+            shipping damage, fulfillment errors, or quality concerns—you may contact us at:
+          </p>
+
+          <div className="inline-flex items-center space-x-2 px-3 py-2 rounded-lg bg-yellow-400/10 border border-yellow-400/40 text-yellow-200 font-semibold">
+            <Mail className="h-4 w-4" />
+            <span>dpr@dreadsvault.com</span>
+          </div>
+
+          <div className="space-y-1">
+            <p>Please include the following when reaching out:</p>
+            <ul className="list-disc list-inside space-y-1 pl-1">
+              <li>Full name</li>
+              <li>Order or event reference (if applicable)</li>
+              <li>Brief description of the issue</li>
+              <li>Photos or supporting evidence (if applicable)</li>
+            </ul>
+          </div>
+
+          <p>
+            We will review concerns on a case-by-case basis at our sole discretion. Submission of a request does not
+            guarantee replacement, refund, or compensation.
+          </p>
+          <p>
+            Our goal is to maintain a fair, enjoyable, and transparent experience for all participants while also protecting
+            the integrity of our event-based structure.
+          </p>
+          <p>
+            By participating in any event or transaction with Dread’s Vault, you acknowledge and agree to the terms of this
+            Return Policy.
+          </p>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
 const Footer: React.FC = () => {
   const [isTosOpen, setIsTosOpen] = useState(false);
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [isContactOpen, setIsContactOpen] = useState(false);
+  const [isShippingOpen, setIsShippingOpen] = useState(false);
+  const [isReturnsOpen, setIsReturnsOpen] = useState(false);
 
   /** Smooth scroll helper (matches Header.tsx) */
   const scrollToSection = (id: string) => {
@@ -487,10 +775,33 @@ const Footer: React.FC = () => {
                 Support
               </h3>
               <ul className="space-y-1 sm:space-y-2">
-                <li><a href="#" className="text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon">Contact Us</a></li>
-                <li><a href="#" className="text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon">Shipping Info</a></li>
-                <li><a href="#" className="text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon">Returns</a></li>
-                <li><a href="#" className="text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon">Help Center</a></li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setIsContactOpen(true)}
+                    className="w-full text-left text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon underline-offset-2 hover:underline"
+                  >
+                    Contact Us
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setIsShippingOpen(true)}
+                    className="w-full text-left text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon underline-offset-2 hover:underline"
+                  >
+                    Shipping Policy
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setIsReturnsOpen(true)}
+                    className="w-full text-left text-white/60 hover:text-white transition-colors text-xs sm:text-sm font-pokemon underline-offset-2 hover:underline"
+                  >
+                    Returns Policy
+                  </button>
+                </li>
               </ul>
             </div>
 
@@ -541,6 +852,9 @@ const Footer: React.FC = () => {
 
       <TermsOfServiceModal isOpen={isTosOpen} onClose={() => setIsTosOpen(false)} />
       <PrivacyPolicyModal isOpen={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
+      <ContactModal isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
+      <ShippingPolicyModal isOpen={isShippingOpen} onClose={() => setIsShippingOpen(false)} />
+      <ReturnsPolicyModal isOpen={isReturnsOpen} onClose={() => setIsReturnsOpen(false)} />
     </>
   );
 };
