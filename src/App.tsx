@@ -7,6 +7,7 @@ import PokemonSection from './components/PokemonSection';
 import StreamDashboard from './components/StreamDashboard';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import DiscordCommunity from './components/DiscordCommunity';
 import AdminPortal from './components/AdminPortal';
 import ResetSessionButton from './components/ResetSessionButton';
 import { useAuth } from './auth/AuthContext';
@@ -136,6 +137,7 @@ function App() {
       <Header />
       <main>
         <HeroBanner />
+        <DiscordCommunity />
         <HowItWorks />
         <StreamCountdown onStreamChange={setCurrentStreamId} />
         <CurrentSetSection />

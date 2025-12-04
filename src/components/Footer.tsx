@@ -1134,6 +1134,13 @@ const Footer: React.FC = () => {
   const [isProductOpen, setIsProductOpen] = useState(false);
   const [isFaqOpen, setIsFaqOpen] = useState(false);
 
+  // Allow other components to open Product Experience modal via custom event
+  useEffect(() => {
+    const handler = () => setIsProductOpen(true);
+    window.addEventListener('open-product-experience', handler);
+    return () => window.removeEventListener('open-product-experience', handler);
+  }, []);
+
   /** Smooth scroll helper (matches Header.tsx) */
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);

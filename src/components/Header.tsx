@@ -188,6 +188,12 @@ const Header: React.FC = () => {
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center space-x-8">
               <button
+                onClick={() => scrollToSection('discord-community')}
+                className="text-white/80 hover:text-white transition-colors font-pokemon"
+              >
+                Discord Community
+              </button>
+              <button
                 onClick={() => scrollToSection('how-it-works')}
                 className="text-white/80 hover:text-white transition-colors font-pokemon"
               >
@@ -323,6 +329,12 @@ const Header: React.FC = () => {
           {mobileMenuOpen && (
             <div className="md:hidden bg-gray-900 border-t border-gray-700">
               <div className="px-4 py-3 space-y-3">
+                <button
+                  onClick={() => scrollToSection('discord-community')}
+                  className="block w-full text-left text-white/80 hover:text-white transition-colors font-pokemon"
+                >
+                  Discord Community
+                </button>
                 <button
                   onClick={() => scrollToSection('how-it-works')}
                   className="block w-full text-left text-white/80 hover:text-white transition-colors font-pokemon"
